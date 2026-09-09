@@ -1,0 +1,155 @@
+# Wattleflow nomenclature & structure registry
+# Enforced by tools/wem_lint.py for NFRQ-ORG-01 (Dependency Locality) and
+# NFRQ-ORG-02 (Class Nomenclature). This file is the TARGET controlled vocabulary;
+# the lint reports deviations of the current source from it.
+#
+# --- NFRQ-ORG-01: domains ----------------------------------------------------- #
+# Top-level functional packages (own to wattleflow-processors). `helpers` is the
+# shared namespace, not a domain.
+domains:
+  - pipelines
+  - drivers
+  - processors
+  - strategies
+  - connections
+  - documents
+  - blackboards
+
+shared_namespace: helpers
+
+# --- NFRQ-ORG-04: cross-cutting capabilities (helper, not domain primitive) --- #
+# A capability serves >=2 consumers, is a callable helper (never a Strategy/Pipeline
+# specialisation), and is named by capability. See docs/adr/helpers/DR-WFL-001.
+capabilities:
+  - routing
+
+# --- NFRQ-ORG-02: pipeline grammar -------------------------------------------- #
+# A class is a "pipeline class" if it inherits one of these bases.
+pipeline_bases:
+  - GenericPipeline
+  - IPipeline
+
+# Canonical subject (leading facet) <-> owning package, compared case-insensitively.
+package_subject:
+  pdf: PDF
+  png: PNG
+  dataframe: DataFrame
+  text: Text
+  email: Email
+  message: Message
+
+# Packages that group several subjects (subject==package relaxed -> warning).
+grouping_packages:
+  - cad          # CSVToSheets, StepToViews
+  - convertors   # domain-internal shared converters
+
+# Packages skipped by the grammar check (structural exception, deferred via DR).
+exempt_packages:
+  - nlp          # named-entity-recognition cluster (Essay A §1: the 44% exception)
+  - rss
+  - xml
+  - quality
+
+# Full canonical subject vocabulary (the leading facet).
+subjects:
+  - PDF
+  - PNG
+  - CSV
+  - DataFrame
+  - Text
+  - Email
+  - Message
+  - Markdown
+  - Step
+  - Dummy
+
+# Closed verb vocabulary for the Operation facet.
+operations:
+  - Extract
+  - Redact
+  - Clean
+  - Repair
+  - Translate
+  - Write
+
+# Targets for the converter form  To<Target>.
+targets:
+  - Sheets
+  - Views
+  - Word
+
+# Engine / language / variant qualifiers (extensible via DR).
+qualifiers:
+  - Macro
+  - StickyWords
+  - Spacy
+  - Stanza
+  - Flair
+  - Deberta
+  - Gliner
+  - En
+  - Hr
+
+# Acronyms — PEP 8 mandates all-caps; the lint flags any mixed-case variant.
+acronyms:
+  - PDF
+  - PNG
+  - CSV
+  - HTML
+  - RDF
+  - CAD
+  - URI
+  - S3
+  - NER
+
+# Bare generic role nouns prohibited as standalone class names.
+prohibited_standalone:
+  - Manager
+  - Helper
+  - Utility
+  - Parser
+  - Piece
+  - Sheet
+  - Placement
+  # NFRQ-ORG-04 capability role-nouns — allowed only qualified (e.g. DestinationRouter).
+  - Router
+  - Resolver
+  - Generator
+  - Scanner
+
+# Synonyms collapsed to a canonical operation (informational; lint suggests).
+synonyms:
+  Redaction: Redact
+  Cleanup: Clean
+  Correction: Clean
+  Fix: Repair
+
+# --- NFRQ-ORG-03: TypeVar (generic parameter) role vocabulary ----------------- #
+# A TypeVar names the SEMANTIC ROLE the type plays in the generic contract, not
+# the mechanism (the fact that it is a type). Shares the `acronyms` block above.
+type_vars:
+  # Canonical role nouns — the closed controlled vocabulary (criterion 1).
+  roles:
+    - Key
+    - Value
+    - Message
+    - Destination
+    - Context
+    - Result
+    - State
+    - Action
+    - Vertex
+    - Edge
+    - Input
+    - Output
+    - Element
+  # Synonyms collapsed to a canonical role (criterion 6; lint flags + suggests).
+  synonyms:
+    Yielded: Output
+    Sent: Input
+    Return: Result
+    Returned: Result
+    Elem: Element
+  # Branded names awaiting a DR decision (rename to canonical vs keep) — WARN,
+  # not ERROR, until decided (analogous to the ORG-01 tolerance policy).
+  tolerated: []

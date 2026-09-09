@@ -1,0 +1,398 @@
+# =============================================================================
+# blackwattle — non-zero-trust extension layer for the Wattleflow framework
+# =============================================================================
+#
+# TRUST BOUNDARY
+#   wattleflow              (a) core     — zero-trust, no unvetted dependencies
+#   wattleflow-workflow     (b) workflow — zero-trust, no unvetted dependencies
+#   blackwattle             (c) contrib  — THIS PACKAGE. Pulls third-party
+#                                          libraries outside the supply-chain
+#                                          review process.
+#
+#   The dependency arrow points one way only: blackwattle -> (b) -> (a).
+#   Neither (a) nor (b) contains blackwattle in its dependency graph. This is
+#   the single claim a security reviewer needs to verify, and it is verifiable
+#   with `pip install wattleflow-workflow && pip list`.
+#
+#   The boundary is NOT visible at the call site. `src/wattleflow/` is one PEP
+#   420 namespace shared by all three distributions (DR-WFL-017), so an import
+#   names the ontological role and says nothing about which distribution — and
+#   therefore which trust tier — ships it:
+#
+#       from wattleflow.concrete import Pipeline    # (b), zero-trust
+#       from wattleflow.drivers import DriverPdf    # (c), THIS package
+#
+#   That is the accepted design (DR-PRC-002 t.3: the package path names the
+#   ontology, not the project). The tier is read from the distribution manifest
+#   below and from `tools/dictionary.json`, never from the import statement.
+#
+# SPECIFICATIONS APPLIED
+#   PEP 517  — build backend interface (see [build-system])
+#   PEP 518  — build-system requirements declared in pyproject.toml
+#   PEP 621  — the [project] table: standardised, backend-agnostic metadata
+#   PEP 508  — dependency specifier syntax (name, extras, version, markers)
+#   PEP 440  — version identifiers and version specifiers
+#   PEP 503  — distribution name normalisation (case, `-`, `_`, `.`)
+#   PEP 685  — extra name normalisation and comparison
+#   PEP 420  — implicit namespace packages (shared `wattleflow` tree)
+#   PEP 561  — distributing and packaging type information
+#   PEP 639  — SPDX licence expressions in `license` / `license-files`
+#   PEP 660  — editable installs via the build backend
+#   PEP 735  — dependency groups (development requirements, not shipped)
+#
+# NAME NORMALISATION (PEP 503 / PEP 685)
+#   `blackwattle` is deliberately one word. PEP 503 collapses runs of `-`, `_`
+#   and `.` to a single `-`, so `black-wattle` and `black_wattle` normalise to
+#   the SAME name — but `blackwattle` normalises to something DIFFERENT. The
+#   same rule governs extras under PEP 685. A consumer who types the hyphenated
+#   form gets a warning, not an error, and a silently incomplete install. The
+#   alias extra declared in wattleflow-workflow absorbs that mistake.
+#
+#   The rule also applies to dependencies below: `pdfminer.six` normalises to
+#   `pdfminer-six`, and `SQLAlchemy` / `Pillow` normalise to lowercase. Written
+#   here in their canonical PyPI spelling for readability.
+# =============================================================================
+
+[project]
+# PEP 621. `name` is normalised per PEP 503 before it reaches the index, so
+# casing here is cosmetic; keep it lowercase to match what users will type.
+name = "blackwattle"
+
+# PEP 440. Four-component release segment, mirroring the core and workflow
+# distributions. Pre-1.0, so the public API carries no stability promise —
+# which is consistent with what this layer is.
+#
+# NOTE: setuptools_scm appears in the dev requirements. If you intend to derive
+# the version from git tags instead, remove this line, add `dynamic = ["version"]`
+# and a [tool.setuptools_scm] table. Do not do both — a static version silently
+# wins and the tags stop meaning anything.
+version = "0.0.1"
+
+description = "Blackwattle - non-zero-trust extension layer and end-to-end pipelines for the Wattleflow framework."
+readme = "README.md"
+
+# PEP 639. A bare SPDX expression string (not the legacy table or classifier
+# form). Requires setuptools >= 77; older backends reject this and want
+# `license = {text = "Apache-2.0"}` instead.
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+
+authors = [{ name = "wattleflow", email = "wattleflow@outlook.com" }]
+
+keywords = [
+    "wattleflow",
+    "blackwattle",
+    "workflow",
+    "pipeline",
+    "extensions",
+    "connectors",
+    "data",
+    "engineering",
+    "framework",
+    "python",
+]
+
+# PEP 508 environment marker vocabulary depends on this floor; keep it aligned
+# with (a) and (b) or the resolver will silently prefer an older release.
+requires-python = ">=3.11"
+
+classifiers = [
+    # Deliberately BELOW the "5 - Production/Stable" carried by (a) and (b).
+    # The maturity signal is part of the trust boundary, not a modesty tic.
+    "Development Status :: 4 - Beta",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Operating System :: OS Independent",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Libraries",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    # `Typing :: Typed` is NOT declared: PEP 561 makes that classifier a claim
+    # about a `py.typed` marker file, and this distribution ships none. See the
+    # note above [tool.setuptools.package-data]. Add both together or neither.
+]
+
+# -----------------------------------------------------------------------------
+# Required dependencies
+# -----------------------------------------------------------------------------
+# PEP 508 specifiers, PEP 440 ranges.
+#
+# Only (b) is declared. (a) arrives transitively because (b) requires it.
+# Listing both would create two places to maintain one constraint, and they
+# drift. Add `wattleflow` here ONLY if this package touches a core API that
+# (b) does not, and you want that pinned independently.
+#
+# Everything else is OPTIONAL by design. The specializations lazy-load their
+# third-party libraries at import time, so `pip install blackwattle` yields a
+# small, auditable install and each integration is a separate, reviewable
+# supply-chain decision. Do not promote anything into this list without a
+# reason that survives that framing.
+#
+# The upper bound is a judgement call: pre-1.0 there is no compatibility
+# promise across the third component, so `<0.0.2` is the honest cap. Relax it
+# once (b) reaches 1.0 and adopts a stability policy.
+dependencies = [
+    "wattleflow-workflow>=0.0.1.12,<0.0.2",
+]
+
+# -----------------------------------------------------------------------------
+# Optional dependencies — the unvetted surface, grouped by domain
+# -----------------------------------------------------------------------------
+# PEP 621 `optional-dependencies`; names normalised per PEP 685.
+#
+# Grouped so a consumer who wants object storage does not also acquire a CUDA
+# runtime. Version floors are intentionally absent, matching the current
+# requirements.txt — add them deliberately, per library, rather than in bulk.
+# Reproducibility belongs in a lockfile or constraints file, not here.
+[project.optional-dependencies]
+
+# Cryptographic primitives used by connection and credential handling.
+security = [
+    "cryptography",
+]
+
+# Relational access.
+# NOTE: psycopg2-binary ships prebuilt libpq and is explicitly discouraged by
+# its own maintainers for use as a library dependency — it can collide with a
+# system libpq at runtime. Prefer `psycopg[binary]` (v3) or source psycopg2 in
+# anything that ships to a consumer.
+sql = [
+    "psycopg2-binary",
+    "SQLAlchemy",
+]
+
+# Search and indexing backends.
+search = [
+    "elasticsearch",
+    "opensearch-py",
+    "pysolr",
+]
+
+# Messaging, streaming and columnar interchange.
+# WARNING: `kafka-python` and `kafka-python-ng` are competing forks that BOTH
+# install a top-level module named `kafka`. Installing both is a file-level
+# collision — install order decides which one you get, and the loser's files
+# are silently overwritten. Exactly one may appear here. `kafka-python-ng` is
+# the maintained fork; `kafka-python` is retained commented out for reference.
+# NOTE: pyspark requires a JVM (the conda openjdk=17 note in requirements.txt).
+streaming = [
+    "kafka-python-ng",
+    "pyspark",
+    "pyarrow",
+]
+
+# Cloud, transport and networking.
+# NOTE: requests-kerberos and requests-ntlm need system GSSAPI/krb5 headers to
+# build on some platforms; they are not pure-Python installs everywhere.
+cloud = [
+    "boto3",
+    "paramiko",
+    "requests",
+    "requests-kerberos",
+    "requests-ntlm",
+    "websockets",
+]
+
+# Tabular, columnar and semantic data formats.
+data = [
+    "pandas",
+    "fastavro",
+    "rdflib",
+    "pyarrow",
+]
+
+# Document parsing, extraction and OCR.
+# LICENCE WARNING: PyMuPDF is AGPL-3.0 (or commercial). It is an optional
+# dependency, not vendored code, so it does not change this distribution's
+# Apache-2.0 terms — but a consumer who installs this extra and redistributes
+# the result inherits AGPL obligations. Flag it in the documentation.
+# SYSTEM DEPENDENCIES: pytesseract requires the tesseract binary; tika requires
+# a JVM. Neither is installable through pip.
+documents = [
+    "python-docx",
+    "pypdf",
+    "pdfminer.six",
+    "PyMuPDF",
+    "Pillow",
+    "pytesseract",
+    "tika",
+    "extract-msg",
+]
+
+# Natural language processing and models.
+# NOTE: this is by far the heaviest group — torch alone can exceed 2 GB with
+# CUDA wheels. spacy and stanza additionally require model downloads at runtime
+# that pip does not manage. Keep it isolated; never fold it into a default.
+nlp = [
+    "spacy",
+    "stanza",
+    "flair",
+    "gliner",
+    "transformers",
+    "torch",
+    "wordfreq",
+]
+
+# Hosted AI APIs and media retrieval.
+media = [
+    "anthropic",
+    "youtube-transcript-api",
+    "yt-dlp",
+]
+
+# Convenience aggregate. PEP 508 permits a distribution to depend on itself
+# with extras, which is the standard idiom for an "everything" group and avoids
+# duplicating the lists above.
+#
+# `all` deliberately EXCLUDES nlp. A consumer typing `[all]` is asking for
+# breadth, not for a multi-gigabyte model runtime; make that opt-in by name.
+all = [
+    "blackwattle[security,sql,search,streaming,cloud,data,documents,media]",
+]
+
+# -----------------------------------------------------------------------------
+# Development requirements (PEP 735)
+# -----------------------------------------------------------------------------
+# Dependency groups are NOT published in distribution metadata — they exist only
+# for local development, which is the correct home for build and release
+# tooling. Install with `pip install --group dev` (pip >= 25.1) or keep the
+# existing requirements.txt as a fallback for older toolchains.
+#
+# `build`, `setuptools`, `wheel` and `setuptools_scm` intentionally do NOT
+# appear in [build-system].requires below unless the backend genuinely needs
+# them at build time — build tooling in a project's runtime metadata is a
+# common way for a "zero-trust" claim to quietly stop being true.
+#
+# NOT INSTALLABLE FROM PyPI, and therefore absent from every list here:
+#   `oscal` is not published. A PEP 508 direct reference (`oscal @ git+https://...`)
+#   is valid in a requirements file and in a local install, but PyPI REJECTS
+#   uploads whose metadata contains one. It must stay out of this file
+#   entirely — document it as a manual development prerequisite instead.
+[dependency-groups]
+dev = [
+    "build",
+    "setuptools>=77",
+    "setuptools_scm",
+    "twine",
+    "wheel",
+    "ruff",
+]
+
+[build-system]
+# PEP 518 declares what is needed to BUILD; PEP 517 names the backend that does
+# it. The setuptools floor is required by the PEP 639 `license` string above.
+# `wheel` is no longer required by modern setuptools but is retained for parity
+# with (a) and (b). Editable installs go through PEP 660, which this backend
+# implements — see the note under [tool.setuptools.packages.find].
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project.urls]
+homepage = "https://github.com/wattleflow/blackwattle.git"
+repository = "https://github.com/wattleflow/blackwattle.git"
+documentation = "https://github.com/wattleflow/documentation.git"
+# Surface the trust boundary where a reviewer will look for it first.
+security = "https://github.com/wattleflow/documentation/blob/main/SECURITY.md"
+
+# -----------------------------------------------------------------------------
+# Plugin discovery (optional)
+# -----------------------------------------------------------------------------
+# PEP 621 `entry-points`, resolved at runtime through
+# `importlib.metadata.entry_points(group=...)`.
+#
+# This lets the Workflow Factory in (b) discover what blackwattle provides
+# WITHOUT importing it — the factory reads installed metadata, not modules, so
+# an absent or broken extension degrades to "not registered" instead of an
+# ImportError at startup. That property matters more here than usual, because
+# every module in this package may fail to import for a missing optional
+# dependency. Uncomment once the factory reads this group.
+#
+# [project.entry-points."wattleflow.plugins"]
+# blackwattle = "wattleflow.blackwattle:register"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+include-package-data = false
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+# PEP 420. `wattleflow` carries NO __init__.py in any of the three
+# distributions — this is the mechanism that lets (a), (b) and blackwattle
+# install into one import tree. If any distribution ships an __init__.py at
+# that level, wheels overwrite each other silently and install order decides
+# which survives; `pip uninstall` of one then breaks the others.
+#
+# Without `namespaces = true` the finder returns NOTHING over such a tree and
+# the wheel ships no modules at all, while the source tree looks healthy.
+namespaces = true
+
+# Allowlist, not denylist (mirrors (a) and (b)): what is not listed is not
+# shipped, so a new directory under src/wattleflow cannot leak into the wheel
+# by being forgotten — and non-package assets never become packages.
+#
+# INVARIANT: every entry here must be covered by MANIFEST.in, or it installs as
+# an empty directory and the consumer's import fails at runtime, not at install.
+#
+# THE TRAILING `*` IS LOAD-BEARING. `find_namespace_packages` matches each
+# pattern against the FULL dotted name, so a bare `wattleflow.pipelines` matches
+# that package and NOTHING beneath it. Measured on this tree: without the
+# wildcard 14 of 37 packages ship — `pipelines.nlp`, `pipelines.pdf`,
+# `helpers.parsers`, `strategies.documents`, `decorators.oscal` and 17 more are
+# silently dropped, and the failure surfaces as an ImportError in the consumer,
+# never at build time. `(b)` writes the same list the same way.
+#
+# Every name is a subtree this distribution owns entirely. Names shared with
+# wattleflow-workflow — `constants`, `decorators`, `enums`, `helpers`, `mappers`
+# — are PEP 420 namespaces holding only this tree's modules (DR-WFL-017), so the
+# whole-subtree rule is safe: measured, the two trees have no module name in
+# common under any of them.
+include = [
+    "wattleflow.blackboards*",
+    "wattleflow.connections*",
+    "wattleflow.constants*",
+    "wattleflow.decorators*",
+    "wattleflow.documents*",
+    "wattleflow.drivers*",
+    "wattleflow.enums*",
+    "wattleflow.helpers*",
+    "wattleflow.mappers*",
+    "wattleflow.metrics*",
+    "wattleflow.oscal*",
+    "wattleflow.pipelines*",
+    "wattleflow.processors*",
+    "wattleflow.repositories*",
+    "wattleflow.strategies*",
+]
+
+# Runtime data files. With `include-package-data = false`, MANIFEST.in fills the
+# SDIST but not the WHEEL, so anything read at runtime needs this second, explicit
+# declaration or it reaches the consumer only via `pip install <sdist>` and is
+# absent from every wheel install (DR-WFL-015).
+#
+# The OSCAL loaders read the vendored ASD ISM catalogue and profiles from here.
+# The pattern must stay in step with `recursive-include src/wattleflow/oscal/resources
+# *.json` in MANIFEST.in — two files, one fact.
+#
+# NOTE ON PEP 561: there is no `py.typed` marker in this distribution, so type
+# checkers treat `wattleflow.*` as untyped and silently degrade it to Any in
+# consumer code — the same state as (a) and (b), neither of which ships one. A
+# marker cannot simply be added at `src/wattleflow/py.typed`: that directory is a
+# PEP 420 namespace shared by all three distributions, so the file would collide
+# between wheels. Claiming typing here means one marker per owned package, plus
+# the matching entries below, and is a decision, not a one-line fix.
+[tool.setuptools.package-data]
+"wattleflow.oscal" = ["resources/**/*.json"]
+
+[tool.ruff]
+# 120, matching the core distribution (which has carried 120 all along). This
+# DIVERGES from CLAUDE.md 2.3, which states 100 and names this table as the
+# place it is set; wattleflow-workflow is still on 100. The registers change
+# through a decision record, not a quiet edit (D-03), so the divergence is a
+# finding until DR-PRC-003 records it.
+line-length = 120
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "B"]
+ignore = ["E203", "E731", "I001"]

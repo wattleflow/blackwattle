@@ -1,0 +1,699 @@
+{
+  "_about": [
+    "Criterion dictionary for tools/wem_lint.py — the controlled vocabulary of CODE",
+    "IDENTIFIERS the NFR lint measures src/wattleflow against, for the",
+    "`wattleflow-processors` distribution (NFRQ-ORG-01/02/03/04, NFRQ-SEC-03).",
+    "Written 2026-07-31 (analysis tools/2026-07-31-analysis-changes.md §2.1) by",
+    "translating tools/naming_registry.yaml — which the tool stopped reading in",
+    "v1.4.0/1.5.0 when the criterion moved to JSON, leaving this distribution with",
+    "no machine-readable criterion of its own. The YAML file stays on disk until",
+    "DR-PRC-001 retires it, but it is NO LONGER the source of truth. It replaces a",
+    "verbatim copy of the workflow criterion, which declared another distribution's",
+    "domains and tier and could only have measured this tree by accident.",
+    "JSON, not YAML: the lint is stdlib-only by design, and json is the only",
+    "structured format the standard library parses. Keys starting with an",
+    "underscore are prose and are dropped by the loader.",
+    "Presentation (report strings, finding catalogue) is NOT here: it lives in the",
+    "instrument's own tools/messages.json, shared by every distribution, versioned",
+    "apart from this criterion and outside the D-10 triple.",
+    "The registry describes the TARGET state, not the state of the tree: the tool",
+    "measures how far the source deviates from it. Every extension — a new domain,",
+    "subject, operation, acronym or TypeVar role — requires a DR record."
+  ],
+  "registry": "wattleflow-code-vocabulary",
+  "distribution": "wattleflow-processors",
+  "_criterion_version": [
+    "0.8.0 (2026-09-03) — `audit.info_exempt` gains `DriverLocalStorage`.",
+    "The rule reads a driver as a step inside somebody else's unit of work and",
+    "bars `self.info()` outright; it cannot tell a record that scales with the",
+    "INPUT (one per write) from one that scales with the RUN (one at load, one",
+    "tally at close). The driver now emits the second kind only: where it writes",
+    "and under what policy when it loads, and read/written/copied/bytes when the",
+    "workflow asks it to report. Per-operation records stay at DEBUG.",
+    "Cost: the exemption is by CLASS, so nothing stops a later `self.info()` in",
+    "a loop of this same class from passing unmeasured. Refining the rule to see",
+    "call context instead of class membership is the alternative, and it is the",
+    "question the DR has to settle.",
+    "Measured, not predicted: OBS-03 goes 3 -> 1 with this entry (the two new",
+    "driver records), and the remaining finding is the pre-existing one in",
+    "`WriteEmailCopyOLD`. No other rule moves, so vectors stay comparable with",
+    "0.7.0 for every rule except OBS-03.",
+    "AGREED with the maintainer 2026-09-03: instructed ('driver mora sam pisati",
+    "info'), then confirmed the same day. DR-PRC record not yet written — the",
+    "DR-PRC series has no index (declared gap, D-11).",
+    "0.7.0 (2026-08-29) — the content-digest step gets a name.",
+    "`subjects` gains `File`: a digest is taken over a FILE, and no registered",
+    "subject covers a source of unconstrained format. `qualifiers` gains `Digest`",
+    "— what the operation produces, the Text/Spans/Dictionary form.",
+    "No new VERB: `PipelineFileExtractDigest` reuses `Extract`, the same shape as",
+    "PipelinePDFExtractText and PipelineOCRExtractTika. The `operations` list is",
+    "declared closed, so extending it is the heavier change and is not needed.",
+    "The YAML name `PipelineFileDigest` is NOT adopted: it carries no Operation",
+    "and would fail criterion 1 whatever else were registered.",
+    "PENDING DR-PRC: agreed with the maintainer 2026-08-29, decision record not",
+    "yet written — the DR-PRC series has no index (declared gap, D-11).",
+    "ORG-02 vectors are NOT comparable with 0.6.0. Registering `File` re-diagnoses",
+    "PipelineFileDocumentDummyWrite: it now PARSES as subject `File`, so criterion 1",
+    "passes and the failure moves downstream — ERROR 'Operation Document not in the",
+    "closed verb vocabulary' plus two stray-qualifier WARNINGs (Dummy, Write).",
+    "Error count is unchanged (1); WARNING goes 2 -> 4. The name was already broken;",
+    "the criterion now says so more precisely. Measured, not predicted.",
+    "0.6.0 (2026-08-29) — mail domain collapsed to ONE subject.",
+    "`subjects` loses `Email` and `Message`: .eml and .msg are two serialisations",
+    "of one subject, not three subjects, and 0.4.0's package split (eml->email,",
+    "msg->message) has since been consolidated into the single `mail/` package.",
+    "`qualifiers` gains `EML` and `MSG` — the container format the reader acts on,",
+    "in the uppercase form `identifier_acronyms` already carries, so no new",
+    "acronym-casing finding appears while DR-WFL-004 stays open.",
+    "`package_subject` loses the dead `email` and `message` bindings.",
+    "PipelineEmailExtract -> PipelineMailExtractEML and PipelineMessageExtract ->",
+    "PipelineMailExtractMSG in the same pass; both classes were internal (no YAML,",
+    "example or notebook referenced them).",
+    "PENDING DR-PRC: agreed with the maintainer 2026-08-29, decision record not yet",
+    "written — the DR-PRC series has no index (declared gap, D-11).",
+    "ORG-02 vectors are NOT comparable with 0.5.2: two K14 errors are resolved.",
+    "0.5.2 (2026-08-24) — `exempt_packages` reduced to `nlp`; rss, xml and",
+    "quality removed. Declaration only: verdicts are unchanged, verified by",
+    "lifting each exemption separately (no finding appeared for the three), so",
+    "vectors stay comparable with 0.5.1. The list now agrees with `blind_spots`,",
+    "which names only the named-entity cluster.",
+    "0.5.1 (2026-08-24) — declaration only, no vocabulary and no verdict change.",
+    "`blind_spots` gains the ORG-01 fan-in limit: consumer count cannot see a",
+    "cross-cutting capability or a core contract, so a K4 finding is a question,",
+    "not an instruction to relocate. Recorded after `helpers/formatters` was",
+    "moved to strategies/ on a literal reading of K4 and moved back.",
+    "Decision records are cited as `DR` throughout; the older acronym is gone.",
+    "0.5.0 (2026-08-24) — two retirements, no new vocabulary.",
+    "`package_aliases` REMOVED: 0.4.0 renamed dframe/eml/msg/txt to their",
+    "canonical subject, so every entry was dead and would only have re-mapped a",
+    "future package that reused the abbreviation.",
+    "`type_vars.tolerated` emptied: the branded-name question it carried is",
+    "decided, so the tolerance has no subject left. `_pipeline_grammar` no",
+    "longer mentions package_aliases.",
+    "Neither retirement changes a verdict on the current tree: no module used an",
+    "alias and no type variable carried the retired name, so ORG-02/ORG-03",
+    "unchanged and vectors stay comparable with 0.4.0.",
+    "0.4.0 (2026-08-23) — pipeline grammar (NFRQ-ORG-02) worklist.",
+    "Packages renamed to their canonical subject, retiring the K18 aliases:",
+    "dframe->dataframe, eml->email, msg->message, txt->text (hard rename,",
+    "imports updated in the same pass; `package_aliases` kept, now inert).",
+    "`PipelineOCRExtractWithTika` renamed to `PipelineOCRExtractTika`: `With` is",
+    "a preposition, not a facet, and registering it would corrupt the vocabulary;",
+    "the tool-name qualifier follows the Spacy/Stanza/Flair/Deberta/Gliner form.",
+    "`qualifiers` gains Tika, Attachment, Spans, Text, Dictionary, and splits the",
+    "unreachable `StickyWords` into `Sticky` + `Words`.",
+    "STILL OPEN, deliberately untouched: `Entity` (see _qualifiers) and the",
+    "`convertors` grouping-package WARNING, which the criterion emits by design",
+    "pending its DR. Two K14 findings therefore remain and are not a regression.",
+    "ORG-02 vectors are NOT comparable with 0.3.0.",
+    "0.3.0 (2026-08-23) — `scope.core_libraries` gains the LLM/NLP backends",
+    "(anthropic, huggingface_hub, tqdm, transformers, spacy, stanza, flair,",
+    "gliner, torch), settling the item the 0.1.0 note left PENDING DR-PRC-001.",
+    "The decision is DR-PRC-001 (Accepted 2026-08-20), which places the model",
+    "access path in this distribution and records the masking test as witness;",
+    "the run of 2026-08-23 extends that witness to the whole tree (27/27 package",
+    "__init__ files import with every optional library masked).",
+    "NOT scope-only: SEC-03 loses 7 `foreign-import` findings and the ORG rules",
+    "now MEASURE the seven modules they used to skip, so SEC-03 and ORG vectors",
+    "are NOT comparable with 0.2.1. Compare from this version forward.",
+    "0.1.1 (2026-08-22) — `domains` gains `oscal` (DR-WFL-015, witness: tag",
+    "v0.0.20): the OSCAL package and the compliance decorators moved into this",
+    "distribution; leaving the package out of `domains` would report the tree as",
+    "clean while one package stayed unmeasured. Scope only, no rule semantics:",
+    "vectors stay comparable with 0.1.0.",
+    "0.1.0 (2026-07-31) — first criterion this distribution owns.",
+    "PENDING DR-PRC-001: this is a DRAFT criterion; its findings are conformant,",
+    "not descriptive (D-08). Vocabulary carried over from naming_registry.yaml is",
+    "unchanged; the DR only has to rule on the additions this file makes explicit,",
+    "listed here so the decision has a precise diff:",
+    "  + subjects `OCR` and `Mail` (with package_subject ocr:OCR, mail:Mail) — the",
+    "    ocr/ and mail/ packages had no declared subject at all, so every class in",
+    "    them failed criterion 1 for want of a vocabulary entry rather than on merit.",
+    "  + identifier_acronyms `OCR`, `JSON`, `SQL`, `XML`, `EML`, `MSG`, `YAML`, `OSCAL`.",
+    "  + domains `repositories`, `mappers`, `decorators` — present in the tree,",
+    "    absent from naming_registry.yaml (`mappers` arrived here per NFRQ-SEC-03).",
+    "  + `scope.core_libraries` — this distribution never declared its tier.",
+    "  ! the `entity/` package is deliberately left WITHOUT a subject: whether",
+    "    `Entity` joins the subject vocabulary (and whether Entities/EntityRecognition",
+    "    collapse to it, NFRQ-ORG-02 DRY note) is an open question the run surfaces",
+    "    as findings rather than a gap this file quietly fills."
+  ],
+  "criterion_version": "0.8.0",
+  "dictionary_version": "0.2.0",
+  "dictionary_source": "tools/naming_registry.yaml (retired by DR-PRC-001)",
+  "_python_reference": "Defines the 'stdlib' set for ORG-01; must track requires-python in pyproject.toml.",
+  "python_reference": "3.11",
+  "_acronym_identifier_casing": [
+    "Enforcement level of the acronym-casing criterion — a registry fact under DR",
+    "governance rather than a constant in the tool: `adopted` makes the check an",
+    "ERROR, any other status falls back to the severity declared for the",
+    "`acronym_case` rule below. DR-WFL-004 (PDF vs Pdf) is open, so it warns."
+  ],
+  "acronym_identifier_casing": {
+    "status": "undecided",
+    "decision_pending": "DR-WFL-004",
+    "note": "the lint warns (WARNING, waiver declared) instead of failing the build until the decision is taken"
+  },
+  "_blind_spots": [
+    "Declared unmeasured territory. Reported as INFO on every run so the vector can",
+    "never read as full coverage."
+  ],
+  "blind_spots": [
+    "imports inside the shared namespace are not modelled as edges, so cycles and layering within helpers/ are unmeasured (helpers->domain acyclicity and helper fan-in ARE measured)",
+    "the helpers/ tree of this distribution merges with the workflow one at runtime (PEP 420); the lint sees only the modules under this --src, so a fan-in count here is a lower bound over the merged namespace",
+    "ORG-01 criterion 1 counts consumer domains, which is not evidence of where a module belongs: a cross-cutting CAPABILITY (NFRQ-ORG-04, CLAUDE.md 2.6) and a module implementing a core contract keep their home in helpers/ whatever the current fan-in says. Serialisation is the standing example — a Formatter is an IFormatter specialisation (core) callable from a pipeline transformation just as much as from a write strategy, so `helpers.formatters` reading as single-consumer is a snapshot of today's callers, not a misplacement. A K4 finding is a question about the module, never an instruction to relocate it.",
+    "ORG-01 measures the import graph, never the runtime one: dynamic edges (WorkflowFactory registry, YAML-declared types) are invisible to the AST",
+    "the pipelines/nlp package is exempt from the name grammar (the 44% named-entity cluster, NFRQ-ORG-02 Appendix A §1) — its names are unmeasured by construction",
+    "third-party dependencies are declared here as a tier, but this distribution ships no SBOM or hash-pinned lock yet (NFRQ-SEC-03 criterion 4), so tier membership is a claim, not an attestation",
+    "a strategic adversary is beyond the reach of the lint",
+    "NFRQ-OBS-01 criteria 4 and 5 (WARNING is never a failure; CRITICAL means the component cannot continue) need the semantics of the branch and are not machine-decidable — reviewed, not measured",
+    "NFRQ-OBS-02 criterion 2 (entry and exit of one operation share `msg` and differ only in `step`) is reviewed: pairing two calls as one operation is not decidable from the AST alone",
+    "NFRQ-OBS-03 criterion 2 measures records per unit of work at RUNTIME; the static lint cannot see it, so the [M] value is absent from this vector, not zero"
+  ],
+  "_rules": [
+    "The rule table as the NFR registry declares it: id, requirement, check,",
+    "severity and waiver policy. The tool resolves severity from here (POLICY §9).",
+    "`clean_core_imports` is WARNING in this distribution, not ERROR:",
+    "wattleflow-processors is the NON-core tier — third-party is legitimate here,",
+    "so the check measures departure from the DECLARED tier and feeds a migration",
+    "worklist (the ORG-01 tolerance policy) rather than blocking a build."
+  ],
+  "rules": [
+    {
+      "id": "PRC-01a",
+      "nfr": "NFRQ-SEC-03",
+      "check": "clean_core_imports",
+      "severity": "warning",
+      "waiver": "declared"
+    },
+    {
+      "id": "PRC-01b",
+      "nfr": "NFRQ-ORG-01",
+      "check": "domain_acyclicity",
+      "severity": "error",
+      "waiver": "dr_required"
+    },
+    {
+      "id": "PRC-01c",
+      "nfr": "NFRQ-ORG-01",
+      "check": "helper_fan_in",
+      "severity": "warning",
+      "waiver": "declared"
+    },
+    {
+      "id": "PRC-02a",
+      "nfr": "NFRQ-ORG-02",
+      "check": "base_family_membership",
+      "severity": "error",
+      "waiver": "dr_required"
+    },
+    {
+      "id": "PRC-02b",
+      "nfr": "NFRQ-ORG-02",
+      "check": "prohibited_standalone",
+      "severity": "error",
+      "waiver": "forbidden"
+    },
+    {
+      "id": "PRC-02c",
+      "nfr": "NFRQ-ORG-02",
+      "check": "acronym_case",
+      "severity": "warning",
+      "waiver": "declared"
+    },
+    {
+      "id": "PRC-03a",
+      "nfr": "NFRQ-ORG-03",
+      "check": "typevar_role_vocabulary",
+      "severity": "warning",
+      "waiver": "declared"
+    },
+    {
+      "id": "PRC-SEC-03a",
+      "nfr": "NFRQ-SEC-03",
+      "check": "distribution_manifest",
+      "severity": "warning",
+      "waiver": "dr_required"
+    },
+    {
+      "id": "PRC-07a",
+      "nfr": "NFRQ-ORG-07",
+      "check": "preset_allowed_declaration",
+      "severity": "error",
+      "waiver": "dr_required"
+    },
+    {
+      "id": "PRC-OBS-01a",
+      "nfr": "NFRQ-OBS-01",
+      "check": "audit_level_vs_propagation",
+      "severity": "warning",
+      "waiver": "declared"
+    },
+    {
+      "id": "PRC-OBS-01b",
+      "nfr": "NFRQ-OBS-01",
+      "check": "audit_failure_trace",
+      "severity": "warning",
+      "waiver": "declared"
+    },
+    {
+      "id": "PRC-OBS-02a",
+      "nfr": "NFRQ-OBS-02",
+      "check": "audit_event_vocabulary",
+      "severity": "warning",
+      "waiver": "declared"
+    },
+    {
+      "id": "PRC-OBS-03a",
+      "nfr": "NFRQ-OBS-03",
+      "check": "audit_info_placement",
+      "severity": "warning",
+      "waiver": "declared"
+    }
+  ],
+  "_domains": [
+    "NFRQ-ORG-01 — top-level functional packages under src/wattleflow owned by this",
+    "distribution. `helpers` is the shared namespace, NOT a domain: it must not",
+    "appear here, or intra-helper imports get misreported as acyclicity breaks.",
+    "`enums` is likewise absent (2026-08-22, DR-WFL-016): like `constants` in the",
+    "clean core it imports nothing intra-project, so it is foundation material every",
+    "layer — helpers included — may depend on. Declaring it a domain turned three",
+    "helper->enums imports into ORG-01 leaf errors."
+  ],
+  "domains": [
+    "blackboards",
+    "connections",
+    "decorators",
+    "documents",
+    "drivers",
+    "mappers",
+    "oscal",
+    "pipelines",
+    "processors",
+    "repositories",
+    "strategies"
+  ],
+  "shared_namespace": "helpers",
+  "_report_language": "Default report language; --lang overrides it per run. Presentation, not criterion (D-13).",
+  "report_language": "en",
+  "_scope": [
+    "Distribution tier. wattleflow-processors is the NON-core distribution: it is",
+    "the home of third-party-bound modules (NFRQ-SEC-03) — but 'non-core' is not",
+    "'anything goes'. `core_libraries` declares the tier this distribution INTENDS",
+    "to carry; a module importing outside it is reported (K9) and skipped by the",
+    "ORG rules.",
+    "The LLM/NLP backends (anthropic, huggingface_hub, tqdm, transformers, spacy,",
+    "stanza, flair, gliner, torch) ARE in the tier: DR-PRC-001 placed the model",
+    "access path in this distribution and carries the masking test as its witness",
+    "(huggingface_hub, transformers, tqdm masked -> the modules still import).",
+    "The tier is what this distribution imports, so declaring them is describing",
+    "it; leaving them out ALSO cost coverage, because the ORG rules skip every",
+    "module reported as foreign — seven modules read as clean while unmeasured.",
+    "Membership stays a claim, not an attestation, until the distribution ships",
+    "an SBOM and a hash-pinned lock (NFRQ-SEC-03 criterion 4) — a declared blind",
+    "spot, not a gap this list closes.",
+    "`guarded_optional` is the only waiver, and the test is masking (mask the",
+    "package — the module must still import and work), never code review."
+  ],
+  "scope": {
+    "core_libraries": [
+      "typing_extensions",
+      "cryptography",
+      "yaml",
+      "jsonschema",
+      "requests",
+      "requests_kerberos",
+      "requests_ntlm",
+      "pandas",
+      "numpy",
+      "pyarrow",
+      "fastavro",
+      "rdflib",
+      "fitz",
+      "pypdf",
+      "pdfminer",
+      "PIL",
+      "pytesseract",
+      "tika",
+      "docx",
+      "extract_msg",
+      "sqlalchemy",
+      "psycopg2",
+      "elasticsearch",
+      "opensearchpy",
+      "pysolr",
+      "kafka",
+      "pyspark",
+      "paramiko",
+      "boto3",
+      "azure",
+      "google",
+      "hvac",
+      "websockets",
+      "wordfreq",
+      "youtube_transcript_api",
+      "yt_dlp",
+      "anthropic",
+      "huggingface_hub",
+      "tqdm",
+      "transformers",
+      "spacy",
+      "stanza",
+      "flair",
+      "gliner",
+      "torch"
+    ],
+    "exclude_paths": [],
+    "guarded_optional": []
+  },
+  "_distribution_manifest": [
+    "NFRQ-SEC-03 criteria 2/3 — the packaging manifest of this distribution, read by",
+    "the `distribution_manifest` check (stdlib tomllib). `pyproject` is relative to",
+    "the repository root (the parent of tools/)."
+  ],
+  "distribution_manifest": {
+    "pyproject": "pyproject.toml"
+  },
+  "_bases": [
+    "NFRQ-ORG-02 — inheritance roots. A class belongs to a family if it inherits one",
+    "of that family's bases; pipeline detection reads `bases.pipeline`."
+  ],
+  "bases": {
+    "root": [
+      "IWattleflow"
+    ],
+    "blackboard": [
+      "IBlackboard",
+      "GenericBlackboard"
+    ],
+    "connection": [
+      "ConnectionObserverInterface",
+      "GenericConnection"
+    ],
+    "document": [
+      "IAdaptee",
+      "IAdapter",
+      "ITarget",
+      "Document",
+      "DocumentAdapter",
+      "DocumentFacade",
+      "FileDocument"
+    ],
+    "driver": [
+      "IDriver",
+      "GenericDriver",
+      "LazyDriverProxy"
+    ],
+    "processor": [
+      "IProcessor",
+      "GenericProcessor"
+    ],
+    "pipeline": [
+      "IPipeline",
+      "GenericPipeline"
+    ],
+    "repository": [
+      "IRepository",
+      "GenericRepository",
+      "RepositoryWithDriver"
+    ],
+    "strategy": [
+      "IStrategy",
+      "Strategy",
+      "StrategyGenerate",
+      "StrategyCreate",
+      "StrategyRead",
+      "StrategyWrite"
+    ],
+    "memento": [
+      "IMemento",
+      "GenericMemento"
+    ],
+    "exception": [
+      "AuditException"
+    ]
+  },
+  "_capabilities": [
+    "NFRQ-ORG-04 — recognised cross-cutting capabilities: callable helpers named by",
+    "capability, never specialisations of a domain primitive. First holders:",
+    "helpers/routing.py, helpers/files.py (DR-WFL-001)."
+  ],
+  "capabilities": [
+    "routing"
+  ],
+  "_pipeline_grammar": [
+    "NFRQ-ORG-02 — `Pipeline + <Subject> + <Operation | ToTarget> + [Qualifier]`.",
+    "package_subject binds the leading facet to the owning package (criterion 5);",
+    "grouping_packages relax criterion 5 where one package holds several",
+    "subjects; exempt_packages are deferred by DR and skipped entirely."
+  ],
+  "package_subject": {
+    "pdf": "PDF",
+    "png": "PNG",
+    "dataframe": "DataFrame",
+    "text": "Text",
+    "ocr": "OCR",
+    "mail": "Mail"
+  },
+  "grouping_packages": [
+    "cad",
+    "convertors"
+  ],
+  "exempt_packages": [
+    "nlp"
+  ],
+  "subjects": [
+    "PDF",
+    "PNG",
+    "CSV",
+    "DataFrame",
+    "Text",
+    "Mail",
+    "Markdown",
+    "OCR",
+    "Step",
+    "Dummy",
+    "File"
+  ],
+  "operations": [
+    "Extract",
+    "Redact",
+    "Clean",
+    "Repair",
+    "Translate",
+    "Write"
+  ],
+  "targets": [
+    "Sheets",
+    "Views",
+    "Word"
+  ],
+  "qualifiers": [
+    "Macro",
+    "Sticky",
+    "Words",
+    "Spacy",
+    "Stanza",
+    "Flair",
+    "Deberta",
+    "Gliner",
+    "Tika",
+    "Attachment",
+    "Spans",
+    "Text",
+    "Dictionary",
+    "En",
+    "Hr",
+    "EML",
+    "MSG",
+    "Digest"
+  ],
+  "_synonyms": "Operation synonyms collapsed to the canonical verb (NFRQ-ORG-02, DRY).",
+  "synonyms": {
+    "Redaction": "Redact",
+    "Cleanup": "Clean",
+    "Correction": "Clean",
+    "Fix": "Repair"
+  },
+  "_identifier_acronyms": "Acronym TOKENS as they appear in code identifiers — distinct from the discourse `acronyms` table of documentation/dictionary.yaml.",
+  "identifier_acronyms": [
+    "PDF",
+    "PNG",
+    "CSV",
+    "HTML",
+    "RDF",
+    "CAD",
+    "URI",
+    "S3",
+    "NER",
+    "OCR",
+    "JSON",
+    "SQL",
+    "XML",
+    "EML",
+    "MSG",
+    "YAML",
+    "OSCAL"
+  ],
+  "_prohibited_standalone": [
+    "Bare generic role nouns prohibited as STANDALONE class names (NFRQ-ORG-02",
+    "criterion 6; NFRQ-ORG-04 criterion 3 delegates its capability role-nouns here).",
+    "The same noun is legal as a qualified facet — `DriverS3UriParser`, not `Parser`."
+  ],
+  "prohibited_standalone": [
+    "Manager",
+    "Helper",
+    "Utility",
+    "Parser",
+    "Piece",
+    "Sheet",
+    "Placement",
+    "Router",
+    "Resolver",
+    "Generator",
+    "Scanner"
+  ],
+  "_type_vars": [
+    "NFRQ-ORG-03 — a TypeVar names the SEMANTIC ROLE the type plays in the generic",
+    "contract, not the mechanism. Acronym casing is checked against",
+    "`identifier_acronyms`. `tolerated` holds branded names awaiting a DR decision",
+    "(WARNING, not ERROR, until decided — the ORG-01 tolerance policy); it is",
+    "empty, so no branded name is currently carried."
+  ],
+  "type_vars": {
+    "roles": [
+      "Key",
+      "Value",
+      "Message",
+      "Destination",
+      "Context",
+      "Result",
+      "State",
+      "Action",
+      "Vertex",
+      "Edge",
+      "Input",
+      "Output",
+      "Element",
+      "Adaptee",
+      "Connection"
+    ],
+    "synonyms": {
+      "Yielded": "Output",
+      "Sent": "Input",
+      "Return": "Result",
+      "Returned": "Result",
+      "Elem": "Element"
+    },
+    "tolerated": []
+  },
+  "_preset_allowed": [
+    "NFRQ-ORG-07 — Preset Whitelist Declaration. A class whose optional runtime",
+    "configuration is carried by PresetDecorator declares the permitted keys in a",
+    "class attribute named exactly `ALLOWED`.",
+    "Why a rule and not a preference: PresetDecorator resolves the whitelist from",
+    "the CLASS (`type(parent).ALLOWED`). A declaration under any other name, or at",
+    "module scope, is invisible to that resolution — the whitelist reads as empty",
+    "and every configuration key the caller passes is dropped WITHOUT ERROR. The",
+    "failure is silent by construction, which is why the severity is `error`.",
+    "This distribution held 26 of the 27 non-conforming declarations found on",
+    "2026-08-01 (4 spellings); they were consolidated in the same change."
+  ],
+  "preset_allowed": {
+    "declaration": "ALLOWED",
+    "scope": "class",
+    "resolved_by": "wattleflow.decorators.preset.PresetDecorator",
+    "synonyms": [
+      "__allowed__",
+      "__ALLOWED__",
+      "ALLOWED_KWARGS",
+      "allowed"
+    ],
+    "forwarding": "prohibited"
+  },
+  "_audit": "NFRQ-OBS-01/02/03 criterion data: which call is an audit call, which levels escalate, which Event members are phases, and which classes are steps inside a unit of work (and therefore emit no INFO). Editing this block edits the criterion -> DR (D-03).",
+  "audit": {
+    "levels": [
+      "debug",
+      "info",
+      "warning",
+      "error",
+      "critical",
+      "exception",
+      "fatal"
+    ],
+    "escalated": [
+      "error",
+      "critical",
+      "exception"
+    ],
+    "trace": "debug",
+    "event_enum": "Event",
+    "phase_steps": [
+      "Started",
+      "Starting",
+      "Validating",
+      "Configuring",
+      "Check",
+      "Completing",
+      "Completed",
+      "Failed"
+    ],
+    "step_class_bases": [
+      "StrategyCreate",
+      "StrategyRead",
+      "StrategyWrite",
+      "StrategyGenerate",
+      "BaseWriteStrategy",
+      "GenericDriver",
+      "GenericConnection"
+    ],
+    "step_class_prefixes": [
+      "Strategy",
+      "Driver",
+      "Connection"
+    ],
+    "info_exempt": [
+      "DriverLocalStorage",
+      "StrategyCopyHuggingfaceModels"
+    ],
+    "fields": {
+      "msg": "the operation/event — always Event.<Member>.name",
+      "step": "phase of that operation within time",
+      "scope": "which part of the same operation",
+      "component": "subsystem or external participant the operation uses",
+      "target": "the kind of object the operation acts on",
+      "reason": "why the outcome is what it is — a human sentence",
+      "error": "the exception text"
+    },
+    "import_guard": [
+      "ImportError",
+      "ModuleNotFoundError"
+    ]
+  },
+  "_qualifiers": [
+    "Qualifier facet of NFRQ-ORG-02, matched one CamelCase segment at a time — a",
+    "multi-word entry is unreachable by construction.",
+    "Backend/tool names: Spacy, Stanza, Flair, Deberta, Gliner, Tika.",
+    "What the operation acts on or produces: Attachment, Spans, Text, Dictionary,",
+    "Macro, Sticky, Words, Digest. Container format read: EML, MSG.",
+    "Language: En, Hr.",
+    "`Text` is also a Subject; position decides the facet, so the token is",
+    "legitimately in both lists.",
+    "NOT registered on purpose: `Entity` — the 0.1.0 note keeps it an open",
+    "question (whether Entity joins the SUBJECT vocabulary and whether",
+    "Entities/EntityRecognition collapse into it), and registering it here as a",
+    "qualifier would close that question sideways."
+  ],
+  "_exempt_packages": [
+    "Packages the pipeline grammar skips entirely (NFRQ-ORG-02 Appendix A). An",
+    "exemption is a debt: it must protect something, and it must be visible (K17,",
+    "D-11). Measured 2026-08-24 by lifting each one in turn — only `nlp` is",
+    "load-bearing (13 names become ERROR without it, the named-entity cluster).",
+    "`rss` and `xml` hold no module but __init__.py, and `quality` holds no",
+    "Pipeline class at all, so their exemptions protected nothing and merely made",
+    "the list disagree with the blind spot, which names `nlp` alone.",
+    "Do not pre-emptively exempt a package: declare the exemption when a name",
+    "actually needs it, through a DR."
+  ]
+}

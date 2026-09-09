@@ -1,0 +1,680 @@
+# Module name: tools/.wem_lint
+# Author: (wattleflow@outlook.com)
+# Copyright: © 2022–2026 WattleFlow. All rights reserved.
+# License: Apache 2 Licence
+
+"""wem_lint — static enforcement of the Wattleflow NFR registry.
+
+Implements the machine-verifiable acceptance criteria of:
+  * NFRQ-ORG-01 — Dependency Locality of Support Classes (import-graph checks)
+  * NFRQ-ORG-02 — Class Nomenclature (name-grammar checks)
+  * NFRQ-ORG-03 — TypeVar Nomenclature (generic-parameter role names)
+
+The checks are purely AST/import-graph based — no target module is imported, so
+the lint runs without any third-party (OCR, pandas, …) dependency installed. It
+is runnable on demand now and, once a CI pipeline exists, as a quality gate.
+
+The tool dogfoods the framework's own design-pattern interfaces (wattleflow.core):
+  * Iterator/Aggregate (ISyncAggregate, IIterator) — SourceTree walks the .py tree
+  * Builder (IBuilder)                             — ImportGraphBuilder (ORG-01)
+  * Strategy/Context (IStrategy, IStrategyContext) — one rule per NFR, run by WemLint
+
+Usage:
+    python tools/wem_lint.py [--src SRC] [--registry FILE] [--quiet]
+    # from code: raise SystemExit(Application(argv).run())
+
+Exit code is non-zero if any ERROR-level violation is found.
+"""
+
+from __future__ import annotations
+import argparse
+import ast
+import logging
+import re
+import sys
+from collections import defaultdict
+from pathlib import Path
+from typing import Iterator
+
+try:
+    import yaml
+except ImportError:  # pragma: no cover
+    sys.exit("wem_lint requires PyYAML — install with: pip install pyyaml")
+
+try:
+    from wattleflow.core import (
+        IBuilder,
+        IFactory,
+        IIterator,
+        IStrategy,
+        IStrategyContext,
+        ISyncAggregate,
+        IWattleflow,
+    )
+except ImportError as e:  # pragma: no cover
+    sys.exit(f"wem_lint requires the 'wattleflow' core package (import failed: {e})")
+
+# CamelCase tokeniser that keeps acronyms whole: "PDFExtractText" -> [PDF, Extract, Text]
+_CAMEL = re.compile(r"[A-Z]+(?![a-z])|[A-Z][a-z]+|[A-Z]|\d+")
+
+# Severity is a stdlib logging level (int); the report renders its level name.
+ERROR, WARNING, INFO = logging.ERROR, logging.WARNING, logging.INFO
+
+
+# --------------------------------------------------------------------------- #
+# region Findings                                                             #
+# --------------------------------------------------------------------------- #
+class Finding:
+    __slots__ = ("nfr", "severity", "path", "line", "name", "message")
+
+    def __init__(self, nfr, severity, path, line, name, message):
+        self.nfr = nfr
+        self.severity = severity
+        self.path = path
+        self.line = line
+        self.name = name
+        self.message = message
+
+    def render(self, root: Path) -> str:
+        try:
+            rel = self.path.relative_to(root)
+        except ValueError:
+            rel = self.path
+        level = logging.getLevelName(self.severity)
+        return f"  [{level:<7}] {rel}:{self.line}  {self.name}\n           {self.message}"
+
+
+# --------------------------------------------------------------------------- #
+# region Naming — name & layout primitives                                    #
+# --------------------------------------------------------------------------- #
+class Naming:
+    """Stateless primitives for analysing class names and module layout.
+
+    A bare `Helper`/`Utility` name is intentionally avoided: NFRQ-ORG-02 — the very
+    rule this tool enforces — prohibits standalone generic role nouns.
+    """
+
+    @staticmethod
+    def tokenize(name: str) -> list[str]:
+        return _CAMEL.findall(name)
+
+    @staticmethod
+    def casefold_lookup(token: str, vocab) -> str | None:
+        cf = token.casefold()
+        for v in vocab:
+            if v.casefold() == cf:
+                return v
+        return None
+
+    @staticmethod
+    def file_domain(path: Path, src: Path, domains: set[str], shared: str) -> str | None:
+        # First path component under src/wattleflow → domain (or the shared namespace).
+        try:
+            parts = path.relative_to(src).parts
+        except ValueError:
+            return None
+        if not parts:
+            return None
+        top = parts[0]
+        if top in domains or top == shared:
+            return top
+        return None
+
+    @staticmethod
+    def class_subpackage(path: Path, src: Path, domain: str) -> str | None:
+        # Component immediately after the domain, if the class lives in a sub-package.
+        parts = path.relative_to(src).parts
+        if len(parts) >= 3 and parts[0] == domain:
+            return parts[1]
+        return None  # class sits directly in the domain package
+
+
+# --------------------------------------------------------------------------- #
+# region Source tree — Iterator / Aggregate (ISyncAggregate, IIterator)       #
+# --------------------------------------------------------------------------- #
+class PyFileIterator(IIterator[Path]):
+    """Yields every non-cache .py file under a root, in stable order."""
+
+    def __init__(self, root: Path):
+        super().__init__()
+        self._root = root
+
+    def create_iterator(self) -> Iterator[Path]:
+        for path in sorted(self._root.rglob("*.py")):
+            if "__pycache__" not in path.parts:
+                yield path
+
+
+class SourceTree(ISyncAggregate[Path]):
+    """Aggregate over the source tree; hands out fresh file iterators."""
+
+    def __init__(self, root: Path):
+        super().__init__()
+        self._root = root
+
+    def create_iterator(self) -> PyFileIterator:
+        return PyFileIterator(self._root)
+
+
+# --------------------------------------------------------------------------- #
+# region NFRQ-ORG-02 — Class Nomenclature                                      #
+# --------------------------------------------------------------------------- #
+class NomenclatureRule(IStrategy):
+    """NFRQ-ORG-02 — class-name grammar over the pipelines domain."""
+
+    def execute(self, caller: IWattleflow, *, src, reg, source, **kwargs) -> list[Finding]:
+        findings: list[Finding] = []
+        for path in source.create_iterator():
+            self._check_file(path, src, reg, findings)
+        return findings
+
+    def _check_file(self, path, src, reg, findings):
+        domain = Naming.file_domain(path, src, set(reg["domains"]), reg["shared_namespace"])
+        if domain != "pipelines":
+            return
+
+        def add(sev, line, nm, msg):
+            findings.append(Finding("ORG-02", sev, path, line, nm, msg))
+
+        try:
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+        except SyntaxError as e:
+            add(ERROR, e.lineno or 0, path.name, f"syntax error: {e}")
+            return
+
+        bases = set(reg["pipeline_bases"])
+        subpkg = Naming.class_subpackage(path, src, "pipelines")
+        canon_pkg = reg.get("package_aliases", {}).get(subpkg, subpkg)
+
+        for node in tree.body:
+            if not isinstance(node, ast.ClassDef):
+                continue
+            is_pipeline = bool({b.id for b in node.bases if isinstance(b, ast.Name)} & bases)
+            has_prefix = node.name.startswith("Pipeline")
+
+            if has_prefix and not is_pipeline:
+                add(
+                    ERROR,
+                    node.lineno,
+                    node.name,
+                    "`Pipeline` prefix on a non-pipeline class (criterion 2)",
+                )
+            if not is_pipeline:
+                if node.name in reg.get("prohibited_standalone", []):
+                    add(
+                        ERROR,
+                        node.lineno,
+                        node.name,
+                        "standalone generic role noun — must be domain-qualified (criterion 6)",
+                    )
+                continue
+            if not has_prefix:
+                add(
+                    ERROR,
+                    node.lineno,
+                    node.name,
+                    "pipeline class must carry the `Pipeline` prefix (criterion 2)",
+                )
+                continue
+            if canon_pkg in reg.get("exempt_packages", []):
+                add(
+                    INFO,
+                    node.lineno,
+                    node.name,
+                    f"package '{subpkg}' is exempt (deferred via ADR) — grammar not enforced",
+                )
+                continue
+            if subpkg in reg.get("package_aliases", {}):
+                add(
+                    WARNING,
+                    node.lineno,
+                    node.name,
+                    f"package '{subpkg}' should be renamed to canonical '{canon_pkg}' (decision 2)",
+                )
+
+            self._check_grammar(node, path, reg, canon_pkg, findings)
+
+    def _check_grammar(self, node, path, reg, canon_pkg, findings):
+        name = node.name
+        segs = Naming.tokenize(name[len("Pipeline") :])
+        subjects, operations = reg["subjects"], reg["operations"]
+        targets, qualifiers = reg["targets"], reg["qualifiers"]
+        acronyms, synonyms = reg["acronyms"], reg.get("synonyms", {})
+
+        def add(sev, msg):
+            findings.append(Finding("ORG-02", sev, path, node.lineno, name, msg))
+
+        # 1) Subject — longest leading run of segments that joins to a known subject.
+        subject, used = None, 0
+        for i in range(len(segs), 0, -1):
+            if "".join(segs[:i]) in subjects:
+                subject, used = "".join(segs[:i]), i
+                break
+        if subject is None:
+            cf = Naming.casefold_lookup(segs[0], subjects) if segs else None
+            if cf:
+                add(
+                    ERROR,
+                    f"subject '{segs[0]}' has wrong casing — expected '{cf}' (PEP 8, criterion 4)",
+                )
+                subject, used = cf, 1
+            else:
+                trailing = next((s for s in segs if Naming.casefold_lookup(s, subjects)), None)
+                hint = f"; subject '{trailing}' appears trailing — lead with it" if trailing else ""
+                add(ERROR, f"no registered Subject at the front (criterion 1){hint}")
+                return
+
+        # 5) Subject must equal the owning package's canonical subject.
+        expected = reg.get("package_subject", {}).get(canon_pkg)
+        if expected is not None and subject.casefold() != expected.casefold():
+            add(ERROR, f"Subject '{subject}' != package subject '{expected}' (criterion 5)")
+        elif expected is None and canon_pkg in reg.get("grouping_packages", []):
+            add(
+                WARNING,
+                f"package '{canon_pkg}' groups several subjects — "
+                "subject/package relaxed (pending ADR)",
+            )
+
+        # 2) Operation or To<Target>.
+        tail = segs[used:]
+        if not tail:
+            add(ERROR, "missing Operation or To<Target> (criterion 1)")
+            return
+        if tail[0] == "To":
+            target = tail[1] if len(tail) > 1 else ""
+            if target not in targets:
+                add(ERROR, f"unknown converter Target 'To{target}' (criterion 3)")
+            tail = tail[2:]
+        elif tail[0] in operations:
+            tail = tail[1:]
+        else:
+            canon = synonyms.get(tail[0])
+            if canon:
+                add(ERROR, f"Operation '{tail[0]}' is a synonym — use '{canon}' (criterion 3, DRY)")
+            else:
+                add(ERROR, f"Operation '{tail[0]}' not in the closed verb vocabulary (criterion 3)")
+            tail = tail[1:]
+
+        # 3) Remaining segments must be registered qualifiers.
+        for q in tail:
+            if q in qualifiers:
+                continue
+            cf = Naming.casefold_lookup(q, acronyms)
+            if cf and cf != q:
+                add(ERROR, f"acronym '{q}' wrong casing — expected '{cf}' (criterion 4)")
+            else:
+                add(WARNING, f"qualifier '{q}' not registered (extend via ADR, criterion 3)")
+
+
+# --------------------------------------------------------------------------- #
+# region NFRQ-ORG-01 — Dependency Locality                                     #
+# --------------------------------------------------------------------------- #
+class ImportGraphBuilder(IBuilder):
+    """Builds the shared-helper fan-in graph and collects acyclicity violations."""
+
+    def __init__(self, src, reg):
+        super().__init__()
+        self._src = src
+        self._reg = reg
+        self._domains = set(reg["domains"])
+        self._shared = reg["shared_namespace"]
+        self._fanin: dict[str, set[str]] = defaultdict(set)  # helper module -> {domains}
+        self.findings: list[Finding] = []
+
+    def add(self, path: Path) -> None:
+        dom = Naming.file_domain(path, self._src, self._domains, self._shared)
+        if dom is None:
+            return
+        try:
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+        except SyntaxError:
+            return
+        for node in ast.walk(tree):
+            if isinstance(node, ast.ImportFrom) and node.module:
+                self._record_edge(node.module, dom, path, node.lineno)
+            elif isinstance(node, ast.Import):
+                for alias in node.names:
+                    self._record_edge(alias.name, dom, path, node.lineno)
+
+    def build(self) -> dict[str, set[str]]:
+        return self._fanin
+
+    def _record_edge(self, module, dom, path, line) -> None:
+        parts = module.split(".")
+        if len(parts) < 2 or parts[0] != "wattleflow":
+            return
+        target = parts[1]
+        if target == self._shared and len(parts) >= 3 and dom != self._shared:
+            self._fanin[parts[2]].add(dom)  # domain importing a shared helper → fan-in
+        elif target in self._domains and dom == self._shared:
+            self.findings.append(
+                Finding(
+                    "ORG-01",
+                    ERROR,
+                    path,
+                    line,
+                    f"helpers→{target}",
+                    f"shared helper imports domain '{module}' — breaks acyclicity (criterion 3)",
+                )
+            )
+
+
+class DependencyLocalityRule(IStrategy):
+    """NFRQ-ORG-01 — shared helpers must be acyclic and broadly used (fan-in ≥ 2)."""
+
+    def execute(self, caller: IWattleflow, *, src, reg, source, **kwargs) -> list[Finding]:
+        shared = reg["shared_namespace"]
+        builder = ImportGraphBuilder(src, reg)
+        for path in source.create_iterator():
+            builder.add(path)
+        fanin = builder.build()
+
+        findings = list(builder.findings)
+        # Criterion 1: every shared helper module has fan-in >= 2 distinct domains.
+        for helper, doms in sorted(fanin.items()):
+            consumers = doms - {shared}
+            if len(consumers) >= 2:
+                continue
+            who = ", ".join(sorted(consumers)) or "none"
+            findings.append(
+                Finding(
+                    "ORG-01",
+                    WARNING,
+                    src / shared / f"{helper}.py",
+                    0,
+                    f"helpers.{helper}",
+                    f"shared helper used by {len(consumers)} domain(s) [{who}] — criterion 1 "
+                    "wants >=2 (tolerated; relocate or keep domain-local)",
+                )
+            )
+        return findings
+
+
+# --------------------------------------------------------------------------- #
+# region NFRQ-ORG-03 — TypeVar Nomenclature                                    #
+# --------------------------------------------------------------------------- #
+class TypeVarRule(IStrategy):
+    """NFRQ-ORG-03 — a TypeVar name must name a semantic role, not a mechanism."""
+
+    def execute(self, caller: IWattleflow, *, src, reg, source, **kwargs) -> list[Finding]:
+        cfg = reg.get("type_vars", {})
+        roles = set(cfg.get("roles", []))
+        synonyms = cfg.get("synonyms", {})
+        tolerated = set(cfg.get("tolerated", []))
+        acronyms = reg.get("acronyms", [])
+        findings: list[Finding] = []
+        for path in source.create_iterator():
+            self._check_file(path, roles, synonyms, tolerated, acronyms, findings)
+        return findings
+
+    def _check_file(self, path, roles, synonyms, tolerated, acronyms, findings):
+        try:
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+        except SyntaxError:
+            return
+
+        def add(sev, line, name, msg):
+            findings.append(Finding("ORG-03", sev, path, line, name, msg))
+
+        single_letters: set[str] = set()
+        for node in ast.walk(tree):
+            tv = self._typevar_assign(node)
+            if tv is None:
+                continue
+            name, call = tv
+            self._check_name(name, call, roles, synonyms, tolerated, acronyms, node.lineno, add)
+            if len(name) == 1 and name.isalpha() and not self._is_constrained(call):
+                single_letters.add(name)
+
+        self._check_generic_arity(tree, single_letters, add)
+
+    def _check_name(self, name, call, roles, synonyms, tolerated, acronyms, line, add):
+        # 5) variance must not be encoded in the name — use covariant=/contravariant=.
+        if name.endswith(("_co", "_contra")):
+            add(
+                ERROR,
+                line,
+                name,
+                "variance encoded in name — declare it via TypeVar() args (criterion 5)",
+            )
+            return
+        # branded name pending a DR decision (rename to canonical role vs keep) → WARN.
+        if name in tolerated:
+            add(
+                WARNING,
+                line,
+                name,
+                "branded TypeVar — ADR must decide rename to canonical role vs keep (criterion 1)",
+            )
+            return
+        # 2/3) bare single-letter is allowed ONLY for one unconstrained parameter.
+        if len(name) == 1 and name.isalpha():
+            if self._is_constrained(call):
+                add(
+                    ERROR,
+                    line,
+                    name,
+                    "single-letter name on a bounded/constrained TypeVar carries a role — "
+                    "name it from the role vocabulary (criterion 3)",
+                )
+            return
+        # 2) mechanism suffix carries zero discriminating information.
+        suffix = self._mechanism_suffix(name)
+        if suffix:
+            add(
+                ERROR,
+                line,
+                name,
+                f"mechanism suffix '{suffix}' carries no information — drop it (criterion 2)",
+            )
+            return
+        # 6) synonym of a canonical role.
+        canon = synonyms.get(name)
+        if canon:
+            add(ERROR, line, name, f"synonym of canonical role '{canon}' — rename (criterion 6)")
+            return
+        # 4) acronym casing follows PEP 8 (all-caps).
+        for tok in Naming.tokenize(name):
+            cf = Naming.casefold_lookup(tok, acronyms)
+            if cf and cf != tok:
+                add(
+                    ERROR,
+                    line,
+                    name,
+                    f"acronym '{tok}' wrong casing — expected '{cf}' (criterion 4)",
+                )
+        # 1) must resolve to the registered role vocabulary.
+        if name not in roles:
+            add(
+                ERROR,
+                line,
+                name,
+                "not in the registered role vocabulary (extend via ADR, criterion 1)",
+            )
+
+    @staticmethod
+    def _typevar_assign(node) -> tuple[str, ast.Call] | None:
+        if not isinstance(node, ast.Assign) or not isinstance(node.value, ast.Call):
+            return None
+        func = node.value.func
+        callee = func.id if isinstance(func, ast.Name) else getattr(func, "attr", None)
+        if callee != "TypeVar":
+            return None
+        if len(node.targets) != 1 or not isinstance(node.targets[0], ast.Name):
+            return None
+        return node.targets[0].id, node.value
+
+    @staticmethod
+    def _is_constrained(call: ast.Call) -> bool:
+        # bound=... or constraints (TypeVar("X", int, str)) → carries a role.
+        has_bound = any(k.arg == "bound" for k in call.keywords)
+        return has_bound or len(call.args) > 1
+
+    @staticmethod
+    def _mechanism_suffix(name: str) -> str | None:
+        if name != "Type" and name.endswith("Type"):
+            return "Type"
+        if name.endswith("_t"):
+            return "_t"
+        # trailing capital T on a multi-char mixed-case name (YieldT, SendT), but
+        # never on an all-caps acronym (e.g. a hypothetical RDFT stays an acronym).
+        if len(name) > 1 and name.endswith("T") and not name.isupper():
+            return "T"
+        return None
+
+    @staticmethod
+    def _check_generic_arity(tree, single_letters: set[str], add) -> None:
+        # 3) two or more single-letter parameters in one Generic[...] is a violation.
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.Subscript):
+                continue
+            value = node.value
+            base = value.id if isinstance(value, ast.Name) else getattr(value, "attr", None)
+            if base not in ("Generic", "Protocol"):
+                continue
+            elts = node.slice.elts if isinstance(node.slice, ast.Tuple) else [node.slice]
+            params = {e.id for e in elts if isinstance(e, ast.Name) and e.id in single_letters}
+            if len(params) >= 2:
+                add(
+                    ERROR,
+                    node.lineno,
+                    ",".join(sorted(params)),
+                    "two or more single-letter type parameters in one Generic[...] — "
+                    "give each a distinct role noun (criterion 3)",
+                )
+
+
+# --------------------------------------------------------------------------- #
+# region Linter — Strategy context (IStrategyContext)                         #
+# --------------------------------------------------------------------------- #
+class WemLint(IStrategyContext):
+    """Runs each NFR rule (an IStrategy) over the shared source tree."""
+
+    def __init__(self, src: Path, reg: dict):
+        super().__init__()
+        self._src = src
+        self._reg = reg
+        self._source = SourceTree(src)
+        self._strategy: IStrategy | None = None
+
+    def set_strategy(self, strategy: IStrategy) -> None:
+        self._strategy = strategy
+
+    def execute_strategy(self, **kwargs) -> list[Finding]:
+        return self._strategy.execute(
+            self, src=self._src, reg=self._reg, source=self._source, **kwargs
+        )
+
+    def run(self, rules) -> list[Finding]:
+        findings: list[Finding] = []
+        for rule in rules:
+            self.set_strategy(rule)
+            findings += self.execute_strategy()
+        return findings
+
+
+# --------------------------------------------------------------------------- #
+# region Rule factory (IFactory)                                              #
+# --------------------------------------------------------------------------- #
+class RuleFactory(IFactory):
+    """Creates the NFR check strategy for a registry id (e.g. 'ORG-02')."""
+
+    _RULES: dict[str, type[IStrategy]] = {
+        "ORG-01": DependencyLocalityRule,
+        "ORG-02": NomenclatureRule,
+        "ORG-03": TypeVarRule,
+    }
+
+    @staticmethod
+    def create(**kwargs) -> IStrategy:
+        nfr = kwargs["nfr"]
+        try:
+            return RuleFactory._RULES[nfr]()
+        except KeyError:
+            known = ", ".join(RuleFactory._RULES)
+            raise ValueError(f"unknown NFR rule '{nfr}' (known: {known})") from None
+
+    @staticmethod
+    def available() -> tuple[str, ...]:
+        return tuple(RuleFactory._RULES)
+
+
+# --------------------------------------------------------------------------- #
+# region Application                                                          #
+# --------------------------------------------------------------------------- #
+class Application:
+    """CLI wrapper around the lint: builds the parser and runs the selected rules.
+
+    `run` is the single entry point (replaces the old module-level `main`); the
+    parser builder, the lint driver and the report renderer are each invoked
+    once, so they live here as private methods.
+    """
+
+    def __init__(self, argv: list[str] | None = None):
+        self.argv = argv
+
+    def run(self) -> int:
+        parser = self._build_parser()
+        args = parser.parse_args(self.argv)
+        return self._lint(args)
+
+    def _build_parser(self) -> argparse.ArgumentParser:
+        here = Path(__file__).resolve().parent
+        ap = argparse.ArgumentParser(description="Wattleflow NFR lint (ORG-01, ORG-02, ORG-03)")
+        ap.add_argument("--src", type=Path, default=here.parent / "src" / "wattleflow")
+        ap.add_argument("--registry", type=Path, default=here / "naming_registry.yaml")
+        ap.add_argument("--quiet", action="store_true", help="suppress INFO findings")
+        ap.add_argument(
+            "--select",
+            default=",".join(RuleFactory.available()),
+            help="comma-separated NFR ids to run (default: all)",
+        )
+        return ap
+
+    def _lint(self, args) -> int:
+        if not args.src.exists():
+            print(f"wem_lint: source tree not found: {args.src}", file=sys.stderr)
+            return 2
+        reg = yaml.safe_load(args.registry.read_text(encoding="utf-8"))
+
+        selected = [s.strip() for s in args.select.split(",") if s.strip()]
+        try:
+            rules = [RuleFactory.create(nfr=nfr) for nfr in selected]
+        except ValueError as e:
+            print(f"wem_lint: {e}", file=sys.stderr)
+            return 2
+        findings = WemLint(args.src, reg).run(rules)
+
+        if args.quiet:
+            findings = [f for f in findings if f.severity != INFO]
+        return self._report(args, selected, findings)
+
+    def _report(self, args, selected, findings) -> int:
+        errors = sum(1 for f in findings if f.severity == ERROR)
+        warns = sum(1 for f in findings if f.severity == WARNING)
+        infos = sum(1 for f in findings if f.severity == INFO)
+
+        for nfr in selected:
+            group = [f for f in findings if f.nfr == nfr]
+            if not group:
+                continue
+            print(f"\n=== NFRQ-{nfr} ===")
+            # Highest logging level first (ERROR=40 > WARNING=30 > INFO=20).
+            for f in sorted(group, key=lambda f: (-f.severity, str(f.path), f.line)):
+                print(f.render(args.src))
+
+        print(f"\n{'-' * 60}")
+        print(f"wem_lint: {errors} error(s), {warns} warning(s), {infos} info")
+        print(
+            "Notes: ORG-01 fan-in counts direct `wattleflow.helpers.<mod>` imports only; "
+            "aggregate `from wattleflow.helpers import X` is not resolved, so fan-in is a "
+            "lower bound (advisory). ORG-01 #2/#4 not yet automated. See NFRQ.md."
+        )
+        return 1 if errors else 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(Application().run())
+# --------------------------------------------------------------------------- #
+# endregion Application                                                       #
+# --------------------------------------------------------------------------- #

@@ -1,0 +1,75 @@
+# =============================================================================
+# wattleflow-processors — development requirements
+#
+# Installs the build tooling plus EVERY third-party library used by the
+# specializations (connections/, drivers/, processors/, pipelines/, documents/,
+# strategies/). These are lazy-loaded at runtime (see CLAUDE.md §7.4), so they
+# are optional for end users but required to develop/test the full package.
+# =============================================================================
+
+# conda install -c conda-forge openjdk=17
+
+# --- Build / tooling ---
+build
+setuptools
+setuptools_scm
+twine
+wheel
+ruff
+
+# --- WattleFlow packages ---
+wattleflow
+wattleflow-workflow
+# oscal            # not yet published to PyPI (CLAUDE.md §6.1)
+
+# --- Security / crypto ---
+cryptography
+
+# --- Databases / SQL ---
+psycopg2-binary
+SQLAlchemy
+
+# --- Search / indexing ---
+elasticsearch
+opensearch-py
+pysolr
+
+# --- Messaging / streaming / big data ---
+kafka-python-ng
+pyspark
+pyarrow
+
+# --- Cloud / transport / networking ---
+boto3
+paramiko
+requests
+requests-kerberos
+requests-ntlm
+websockets
+
+# --- Data formats / documents ---
+pandas
+fastavro
+rdflib
+python-docx
+pypdf
+pdfminer.six
+PyMuPDF
+Pillow
+pytesseract
+tika
+extract-msg
+
+# --- NLP / ML ---
+spacy
+stanza
+flair
+gliner
+transformers
+torch
+wordfreq
+
+# --- Media / AI APIs ---
+anthropic
+youtube-transcript-api
+yt-dlp

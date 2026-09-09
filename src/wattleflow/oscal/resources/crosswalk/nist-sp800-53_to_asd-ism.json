@@ -1,0 +1,54 @@
+{
+  "name": "nist-sp800-53_to_asd-ism",
+  "source": "NIST SP 800-53 Rev 5",
+  "target": "ASD ISM (OSCAL 3.0)",
+  "status": "proposed-requires-compliance-review",
+  "description": "Crosswalk from NIST SP 800-53 control ids to ASD ISM control ids (ism-NNNN). The ASD ISM OSCAL release carries no per-control NIST cross-reference, so this table is a PROPOSED mapping derived by matching NIST control intent against ISM control statements. It MUST be reviewed and signed off by a compliance authority before being relied on. Each source id maps to one or more target ids; keys match case-insensitively; unmapped ids pass through unchanged (see oscal/crosswalk.py). Note: a source id mapped to multiple targets asserts the component satisfies ALL of them, so all targets must be in the active baseline for declared <= baseline to hold. Mappings are intentionally 1:1 to the single closest ISM control; alternates are listed in `provenance` for review, not applied.",
+  "mappings": {
+    "ac-3": ["ism-0445"],
+    "ia-5": ["ism-1401"],
+    "sc-8": ["ism-0469"],
+    "sc-13": ["ism-1080"]
+  },
+  "provenance": {
+    "ac-3": {
+      "nist": "Access Enforcement",
+      "ism": "ism-0445",
+      "ism_statement": "Privileged users are assigned a dedicated privileged user account to be used solely for duties requiring privileged access.",
+      "baseline": "E8 ML1, ML2, ML3",
+      "alternates": ["ism-1507 (privileged access requests validated when first requested)"],
+      "rationale": "Access enforcement via privileged/standard account separation; in scope for Essential Eight 'restrict administrative privileges'."
+    },
+    "ia-5": {
+      "nist": "Authenticator Management",
+      "ism": "ism-1401",
+      "ism_statement": "Multi-factor authentication uses either: something users have and something users know, or something users have that is unlocked by something users know or are.",
+      "baseline": "E8 ML1, ML2, ML3",
+      "alternates": [
+        "ism-1504 (MFA to online services, ML1+)",
+        "ism-1402 (credentials protected by password manager/HSM, full ISM only)",
+        "ism-1685 (service/admin account credential strength, ML2+)"
+      ],
+      "rationale": "Authenticator management is represented in Essential Eight by the multi-factor authentication controls. For service/database credentials specifically, ism-1402/ism-1685 are closer but sit outside ML1."
+    },
+    "sc-8": {
+      "nist": "Transmission Confidentiality and Integrity",
+      "ism": "ism-0469",
+      "ism_statement": "An ASD-Approved Cryptographic Protocol (AACP) or high assurance cryptographic protocol is used to protect data in transit.",
+      "baseline": "FULL ISM only (NOT in any Essential Eight ML profile)",
+      "alternates": [
+        "ism-1277 (data between database and web servers is encrypted)",
+        "ism-1139 (only the latest version of TLS is used)"
+      ],
+      "rationale": "Transmission confidentiality maps to the AACP-in-transit control. The Essential Eight does not cover transmission cryptography, so this target is absent from the E8 ML baselines; verifying it requires the full ISM catalog (or a classification system profile) as the active baseline."
+    },
+    "sc-13": {
+      "nist": "Cryptographic Protection",
+      "ism": "ism-1080",
+      "ism_statement": "An ASD-Approved Cryptographic Algorithm (AACA) or high assurance cryptographic algorithm is used when cryptography is used.",
+      "baseline": "FULL ISM only (NOT in any Essential Eight ML profile)",
+      "alternates": ["ism-0471 (only AACAs used by cryptographic equipment, applications and libraries)"],
+      "rationale": "Cryptographic protection maps to the AACA control. As with sc-8, this is outside Essential Eight scope and needs the full ISM catalog as the active baseline to verify."
+    }
+  }
+}

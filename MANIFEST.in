@@ -1,0 +1,77 @@
+# Source distribution contents — blackwattle.
+# -----------------------------------------------------------------------------
+# THIS IS NOT A ZERO-TRUST PACKAGE. Every third-party import in the shipped
+# modules is lazy/optional (in-function import or try/except fallback), but the
+# installed surface is third-party-coupled and the user audits it (CLAUDE.md §7.4).
+#
+# Hard dependencies: stdlib + `wattleflow-workflow` (which brings `wattleflow`).
+# Everything else — cryptography included — is an OPTIONAL extra in
+# pyproject.toml, so a bare `pip install blackwattle` pulls nothing unvetted.
+# -----------------------------------------------------------------------------
+# `global-exclude *` below drops everything first, so this file is the single
+# control point: a package that `packages.find` declares but this file omits
+# installs EMPTY (DR-WFL-006, DR-WFL-015 / SEC-03 K12). Keep the two in step.
+#
+# INVARIANT: one `recursive-include` here per entry in
+# `[tool.setuptools.packages.find] include` in pyproject.toml — fifteen, in the
+# same order. Both lists are whole-subtree, so adding a specialization under an
+# existing package needs no edit in either file; adding a new top-level package
+# needs an edit in BOTH.
+# -----------------------------------------------------------------------------
+# Names shared with wattleflow-workflow — `constants`, `decorators`, `enums`,
+# `helpers`, `mappers` — are PEP 420 namespaces: no `__init__.py` in either tree,
+# each tree holds only its own modules (DR-WFL-017). Measured 2026-09-08: the two
+# trees have no module name in common under any of the five, so nothing foreign
+# can be swept in and a whole-package rule is safe here.
+#
+# That measurement is why `helpers` is a single recursive rule rather than the
+# per-module list this file used to carry. The list was not safer — it was one
+# more place to forget: it had already lost `helpers/image_security.py` and
+# `helpers/metrics.py`, and still named `helpers/image/`, a directory that does
+# not exist. A rule that tracks the tree cannot drift from it.
+# -----------------------------------------------------------------------------
+# The core, concrete, managers, orchestrators and schedulers layers are reachable
+# here only through dev symlinks and must never be re-shipped from this sdist.
+# -----------------------------------------------------------------------------
+
+global-exclude *
+
+# --- Packages owned entirely by this distribution ---
+# One line per pyproject `include` entry, same order.
+recursive-include src/wattleflow/blackboards *.py
+recursive-include src/wattleflow/connections *.py
+recursive-include src/wattleflow/constants *.py
+recursive-include src/wattleflow/decorators *.py
+recursive-include src/wattleflow/documents *.py
+recursive-include src/wattleflow/drivers *.py
+recursive-include src/wattleflow/enums *.py
+recursive-include src/wattleflow/helpers *.py
+recursive-include src/wattleflow/mappers *.py
+recursive-include src/wattleflow/metrics *.py
+recursive-include src/wattleflow/oscal *.py
+recursive-include src/wattleflow/pipelines *.py
+recursive-include src/wattleflow/processors *.py
+recursive-include src/wattleflow/repositories *.py
+recursive-include src/wattleflow/strategies *.py
+
+# --- Never ship layers that belong to another distribution ---
+# Defensive: these are absent from a clean checkout but reappear as dev symlinks,
+# and must not be swept into this sdist when they do. `global-exclude *` already
+# covers it; these state the boundary where a reader looks for it.
+prune src/wattleflow/core
+prune src/wattleflow/concrete
+
+# --- Documentation lives in its own repository ---
+# `documentation/` is a symlink to the separate, local-only documentation
+# repository (CLAUDE.md §8). Pruning keeps another repository's content — and its
+# C-snapshots — out of this distribution (NFRQ-SEC-02, minimal surface).
+prune documentation
+
+# --- Package data: vendored OSCAL catalogues, read at runtime by the loaders ---
+# `include-package-data = false` means this line fills the SDIST only; the WHEEL
+# needs the matching `[tool.setuptools.package-data]` entry in pyproject.toml.
+# Two files, one fact — change them together.
+recursive-include src/wattleflow/oscal/resources *.json
+
+# --- Repository metadata ---
+include README.md LICENSE pyproject.toml requirements-dev.txt
