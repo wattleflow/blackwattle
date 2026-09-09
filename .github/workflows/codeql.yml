@@ -23,7 +23,7 @@ jobs:
       contents: read
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           # Analiza ne treba write token; smanjuje stetu ako neka akcija procuri env.
           persist-credentials: false
