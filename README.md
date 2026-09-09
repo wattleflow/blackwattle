@@ -70,7 +70,7 @@ whose extra is not installed fails where it is used, not on import of the packag
 ## Optional dependency groups
 
 ```bash
-pip install "blackwattle[sql,documents]"
+pip install wattleflow-workflow[blackwattle]"
 ```
 
 | Extra | Brings | Notes |
