@@ -394,5 +394,12 @@ line-length = 120
 target-version = "py311"
 
 [tool.ruff.lint]
-select = ["E", "W", "F", "I", "B"]
+select = ["E", "W", "F", "I", "B", "S"]   # S = flake8-bandit
 ignore = ["E203", "E731", "I001"]
+[tool.ruff.lint]
+
+[tool.bandit]
+exclude_dirs = ["tests", ".venv", "build", "dist"]
+# B101 (assert) i B404 (import subprocess) sami po sebi nisu nalaz;
+# B603/B602 (subprocess bez shell / sa shell) ostaju ukljuceni.
+skips = ["B101", "B404"]

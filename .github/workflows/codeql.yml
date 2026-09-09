@@ -1,0 +1,64 @@
+name: CodeQL
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+  schedule:
+    - cron: "17 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: CodeQL (python)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      security-events: write
+      actions: read
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # Analiza ne treba write token; smanjuje stetu ako neka akcija procuri env.
+          persist-credentials: false
+
+      - uses: actions/setup-python@v6
+        with:
+          # Donja granica iz requires-python = ">=3.11". Analiziraj najstariju
+          # podrzanu verziju - sintaksa novija od nje je bug, ne feature.
+          python-version: "3.11"
+
+      # KLJUCNO za ovaj paket. Specijalizacije lazy-loadaju biblioteke unutar
+      # funkcija (CLAUDE.md 7.4), pa ekstraktor bez instaliranog okruzenja ne
+      # razrjesuje simbole i taint tragovi puknu na granici biblioteke.
+      # Instalira se SAMO jezgra - jedina obavezna ovisnost je
+      # wattleflow-workflow, sto je nekoliko sekundi, a ne 2 GB torcha.
+      - name: Instalacija jezgre za razlucivanje importa
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+
+      - name: Inicijalizacija CodeQL-a
+        uses: github/codeql-action/init@v4
+        with:
+          languages: python
+          build-mode: none
+          queries: security-extended
+          # src/ layout: bez ovoga se analizira i tests/ i sve sto sleti u korijen.
+          config: |
+            paths:
+              - src
+            paths-ignore:
+              - src/wattleflow/oscal/resources
+              - tests
+
+      - name: Analiza
+        uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:python"

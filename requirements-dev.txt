@@ -1,5 +1,5 @@
 # =============================================================================
-# wattleflow-processors — development requirements
+# blackwattle — development requirements
 #
 # Installs the build tooling plus EVERY third-party library used by the
 # specializations (connections/, drivers/, processors/, pipelines/, documents/,

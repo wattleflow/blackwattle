@@ -1,0 +1,49 @@
+version: 2
+updates:
+  # ---------------------------------------------------------------------------
+  # Python. Dependabot cita [project].dependencies, [project.optional-dependencies]
+  # i [dependency-groups] iz pyproject.toml.
+  #
+  # WAZNO ZA OVAJ REPO: version updates ovdje ce raditi gotovo nista, jer extras
+  # nemaju verzijske specifikatore. Bez donje granice nema sto podici. Jedina
+  # stvarna meta je "wattleflow-workflow>=0.0.1.12,<0.0.2" i dev grupa.
+  # Sigurnosna azuriranja (security updates) su druga stvar - ona ovise o
+  # dependency graphu, a graph bez zakljucanih verzija ne moze pouzdano
+  # utvrditi je li instalirana verzija ranjiva. Vidi napomenu o lockfileu.
+  # ---------------------------------------------------------------------------
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    groups:
+      dev-tooling:
+        applies-to: version-updates
+        patterns:
+          - "build"
+          - "setuptools*"
+          - "twine"
+          - "wheel"
+          - "ruff"
+    ignore:
+      # torch major bumpovi ruse spacy/flair/transformers lanac i traze rucnu
+      # provjeru; sigurnosni PR-ovi i dalje prolaze jer se ignore odnosi samo
+      # na version-updates.
+      - dependency-name: "torch"
+        update-types: ["version-update:semver-major"]
+    labels:
+      - "dependencies"
+
+  # ---------------------------------------------------------------------------
+  # Verzije samih akcija. Za paket ciji je smisao odvajanje razina povjerenja,
+  # ovo je najvazniji unos u datoteci: workflow s write pravom nad Security
+  # eventima povlaci tudji kod na svakom pushu.
+  # ---------------------------------------------------------------------------
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels:
+      - "dependencies"
+      - "ci"

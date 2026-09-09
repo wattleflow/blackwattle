@@ -1,0 +1,207 @@
+name: Python security
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+  schedule:
+    - cron: "33 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # 1. Jezgra - na svaki PR. Brzo, jer su obavezne ovisnosti samo (b) i (a).
+  # ---------------------------------------------------------------------------
+  audit-core:
+    name: SCA - jezgra
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - run: python -m pip install --upgrade pip pip-audit
+
+      # `pip-audit .` cita pyproject.toml i razrjesuje [project].dependencies.
+      # Zamjena za `-r requirements.txt`: taj file duplicira pyproject i drifta.
+      - name: pip-audit (obavezne ovisnosti)
+        run: pip-audit . --strict --progress-spinner off
+
+  # ---------------------------------------------------------------------------
+  # 2. Extras - matrica. Svaki extra u svom poslu, jer su nezavisne odluke o
+  #    supply chainu i jedan pad ne smije sakriti ostale (fail-fast: false).
+  #    `nlp` NIJE ovdje: torch s CUDA wheelovima premasuje disk runnera i traje
+  #    predugo za PR petlju. Ide u zaseban tjedni posao ispod.
+  # ---------------------------------------------------------------------------
+  audit-extras:
+    name: SCA - ${{ matrix.extra }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        extra:
+          - security
+          - sql
+          - search
+          - streaming
+          - cloud
+          - data
+          - documents
+          - media
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - run: python -m pip install --upgrade pip pip-audit
+
+      # Bez JVM-a i bez tesseracta - pip install prolazi, samo runtime ne radi.
+      # Za audit je dovoljno: zanimaju nas verzije, ne izvrsavanje.
+      - name: Instalacija extra grupe
+        run: pip install ".[${{ matrix.extra }}]"
+
+      # Bez `.` - audita se instalirano okruzenje, dakle i tranzitivne ovisnosti.
+      - name: pip-audit
+        run: pip-audit --strict --progress-spinner off
+
+  # ---------------------------------------------------------------------------
+  # 3. NLP - samo tjedno i rucno. Odvojeno zbog velicine i modela.
+  # ---------------------------------------------------------------------------
+  audit-nlp:
+    name: SCA - nlp (tjedno)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - run: python -m pip install --upgrade pip pip-audit
+
+      - name: Oslobadjanje prostora na runneru
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android
+          df -h /
+
+      # CPU wheel umjesto CUDA - torch pada s ~2.5 GB na ~200 MB, a CVE-i su isti.
+      - name: Instalacija nlp grupe
+        run: |
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install ".[nlp]"
+
+      - name: pip-audit
+        run: pip-audit --strict --progress-spinner off
+
+  # ---------------------------------------------------------------------------
+  # 4. Razvojni alati (PEP 735 grupa). Trece mjesto gdje ranjivost moze uci -
+  #    twine i build imaju pristup tokenima za objavu.
+  # ---------------------------------------------------------------------------
+  audit-dev:
+    name: SCA - dev grupa
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Instalacija dev grupe
+        run: |
+          python -m pip install --upgrade "pip>=25.1" pip-audit
+          pip install --group dev
+
+      - run: pip-audit --strict --progress-spinner off
+
+  # ---------------------------------------------------------------------------
+  # 5. SAST - Bandit nad src/, rezultat u Code Scanning
+  # ---------------------------------------------------------------------------
+  bandit:
+    name: SAST (Bandit)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      # [toml] cita [tool.bandit] iz pyproject.toml, [sarif] daje izlazni format.
+      - run: python -m pip install --upgrade pip "bandit[toml,sarif]"
+
+      # `src`, ne `.` - inace Bandit skenira i tests/ i .venv i prijavi B101
+      # (assert) na svakom testu, sto zatrpa kanal.
+      - name: Bandit
+        run: bandit -r src -c pyproject.toml -f sarif -o bandit.sarif --exit-zero
+
+      - name: Upload SARIF
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: bandit.sarif
+          category: bandit
+
+  # ---------------------------------------------------------------------------
+  # 6. Tajne u povijesti
+  # ---------------------------------------------------------------------------
+  gitleaks:
+    name: Tajne (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ---------------------------------------------------------------------------
+  # 7. Licencna provjera - AGPL detekcija
+  #    PyMuPDF u `documents` je AGPL-3.0. Ne mijenja Apache-2.0 ovog paketa, ali
+  #    potrosac koji instalira taj extra i redistribuira rezultat nasljedjuje
+  #    AGPL obveze. Posao ne pada, samo ispisuje stanje za dokumentaciju.
+  # ---------------------------------------------------------------------------
+  licences:
+    name: Licence (documents extra)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - run: |
+          python -m pip install --upgrade pip pip-licenses
+          pip install ".[documents]"
+
+      - name: Popis licenci
+        run: pip-licenses --format=markdown --with-urls >> "$GITHUB_STEP_SUMMARY"
