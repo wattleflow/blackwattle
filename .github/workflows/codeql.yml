@@ -28,7 +28,7 @@ jobs:
           # Analiza ne treba write token; smanjuje stetu ako neka akcija procuri env.
           persist-credentials: false
 
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           # Donja granica iz requires-python = ">=3.11". Analiziraj najstariju
           # podrzanu verziju - sintaksa novija od nje je bug, ne feature.
