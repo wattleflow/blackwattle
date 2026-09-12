@@ -9,8 +9,10 @@
 from __future__ import annotations
 import re
 import unicodedata
+from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, ClassVar, Optional
 from wattleflow.core import IBlackboard, IRepository, ITarget, IWattleflow
 from wattleflow.concrete import DocumentFacade, StrategyCreate, StrategyWrite
 from wattleflow.concrete.exception import DriverException, StrategyException
@@ -20,8 +22,10 @@ from wattleflow.documents.file import FileDocument
 from wattleflow.concrete.helpers import Attribute
 from wattleflow.helpers.dtime import Now
 from wattleflow.helpers.formatters.factory import FormatterFactory
+from wattleflow.helpers.parsers.binary import PdfParser
 from wattleflow.helpers.parsers.mail import (
     AttachmentPolicy,
+    MailAttachment,
     MailHeader,
     MailKeys,
     MailMessage,
@@ -441,27 +445,252 @@ class WriteEmailAttachments(StrategyWrite):
     same rule the extraction pipeline applies — rejects the record. Every
     skipped part is named in the audit and in `attachments_skipped`: a bundle
     that quietly lost a part is worse than one that never had it.
+
+    Every original is kept, and its readable text goes beside it: a PDF gets
+    `<stem>.txt` with the text its pages carry; an attached message gets
+    `<stem>.txt` with its rendered header block and body, and ITS attachments go
+    into `<subdir>/<stem>/` by the same rules, as deep as messages nest — up to
+    `MAX_DEPTH`, so a message that carries itself cannot recurse without end.
     """
 
-    __slots__ = ("_reader",)
+    __slots__ = ("_reader", "_pdf", "_text", "_tika", "_tika_checked")
+
+    MAX_DEPTH: ClassVar[int] = 8
+    PDF_TYPES: ClassVar[frozenset[str]] = frozenset({"application/pdf"})
+    MAIL_TYPES: ClassVar[frozenset[str]] = frozenset(
+        {"message/rfc822", "application/vnd.ms-outlook"}
+    )
+    MAIL_SUFFIXES: ClassVar[frozenset[str]] = frozenset({".eml", ".msg"})
+    TEXT_SUFFIX: ClassVar[str] = ".txt"
+    OUTCOMES: ClassVar[tuple[str, ...]] = (
+        "written",
+        "skipped",
+        "failed",
+        "text_written",
+        "text_missing",
+        "text_ocr",
+    )
 
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self._reader = MailParser()
+        self._pdf = PdfParser()
+        self._text = FormatterFactory.create(FileType.TXT)
+        # Opened on the first PDF and kept: a local Tika server takes seconds to start.
+        self._tika: Any = None
+        self._tika_checked = False
 
-    @staticmethod
-    def _unique(name: str, taken: set[str]) -> str:
+    @classmethod
+    def _unique(cls, name: str, taken: set[str], derives: bool = False) -> str:
         # Two attachments may arrive under one name; the second must not
         # overwrite the first, and renaming both would lose the sender's naming.
+        # A part that derives a text and a directory claims those names too, so
+        # `report.pdf` and an attached `report.eml` cannot share `report.txt`.
         safe = Path(Path(name).name)
         stem, suffix = safe.stem or "attachment", safe.suffix or ".bin"
-        candidate = f"{stem}{suffix}"
-        counter = 1
-        while candidate.lower() in taken:
+        candidate, counter = stem, 1
+        while True:
+            claims = {f"{candidate}{suffix}".lower()}
+            if derives:
+                claims |= {f"{candidate}{cls.TEXT_SUFFIX}".lower(), f"{candidate}/".lower()}
+            if not claims & taken:
+                break
             counter += 1
-            candidate = f"{stem}-{counter}{suffix}"
-        taken.add(candidate.lower())
-        return candidate
+            candidate = f"{stem}-{counter}"
+        taken.update(claims)
+        return f"{candidate}{suffix}"
+
+    @classmethod
+    def _kind(cls, record: dict[str, Any]) -> str | None:
+        """"mail", "pdf", or None for a part that has no text of its own to write."""
+        content_type = AttachmentPolicy.content_type(record)
+        suffix = Path(str(record.get("name") or "")).suffix.lower()
+        if content_type in cls.MAIL_TYPES or suffix in cls.MAIL_SUFFIXES:
+            return "mail"
+        if content_type in cls.PDF_TYPES or suffix == ".pdf":
+            return "pdf"
+        return None
+
+    @contextmanager
+    def _tika_client(self) -> Iterator[Any]:
+        """A Tika client for scanned PDFs, or None when the workflow configures none."""
+        if not self._tika_checked:
+            self._tika_checked = True
+            from wattleflow.connections.tika import TikaConnection
+
+            self._tika = TikaConnection.from_environment(
+                f"{self.name}-tika", level=self._level, handler=self._handler
+            )
+            if self._tika is None:
+                self.warning(
+                    msg=Event.Write.name,
+                    step=Event.Check.name,
+                    reason="no Tika configured: a scanned PDF keeps no text",
+                    hint="set runtime.tika_server_jar or TIKA_SERVER_ENDPOINT",
+                )
+        if self._tika is None:
+            yield None
+            return
+        with self._tika.connect() as client:
+            yield client
+
+    def _text_of(self, kind: str, payload: bytes) -> tuple[str, MailMessage | None, str]:
+        """The readable text of a part, the message when the part is one, and its reader."""
+        if kind == "pdf":
+            with self._tika_client() as client:
+                found = self._pdf.parse(payload=payload, extract_text=True, tika=client)
+            text = "\n\n".join(page.strip() for page in found.pages if page.strip())
+            return text, None, found.backend
+        message = self._reader.parse(payload=payload)
+        return message.render(), message, "mail"
+
+    def _write_text(
+        self,
+        driver: Any,
+        attachment: MailAttachment,
+        name: str,
+        subdir: str,
+        outcome: dict[str, list[str]],
+    ) -> MailMessage | None:
+        """The part's text beside it; the message back when the part is one."""
+        kind = self._kind(attachment.as_dict())
+        if kind is None:
+            return None
+        where = f"{subdir}/{name}"
+        try:
+            text, message, reader = self._text_of(kind, attachment.payload)
+        except Exception as e:  # noqa: BLE001 — the original is written; its text is not
+            outcome["text_missing"].append(where)
+            self.warning(
+                msg=Event.Write.name,
+                step=Event.Check.name,
+                reason="text not extracted",
+                attachment=where,
+                error=f"{type(e).__name__}: {e}",
+            )
+            return None
+
+        if not text.strip():
+            # A scanned PDF has pages and no text layer; that is a finding, not a file.
+            outcome["text_missing"].append(where)
+            self.warning(
+                msg=Event.Write.name,
+                step=Event.Check.name,
+                reason="no text to write",
+                attachment=where,
+            )
+            return message
+
+        try:
+            output = driver.write(
+                self._text.serialise(text),
+                filename=Path(name).stem,
+                suffix=self.TEXT_SUFFIX,
+                encoding="utf-8",
+                subdir=subdir,
+                mkdir=True,
+            )
+            outcome["text_written"].append(str(output))
+            if reader == PdfParser.TIKA_BACKEND:
+                outcome["text_ocr"].append(str(output))
+        except (DriverException, OSError) as e:
+            outcome["text_missing"].append(where)
+            self.error(
+                msg=Event.Write.name,
+                step=Event.Failed.name,
+                reason="text not written",
+                attachment=where,
+                error=str(e),
+            )
+        return message
+
+    def _write_one(
+        self,
+        driver: Any,
+        attachment: MailAttachment,
+        name: str,
+        subdir: str,
+        policy: AttachmentPolicy,
+        depth: int,
+        outcome: dict[str, list[str]],
+    ) -> None:
+        """One original, its text, and — for a message — its own attachments."""
+        try:
+            output = driver.write(
+                attachment.payload,
+                filename=Path(name).stem,
+                suffix=Path(name).suffix,
+                subdir=subdir,
+                mkdir=True,
+            )
+        except (DriverException, OSError) as e:
+            outcome["failed"].append(f"{subdir}/{name}")
+            self.error(
+                msg=Event.Write.name,
+                step=Event.Failed.name,
+                reason="attachment not written",
+                attachment=f"{subdir}/{name}",
+                error=str(e),
+            )
+            return
+
+        outcome["written"].append(str(output))
+        self.debug(
+            msg=Event.Write.name,
+            step=Event.Completed.name,
+            scope="item",
+            attachment=name,
+            digest=attachment.digest,
+            size=attachment.size,
+            output=str(output),
+        )
+
+        message = self._write_text(driver, attachment, name, subdir, outcome)
+        if message is None:
+            return
+        if depth >= self.MAX_DEPTH:
+            self.warning(
+                msg=Event.Write.name,
+                step=Event.Check.name,
+                reason="nesting deeper than MAX_DEPTH, inner attachments not written",
+                attachment=f"{subdir}/{name}",
+                depth=depth,
+            )
+            return
+        self._write_nested(
+            driver, message, f"{subdir}/{Path(name).stem}", policy, depth + 1, outcome
+        )
+
+    def _write_nested(
+        self,
+        driver: Any,
+        message: MailMessage,
+        subdir: str,
+        policy: AttachmentPolicy,
+        depth: int,
+        outcome: dict[str, list[str]],
+    ) -> None:
+        """An attached message's own attachments, in the directory named after it."""
+        taken: set[str] = set()
+        for index, attachment in enumerate(message.walk_attachments()):
+            record = attachment.as_dict()
+            name = self._unique(
+                attachment.name or f"attachment-{index + 1}",
+                taken,
+                derives=self._kind(record) is not None,
+            )
+            reason = policy.rejects(record)
+            if reason:
+                outcome["skipped"].append(f"{subdir}/{name}")
+                self.debug(
+                    msg=Event.Write.name,
+                    step=Event.Check.name,
+                    scope="item",
+                    reason=reason,
+                    attachment=f"{subdir}/{name}",
+                )
+                continue
+            self._write_one(driver, attachment, name, subdir, policy, depth, outcome)
 
     def _write_attachments(
         self,
@@ -470,19 +699,21 @@ class WriteEmailAttachments(StrategyWrite):
         source: Path,
         subdir: str,
         policy: AttachmentPolicy,
-    ) -> tuple[list[str], list[str], list[str]]:
+    ) -> dict[str, list[str]]:
         records = list(document.metadata.get(MailKeys.ATTACHMENTS) or [])
-        written: list[str] = []
-        skipped: list[str] = []
-        failed: list[str] = []
+        outcome: dict[str, list[str]] = {key: [] for key in self.OUTCOMES}
         taken: set[str] = set()
 
         for index, record in enumerate(records):
-            name = self._unique(str(record.get("name") or f"attachment-{index + 1}"), taken)
+            name = self._unique(
+                str(record.get("name") or f"attachment-{index + 1}"),
+                taken,
+                derives=self._kind(record) is not None,
+            )
 
             reason = policy.rejects(record)
             if reason:
-                skipped.append(name)
+                outcome["skipped"].append(name)
                 self.debug(
                     msg=Event.Write.name,
                     step=Event.Check.name,
@@ -499,7 +730,7 @@ class WriteEmailAttachments(StrategyWrite):
                     path=source,
                 )
             except (IndexError, ValueError) as e:
-                failed.append(name)
+                outcome["failed"].append(name)
                 self.warning(
                     msg=Event.Write.name,
                     step=Event.Check.name,
@@ -509,42 +740,14 @@ class WriteEmailAttachments(StrategyWrite):
                 )
                 continue
 
-            digest, size = attachment.digest, attachment.size
             try:
-                output = driver.write(
-                    attachment.payload,
-                    filename=Path(name).stem,
-                    suffix=Path(name).suffix,
-                    subdir=subdir,
-                    mkdir=True,
-                )
-            except (DriverException, OSError) as e:
-                failed.append(name)
-                self.error(
-                    msg=Event.Write.name,
-                    step=Event.Failed.name,
-                    reason="attachment not written",
-                    attachment=name,
-                    error=str(e),
-                )
-                continue
+                self._write_one(driver, attachment, name, subdir, policy, 1, outcome)
             finally:
                 # One payload resident at a time: without this the previous
                 # attachment stays referenced while the next one is decoded.
                 attachment = None
 
-            written.append(str(output))
-            self.debug(
-                msg=Event.Write.name,
-                step=Event.Completed.name,
-                scope="item",
-                attachment=name,
-                digest=digest,
-                size=size,
-                output=str(output),
-            )
-
-        return written, skipped, failed
+        return outcome
 
     def execute(self, caller: IWattleflow, facade: ITarget, **kwargs: Any) -> bool:
         try:
@@ -597,9 +800,7 @@ class WriteEmailAttachments(StrategyWrite):
                 skip_types=kwargs.get("skip_types") or (),
                 skip_below=int(kwargs.get("skip_below") or 0),
             )
-            written, skipped, failed = self._write_attachments(
-                driver, document, source, subdir, policy
-            )
+            outcome = self._write_attachments(driver, document, source, subdir, policy)
 
             # Change layer (M2): who bundled, when, and with what effect. The
             # copy strategy's own stamps are left untouched — one document
@@ -607,22 +808,20 @@ class WriteEmailAttachments(StrategyWrite):
             document.update_metadata("attachments_by", self.name)
             document.update_metadata("attachments_at", Now.utc())
             document.update_metadata("attachments_subdir", subdir)
-            document.update_metadata("attachments_written", written)
-            document.update_metadata("attachments_skipped", skipped)
-            document.update_metadata("attachments_failed", failed)
+            for key in self.OUTCOMES:
+                document.update_metadata(f"attachments_{key}", outcome[key])
 
             self.debug(
                 msg=Event.Write.name,
                 step=Event.Completed.name,
                 subdir=subdir,
                 attachments=document.metadata.get(MailKeys.ATTACHMENT_COUNT),
-                written=len(written),
-                skipped=len(skipped),
-                failed=len(failed),
+                counts={key: len(values) for key, values in outcome.items()},
             )
-            # A bundle missing a part is not a completed write, whatever the
-            # repository can currently tell from the answer.
-            return not failed
+            # A bundle missing an original is not a completed write, whatever the
+            # repository can currently tell from the answer. A missing TEXT is
+            # reported, not failed: the original it would describe is there.
+            return not outcome["failed"]
         except StrategyException:
             raise
         except Exception as e:

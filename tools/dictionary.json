@@ -23,6 +23,15 @@
   "registry": "wattleflow-code-vocabulary",
   "distribution": "wattleflow-processors",
   "_criterion_version": [
+    "0.9.0 (2026-09-11) — the three unmapped pipeline packages get a subject.",
+    "`package_subject` gains `rss` -> RSS, `xml` -> XML and `quality` -> Quality,",
+    "and `subjects` the same three; `identifier_acronyms` gains `RSS`. Before",
+    "this entry a pipeline class in any of them passed criterion 5 without a",
+    "finding of any kind (the grammar check has no branch for an unmapped,",
+    "non-grouping package), so the first RSS pipeline would have gone unmeasured.",
+    "`operations` gains `Measure`: the data-quality pipeline observes records and",
+    "changes none, which no existing verb states (Clean/Repair both modify).",
+    "DR-PRC-004 (proposal), instructed by the maintainer 2026-09-11.",
     "0.8.0 (2026-09-03) — `audit.info_exempt` gains `DriverLocalStorage`.",
     "The rule reads a driver as a step inside somebody else's unit of work and",
     "bars `self.info()` outright; it cannot tell a record that scales with the",
@@ -138,7 +147,7 @@
     "    collapse to it, NFRQ-ORG-02 DRY note) is an open question the run surfaces",
     "    as findings rather than a gap this file quietly fills."
   ],
-  "criterion_version": "0.8.0",
+  "criterion_version": "0.9.0",
   "dictionary_version": "0.2.0",
   "dictionary_source": "tools/naming_registry.yaml (retired by DR-PRC-001)",
   "_python_reference": "Defines the 'stdlib' set for ORG-01; must track requires-python in pyproject.toml.",
@@ -453,7 +462,10 @@
     "dataframe": "DataFrame",
     "text": "Text",
     "ocr": "OCR",
-    "mail": "Mail"
+    "mail": "Mail",
+    "rss": "RSS",
+    "xml": "XML",
+    "quality": "Quality"
   },
   "grouping_packages": [
     "cad",
@@ -473,7 +485,10 @@
     "OCR",
     "Step",
     "Dummy",
-    "File"
+    "File",
+    "RSS",
+    "XML",
+    "Quality"
   ],
   "operations": [
     "Extract",
@@ -481,7 +496,8 @@
     "Clean",
     "Repair",
     "Translate",
-    "Write"
+    "Write",
+    "Measure"
   ],
   "targets": [
     "Sheets",
@@ -533,7 +549,8 @@
     "EML",
     "MSG",
     "YAML",
-    "OSCAL"
+    "OSCAL",
+    "RSS"
   ],
   "_prohibited_standalone": [
     "Bare generic role nouns prohibited as STANDALONE class names (NFRQ-ORG-02",

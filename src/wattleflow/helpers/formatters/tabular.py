@@ -16,6 +16,7 @@ handle — no file paths, FileStorage or driver concerns.
 # region Imports                                                              #
 # --------------------------------------------------------------------------- #
 from __future__ import annotations
+import csv
 import io
 from typing import Any, BinaryIO
 from wattleflow.concrete.serialisation import GenericFormatter
@@ -31,14 +32,31 @@ __all__ = ["CsvFormatter", "ExcelFormatter", "OrcFormatter", "AvroFormatter"]
 
 
 class CsvFormatter(GenericFormatter):
+    """CSV — a pandas DataFrame, or a list of records."""
+
     SUFFIX = ".csv"
 
     def serialise(self, content: Any, **opts: Any) -> str:
+        # v0.0.1 (DR-PRC-004): records need no pandas.
+        if isinstance(content, list):
+            return self.from_records(content)
+
         import pandas as pd
 
         if not isinstance(content, pd.DataFrame):
             raise TypeError(f"CsvFormatter: unsupported content type {type(content).__name__}")
         return content.to_csv(**opts)
+
+    @staticmethod
+    def from_records(records: list[dict]) -> str:
+        """Records as CSV; the header is the union of their keys in first-seen order."""
+        fields = list(dict.fromkeys(key for record in records for key in record))
+        buffer = io.StringIO()
+        # csv.DictWriter ends rows with CRLF, as RFC 4180 prescribes.
+        writer = csv.DictWriter(buffer, fieldnames=fields)
+        writer.writeheader()
+        writer.writerows(records)
+        return buffer.getvalue()
 
 
 class ExcelFormatter(GenericFormatter):
@@ -47,6 +65,9 @@ class ExcelFormatter(GenericFormatter):
     def serialise(self, content: Any, **opts: Any) -> bytes:
         import pandas as pd
 
+        # v0.0.1 (DR-PRC-004): records become a frame.
+        if isinstance(content, list):
+            content = pd.DataFrame.from_records(content)
         if not isinstance(content, pd.DataFrame):
             raise TypeError(f"ExcelFormatter: unsupported content type {type(content).__name__}")
         buf = io.BytesIO()

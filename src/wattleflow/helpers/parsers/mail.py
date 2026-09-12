@@ -3,20 +3,10 @@
 # Copyright: © 2022–2026 WattleFlow. All rights reserved.
 # License: Apache 2 Licence
 
-"""Mail-family parser — RFC 5322 headers, MIME parts, address and date
-normalisation shared by both mail readers.
+"""Mail-family parser: RFC 5322 headers, MIME parts, address and date normalisation.
 
-A facade over the stdlib `email` package, not a replacement: `policy.default`
-already handles unfolding, encoded words and RFC 2231 filenames. Added here is
-only what the stdlib lacks — a named header set with cardinality, the
-known/unknown timezone distinction `-0000` carries, an attachment record
-digested over its content, and the serialisation boundary to the pipeline.
-
-Reading is lazy: envelope, body and attachments are computed on first access
-and cached, so a caller wanting metadata does not pay for attachment decoding.
-
-`GenericParser` owns the source side (FRQ-PTN-15.19), so this module never
-opens a path.
+A facade over the stdlib `email` package that adds only what it lacks; parts are
+read lazily. `GenericParser` owns the source side (FRQ-PTN-15.19).
 """
 
 # --------------------------------------------------------------------------- #
@@ -56,7 +46,6 @@ from wattleflow.concrete.serialisation import GenericParser, ParserError
 # --------------------------------------------------------------------------- #
 # region Message facade                                                       #
 # --------------------------------------------------------------------------- #
-# What a container reports when it knows nothing about the part's type.
 GENERIC_TYPE: str = "application/octet-stream"
 
 HTML_DROP_RE = re.compile(r"<(script|style)\b[^>]*>.*?</\1>", re.IGNORECASE | re.DOTALL)
@@ -64,8 +53,7 @@ HTML_BREAK_RE = re.compile(r"</?(br|p|div|tr|li|h[1-6]|table|blockquote)\b[^>]*>
 HTML_TAG_RE = re.compile(r"<[^>]+>")
 HTML_WS_RE = re.compile(r"[ \t]+\n")
 BLANK_RUN_RE = re.compile(r"\n{3,}")
-# OLE2 strings arrive NUL-terminated; the C0 range has no place in a header
-# value or a filename, but tab and newline belong to a body.
+# OLE2 strings arrive NUL-terminated; tab and newline are kept for bodies.
 OLE2_CONTROL_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 
 
@@ -75,7 +63,6 @@ OLE2_CONTROL_RE = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]")
 class MailHeader(str, Enum):
     """Headers this module reads, with their RFC 5322 §3.6 metadata."""
 
-    # Identity and content.
     FROM = ("from", "From", True)
     SENDER = ("sender", "Sender", True)  # the actual sender when From has >1
     REPLY_TO = ("reply_to", "Reply-To", False)
@@ -85,19 +72,16 @@ class MailHeader(str, Enum):
     SUBJECT = ("subject", "Subject", True)
     DATE = ("date", "Date", True)
 
-    # Message identity — without it there is neither threading nor dedup.
     MESSAGE_ID = ("message_id", "Message-ID", False)
     IN_REPLY_TO = ("in_reply_to", "In-Reply-To", False)
     REFERENCES = ("references", "References", False, False)
 
-    # Delivery trace (RFC 5321 §4.4) — never in content.
     RECEIVED = ("received", "Received", False, False)
     DELIVERY_DATE = ("delivery_date", "Delivery-Date", False)
-    # Written by the final MTA, but a forwarded message carries one per hop.
+    # Not unique: a forwarded message carries one per hop.
     RETURN_PATH = ("return_path", "Return-Path", False, False)
 
-    # Where it came from. Non-standard but widely emitted, and the only place
-    # some gateways record the submitting client at all.
+    # Non-standard, but the only record of the submitting client some gateways keep.
     ORIGINATING_IP = ("originating_ip", "X-Originating-IP", False)
     SENDER_IP = ("sender_ip", "X-Sender-IP", False)
     RECEIVED_SPF = ("received_spf", "Received-SPF", False, False)
@@ -122,8 +106,7 @@ class MailHeader(str, Enum):
 
     @classmethod
     def resolve(cls, name: str) -> "MailHeader | None":
-        """Member by internal or RFC name, case-insensitively: input from a
-        .msg export arrives in both forms."""
+        """Member by internal or RFC name, case-insensitively (.msg exports use both)."""
         return _HEADER_LOOKUP.get(str(name or "").strip().lower())
 
 
@@ -162,11 +145,6 @@ class MailKeys:
     ATTACHMENT_NAME: str = "attachment_name"
     CONTENT_TYPE: str = "content_type"
     PAYLOAD: str = "payload"
-    # Three digests, three questions. FILE_DIGEST answers "is this copy of the
-    # container intact"; CONTENT_DIGEST answers "is this the same SUBJECT" and
-    # is what addresses and deduplicates it; PARENT_DIGEST links a child to the
-    # subject it came out of. A message is not its file, so a single key cannot
-    # carry both — see MailMessage.digest.
     HOPS: str = "mail_hops"
     HOP_COUNT: str = "mail_hop_count"
     SERVERS: str = "mail_servers"
@@ -174,6 +152,7 @@ class MailKeys:
     ORIGINATING_IP: str = "mail_originating_ip"
     ATTACHMENT_COUNT: str = "mail_attachment_count"
     PARENT_SOURCE: str = "parent_source"
+    # FILE: the container copy; CONTENT: the subject (dedup key); PARENT: a child's origin.
     FILE_DIGEST: str = "file_digest"
     CONTENT_DIGEST: str = "content_digest"
     PARENT_DIGEST: str = "parent_digest"
@@ -189,10 +168,7 @@ class MailKeys:
 
 @dataclass(frozen=True, slots=True)
 class MailAddress:
-    """One address `local` and `domain` are kept apart because RFC 5322 treats
-    them differently: the domain is case-insensitive, the local part formally is
-    not. Dedup therefore goes through `key`, not `addr_spec.lower()`.
-    """
+    """One address, local part and domain apart: only the domain is case-insensitive."""
 
     name: str = ""
     local: str = ""
@@ -212,8 +188,7 @@ class MailAddress:
 
     @classmethod
     def _split_raw_addresses(cls, value: str) -> Iterator[tuple[str, str, str]]:
-        """(name, local, domain) from a bare address list. Group syntax
-        (`undisclosed-recipients:;`) carries no address and drops out by itself."""
+        """(name, local, domain) from a bare address list."""
         try:
             pairs = getaddresses([value], strict=True)  # type: ignore[call-arg]
         except TypeError:  # Python < 3.13 has no strict parameter
@@ -237,9 +212,7 @@ class MailAddress:
 
     @classmethod
     def from_text(cls, text: str) -> "MailAddress":
-        """One address from a bare string. When no address survives (a .msg
-        export may leave only a display name), the whole string becomes the
-        name."""
+        """One address from a bare string; with no address, the string becomes the name."""
         raw = str(text or "").strip()
         if not raw:
             return cls()
@@ -251,7 +224,7 @@ class MailAddress:
 
     @classmethod
     def parse(cls, value: Any) -> tuple["MailAddress", ...]:
-        """Addresses from a header,ordered, deduplicated[`key`]. (the `policy.default` path)"""
+        """Addresses from a header, in order, deduplicated by `key`."""
         if value is None:
             return ()
 
@@ -281,37 +254,26 @@ class MailAddress:
         return tuple(unique)
 
     def as_dict(self) -> dict[str, str]:
-        """Serialisation boundary: this crosses into metadata, the object
-        does not."""
         return {"name": self.name, "address": self.addr_spec}
 
 
 @dataclass(frozen=True, slots=True)
 class MailMoment:
-    """A time from the message, the raw text it came from, and whether its zone
-    is known.
+    """A time from the message, the raw text it came from, and whether its zone is known.
 
-    `-0000` and the military zones (RFC 5322 §4.3) mean "zone unknown", for
-    which the stdlib returns a naive `datetime`. The NAMED obsolete zones
-    (`EST`, `GMT`, `UT`…) it does resolve, but §4.3 warns they were routinely
-    emitted by senders outside the zone they name — parsed, and recorded as
-    `zone_source` so a caller can weigh them.
-
-    `raw` is retained because a report must quote what the header said, not
-    what this module made of it.
+    `-0000` means "zone unknown" (RFC 5322 §4.3); obsolete zone names are flagged in
+    `zone_source`.
     """
 
     value: datetime | None = None
     zone_known: bool = False
     raw: str = ""
-    zone_source: str = ""  # "numeric" | "obsolete_name" | "unknown" | "iso" | ""
+    zone_source: str = ""  # "numeric" | "obsolete_name" | "unknown" | "iso" | "printed" | ""
     leap_second: bool = False
 
-    # A trailing alphabetic token is an obsolete zone name; a parenthesised
-    # comment after it is permitted (§3.3) and is not part of the zone.
+    # A trailing (comment) after an obsolete zone name is permitted by §3.3.
     OBSOLETE_ZONE_RE = re.compile(r"(?<![+\-\w])([A-Za-z]{1,5})\s*(?:\([^)]*\))?\s*$")
-    # §3.3 permits a leap second. `datetime` cannot represent one, so it is
-    # normalised to :59 and the substitution is RECORDED rather than hidden.
+    # §3.3 permits :60; `datetime` cannot hold it, so it becomes :59 and is recorded.
     LEAP_SECOND_RE = re.compile(r"(\d{1,2}:\d{2}):60(?!\d)")
 
     @staticmethod
@@ -321,9 +283,7 @@ class MailMoment:
             return "unknown" if re.search(r"-0000\s*(?:\([^)]*\))?\s*$", tail) else "numeric"
         return "obsolete_name" if MailMoment.OBSOLETE_ZONE_RE.search(tail) else "unknown"
 
-    #: English month names, spelled out and abbreviated. An explicit table, not
-    #: `%B`, because `strptime` reads month names through the process LOCALE and
-    #: would fail wherever the runtime is not English.
+    #: Not `%B`: `strptime` reads month names through the process locale.
     MONTHS: ClassVar[Mapping[str, int]] = MappingProxyType(
         {
             name: number
@@ -335,10 +295,7 @@ class MailMoment:
         }
     )
 
-    #: `Thursday, 4 September 2026 14:22` / `4 September 2026 at 14:22` /
-    #: `Thursday, September 4, 2026 2:22 PM`. All-numeric forms are deliberately
-    #: absent: `04/09/2026` is genuinely ambiguous and guessing is worse than
-    #: reporting the raw text.
+    #: All-numeric forms are deliberately absent: `04/09/2026` is ambiguous.
     PRINTED_RE: ClassVar[re.Pattern[str]] = re.compile(
         r"""^\s*(?:[A-Za-z]+,\s*)?
             (?:
@@ -353,14 +310,7 @@ class MailMoment:
 
     @classmethod
     def from_printed(cls, raw: Any) -> "MailMoment":
-        """A time a mail client PRINTED on a page, which is not an RFC field.
-
-        A printed date carries no offset — the client rendered it in whatever
-        zone the reader's machine used, and the page does not say which. The
-        result is therefore always `zone_known=False`, so a caller that needs a
-        wall-clock time applies its own zone rather than assuming the sender's
-        (see the naming rule: one zone, declared, not the sender's offset).
-        """
+        """A time a mail client printed on a page; its zone is always unknown."""
         text = str(raw or "").strip()
         match = cls.PRINTED_RE.match(text)
         if not match:
@@ -396,12 +346,9 @@ class MailMoment:
 
     @classmethod
     def parse(cls, raw: Any) -> "MailMoment":
-        """Accepts `MailMoment`, `datetime`, `DateHeader`, an RFC 2822 or an ISO
-        string.
+        """From a `MailMoment`, `datetime`, `DateHeader`, RFC 2822 or ISO string.
 
-        RFC 2822 is attempted FIRST: it is the format headers actually use, and
-        since 3.11 `fromisoformat` accepts bare digit runs such as `20260831`,
-        so a truncated field would otherwise become a date by accident.
+        RFC 2822 goes first: since 3.11 `fromisoformat` accepts bare digit runs.
         """
         if isinstance(raw, MailMoment):
             return raw
@@ -430,8 +377,7 @@ class MailMoment:
         if isinstance(moment, datetime):
             return cls(moment, moment.tzinfo is not None, text, cls._zone_source(text), leap)
 
-        # ISO fallback, for values this module wrote itself — guarded, so a bare
-        # digit run cannot pass as a date.
+        # ISO fallback for values this module wrote; guarded against bare digit runs.
         if "-" in text and ":" in text:
             try:
                 moment = datetime.fromisoformat(text)
@@ -443,9 +389,7 @@ class MailMoment:
 
     @property
     def utc(self) -> datetime | None:
-        """Aware UTC. An unknown zone is read as UTC — an ASSUMPTION, and the
-        only place in this class making one. Sorting and naming may rely on it;
-        an audit trail must not."""
+        """Aware UTC; an unknown zone is assumed to be UTC (see `utc_evidential`)."""
         if self.value is None:
             return None
         if self.value.tzinfo is None:
@@ -454,8 +398,7 @@ class MailMoment:
 
     @property
     def utc_evidential(self) -> datetime | None:
-        """UTC only when the message stated a zone; `None` otherwise, so an
-        assumed value cannot reach a record that reads as fact."""
+        """UTC only when the message stated a zone, otherwise None."""
         if self.value is None or self.value.tzinfo is None:
             return None
         return self.value.astimezone(timezone.utc)
@@ -467,16 +410,9 @@ class MailMoment:
         return int(self.value.utcoffset().total_seconds())
 
     def in_zone(self, zone: str | None = None, *, assume: str = "UTC") -> datetime | None:
-        """The moment seen from `zone` — ALWAYS resolvable, so a caller that
-        needs a time gets one without first asking whether the zone was known.
+        """The moment seen from `zone`, the machine's own when unnamed.
 
-        `zone` unnamed means the machine's own, resolved for the instant being
-        converted rather than snapshotted. A value whose zone the message never
-        stated is read as `assume` — UTC by default, because RFC 5322 §3.3 gives
-        `-0000` exactly that meaning: the time IS UTC, the sender's zone is
-        withheld. Whether this answer rests on that assumption is `zone_known`;
-        the caller can ask, and a record that must not assume uses
-        `utc_evidential` instead.
+        An unstated zone is read as `assume`: UTC, per RFC 5322 §3.3 `-0000`.
         """
         if self.value is None:
             return None
@@ -509,12 +445,7 @@ class MailMoment:
 class MailHop:
     """One `Received` hop: who handed the message to whom, and when.
 
-    The trace is the one part of a message the SENDER does not write. `From`,
-    `Date` and `Message-ID` all come from the sender's client and can say
-    anything; each hop is stamped by the server that accepted the message, and
-    only hops below a trusted boundary can be forged. That makes this the
-    evidential half of the provenance, which is why it is modelled rather than
-    left as raw header text.
+    Stamped by the accepting server, not the sender, so it is modelled as evidence.
     """
 
     index: int = 0
@@ -526,13 +457,10 @@ class MailHop:
     moment: MailMoment = MailMoment()
     raw: str = ""
 
-    # `from a.example ([10.0.0.1])`, `by mx.example`, `with ESMTPS`, `; <date>`.
-    # `envelope-from` in a trailing comment must not be read as the real `from`,
-    # so the keywords are anchored on a non-word boundary rather than `\b`.
+    # Anchored on a non-word boundary, not `\b`, so `envelope-from` is not read as `from`.
     FROM_RE = re.compile(r"(?<![-\w])from\s+([^\s(;]+)", re.IGNORECASE)
     BY_RE = re.compile(r"(?<![-\w])by\s+([^\s(;]+)", re.IGNORECASE)
     WITH_RE = re.compile(r"(?<![-\w])with\s+([A-Za-z0-9/_-]+)", re.IGNORECASE)
-    # Delimiters must MATCH: `[1.2.3.4)` is malformed and is not an address.
     BRACKET_RE = re.compile(
         r"\[(?:IPv6:)?\s*([0-9A-Fa-f:.]+(?:%[0-9A-Za-z._-]+)?)\s*\]"
         r"|\((?:IPv6:)?\s*([0-9A-Fa-f:.]+(?:%[0-9A-Za-z._-]+)?)\s*\)"
@@ -540,23 +468,16 @@ class MailHop:
 
     @staticmethod
     def address(text: str) -> str:
-        """`text` as an IP, or "" — validated, never pattern-matched.
-
-        A dotted token that merely LOOKS like an address (a version string, a
-        truncated host) would otherwise enter the record as one, and an audit
-        cannot tell the two apart afterwards.
-        """
+        """`text` as an IP address, validated rather than pattern-matched, or ""."""
         candidate = str(text or "").strip()
         if not candidate:
             return ""
-        # `from [IPv6:2001:db8::1]` puts the literal where a host name goes; the
-        # brackets and the tag are syntax, not part of the address.
+        # In `[IPv6:2001:db8::1]` the brackets and the tag are syntax, not address.
         if candidate.startswith("[") and candidate.endswith("]"):
             candidate = candidate[1:-1].strip()
         if candidate.lower().startswith("ipv6:"):
             candidate = candidate[5:].strip()
-        # An IPv6 literal may carry a zone identifier; the address is still an
-        # address, the zone is local scope and is dropped.
+        # An IPv6 zone identifier is local scope, not part of the address.
         candidate = candidate.split("%", 1)[0]
         try:
             return str(ip_address(candidate))
@@ -565,8 +486,7 @@ class MailHop:
 
     @classmethod
     def parse(cls, raw: Any, index: int = 0) -> "MailHop":
-        """One `Received` value. Never raises: a malformed hop yields whatever
-        could be read, because a broken trace is still evidence."""
+        """One `Received` value; never raises, as a broken trace is still evidence."""
         original = str(raw or "")
         text = " ".join(original.split())
         if not text:
@@ -582,9 +502,7 @@ class MailHop:
         from_host = from_match.group(1).rstrip(".") if from_match else ""
         by_host = by_match.group(1).rstrip(".") if by_match else ""
 
-        # Which side a bracketed address belongs to is decided by POSITION: the
-        # one before `by` was written by the sending host, the one after it by
-        # the receiving host. No regex spanning both survives the variety here.
+        # A bracketed address before `by` is the sender's, after it the receiver's.
         boundary = by_match.start() if by_match else len(head)
         from_ip = by_ip = ""
         for found in cls.BRACKET_RE.finditer(head):
@@ -596,8 +514,7 @@ class MailHop:
             elif found.start() >= boundary and not by_ip:
                 by_ip = address
 
-        # `Received: by 2002:a05:...` — some gateways put a bare address where a
-        # host name goes; it is an address, and belongs in the address column.
+        # Some gateways put a bare address where a host name goes (`by 2002:a05:...`).
         for host_attr, ip_attr in (("from_host", "from_ip"), ("by_host", "by_ip")):  #  # ignore B007
             host = from_host if host_attr == "from_host" else by_host
             address = cls.address(host)
@@ -639,9 +556,7 @@ class MailHop:
 
 @dataclass(frozen=True, slots=True)
 class MailAttachment:
-    """One attachment. The digest is taken over the CONTENT, never the name,
-    so it is stable across copies and lets the bundle write strategy
-    deduplicate identical payloads."""
+    """One attachment, digested over its content (never the name) so copies deduplicate."""
 
     name: str
     content_type: str = "application/octet-stream"
@@ -676,25 +591,49 @@ class MailAttachment:
 
     @classmethod
     def from_part(cls, part: EmailMessage, index: int) -> "MailAttachment | None":
-        """None when the part has no decodable content: one broken attachment
-        must not cost the whole message."""
-        try:
-            payload = part.get_payload(decode=True)
-        except (LookupError, ValueError, TypeError):
-            return None
+        """The part as a record, or None when it has no decodable content.
+
+        An attached `message/rfc822` is serialised and named after its subject.
+        """
+        content_type = part.get_content_type() or GENERIC_TYPE
+        fallback = f"attachment-{index}"
+        if content_type == "message/rfc822":
+            payload, subject = cls._embedded(part)
+            fallback = f"{subject or fallback}.eml"
+        else:
+            try:
+                payload = part.get_payload(decode=True)
+            except (LookupError, ValueError, TypeError):
+                return None
         if not payload:
             return None
 
-        name = str(part.get_filename() or "").strip() or f"attachment-{index}"
+        name = str(part.get_filename() or "").strip() or fallback
         data = bytes(payload)
         return cls(
             name=name,
-            content_type=part.get_content_type() or "application/octet-stream",
+            content_type=content_type,
             payload=data,
             digest=FileDigest.labelled(data),
             inline=part.get_content_disposition() == "inline",
             content_id=str(part.get("Content-ID", "") or "").strip("<> "),
         )
+
+    #: The stdlib keeps no raw bytes of a sub-part; rewrite unfolded, with CRLF.
+    EMBEDDED_POLICY: ClassVar[Any] = policy.default.clone(max_line_length=0, linesep="\r\n")
+    UNSAFE_NAME_RE: ClassVar[re.Pattern[str]] = re.compile(r'[\\/:*?"<>|\x00-\x1f]+')
+    MAX_NAME: ClassVar[int] = 120
+
+    @classmethod
+    def _embedded(cls, part: EmailMessage) -> tuple[bytes, str]:
+        """An attached message as bytes, and its subject made safe for a filename."""
+        try:
+            inner = part.get_content()
+            data = inner.as_bytes(policy=cls.EMBEDDED_POLICY)
+        except Exception:  # noqa: BLE001 — one broken part must not cost the message
+            return b"", ""
+        subject = cls.UNSAFE_NAME_RE.sub(" ", str(inner.get("Subject", "") or ""))
+        return data, " ".join(subject.split()).strip(". ")[: cls.MAX_NAME].strip()
 
     def as_dict(self, with_payload: bool = False) -> dict[str, Any]:
         record: dict[str, Any] = {
@@ -715,7 +654,7 @@ class MailAttachment:
 # --------------------------------------------------------------------------- #
 @dataclass(frozen=True, slots=True)
 class MailEnvelope:
-    """RFC 5322 §3.6.2 mandates the distinction, and a single `mail_sender` key cannot express it."""
+    """Parties and dates, with `From` and `Sender` kept apart (RFC 5322 §3.6.2)."""
 
     authors: tuple[MailAddress, ...] = ()
     sender: MailAddress | None = None
@@ -728,8 +667,7 @@ class MailEnvelope:
 
     @property
     def originator(self) -> MailAddress | None:
-        """Who actually sent it: `Sender` when present, else the first
-        `From`."""
+        """`Sender` when present, else the first `From`."""
         if self.sender is not None and self.sender.addr_spec:
             return self.sender
         return self.authors[0] if self.authors else None
@@ -748,15 +686,13 @@ class MailEnvelope:
         return tuple(result)
 
     def as_metadata(self) -> dict[str, Any]:
-        """`MailKeys.*` JSON-serialisable values — objects become a dict."""
+        """The envelope as JSON-serialisable `MailKeys.*` values."""
         originator = self.originator or MailAddress()
         recipients = [address.addr_spec for address in self.to]
         return {
             MailKeys.DATE_SENT: self.date_sent.isoformat(),
             MailKeys.DATE_RECEIVED: (self.date_received or self.date_sent).isoformat(),
-            # Populated ONLY when the message stated a zone. A `-0000` message
-            # has no true UTC, only an assumed one, and that belongs in a field
-            # whose name says so.
+            # Only when the zone was stated; an assumed UTC goes in the next key.
             MailKeys.DATE_SENT_UTC: self.date_sent.utc_isoformat(),
             MailKeys.DATE_SENT_UTC_ASSUMED: self.date_sent.utc_isoformat(evidential=False),
             MailKeys.DATE_SENT_RAW: self.date_sent.raw,
@@ -777,7 +713,7 @@ class MailEnvelope:
 
 @dataclass(frozen=True)
 class MailMessage:
-    """One read message, computed lazily. Two entry points because there are two readers: `.eml`"""
+    """One message, its parts computed lazily on first access."""
 
     message: EmailMessage | None = field(default=None, repr=False)
     raw_headers: Mapping[str, str] = field(default_factory=dict, repr=False)
@@ -787,8 +723,7 @@ class MailMessage:
     # region Constructors
     @classmethod
     def from_stream(cls, reader: BinaryIO) -> "MailMessage":
-        """Neither opens nor closes the source — that is `GenericParser`'s
-        job."""
+        """Neither opens nor closes the source."""
         return cls(message=BytesParser(policy=policy.default).parse(reader))
 
     @classmethod
@@ -802,13 +737,9 @@ class MailMessage:
         body: str = "",
         attachments: Sequence[MailAttachment] = (),
     ) -> "MailMessage":
-        """A message whose headers arrive as a raw RFC block, with body and
-        attachments supplied separately.
+        """A message from a raw RFC header block, with body and attachments given.
 
-        The block is re-read through `policy.default` rather than taken as
-        text: unfolding (RFC 5322 §2.2.3), encoded words (RFC 2047) and
-        repeated fields are the standard's work, and a container that hands
-        over folded text has not done it.
+        The block is re-read through `policy.default` for unfolding and encoded words.
         """
         return cls(
             message=message_from_string(block, policy=policy.default),
@@ -823,9 +754,7 @@ class MailMessage:
         body: str = "",
         attachments: Sequence[MailAttachment] = (),
     ) -> "MailMessage":
-        """Entry point for the .msg reader: `extract_msg` supplies the parts,
-        this supplies the meaning. Keys are accepted as internal or RFC
-        names."""
+        """Entry point for the .msg reader; keys may be internal or RFC names."""
         normalised: dict[str, str] = {}
         for key, value in headers.items():
             header = MailHeader.resolve(str(key))
@@ -841,8 +770,7 @@ class MailMessage:
 
     # region Private
     def _strip_html(self, html: str) -> str:
-        """An HTML body as text: block elements become breaks, script and
-        style CONTENT is dropped, entities are decoded."""
+        """An HTML body as text, with script and style content dropped."""
         text = HTML_DROP_RE.sub(" ", str(html or ""))
         text = HTML_BREAK_RE.sub("\n", text)
         text = HTML_TAG_RE.sub(" ", text)
@@ -855,8 +783,7 @@ class MailMessage:
 
     # region Access
     def header(self, name: MailHeader) -> Any:
-        """The structured header object when the message came from bytes, a
-        bare string when it came from parts, `None` when absent."""
+        """Structured header from bytes, a string from parts, or None when absent."""
         if self.message is not None:
             return self.message.get(name.header)
         return self.raw_headers.get(name.value) or None
@@ -878,13 +805,7 @@ class MailMessage:
 
     @cached_property
     def raw(self) -> dict[str, Any]:
-        """Every declared header, keyed by internal name.
-
-        A header the registry marks non-unique keeps ALL its occurrences: a
-        forwarded message carries one `Return-Path` per hop, and reporting only
-        the first states as the message's origin what was merely the last one
-        written.
-        """
+        """Every declared header by internal name; non-unique ones keep all occurrences."""
         values: dict[str, Any] = {}
         for header in MailHeader:
             if header.unique:
@@ -896,8 +817,7 @@ class MailMessage:
         return values
 
     def party(self, name: MailHeader) -> tuple[MailAddress, ...]:
-        """As `addresses`, but when no address survives it returns the display
-        name as the sole party — a .msg export routinely carries only that."""
+        """As `addresses`, falling back to a lone display name (.msg exports)."""
         found = self.addresses(name)
         if found:
             return found
@@ -920,9 +840,7 @@ class MailMessage:
 
     @cached_property
     def received_at(self) -> MailMoment:
-        """Delivery time: the stamp on the topmost `Received` hop (RFC 5321
-        §4.4 requires it to end in `; date-time`, and a new hop is prepended),
-        then `Delivery-Date`, finally the send time."""
+        """Topmost `Received` stamp, else `Delivery-Date`, else the send time."""
         hops = self.all_headers(MailHeader.RECEIVED)
         if hops:
             moment = MailMoment.parse(hops[0].rsplit(";", 1)[-1])
@@ -936,13 +854,9 @@ class MailMessage:
 
     @cached_property
     def body(self) -> str:
-        """The body as text: `text/plain` when it has CONTENT, otherwise
-        `text/html` stripped of markup.
+        """The body as text: `text/plain` if it has content, else stripped `text/html`.
 
-        Content is tested, not the existence of a part: `multipart/alternative`
-        messages routinely carry an empty plain part beside a full HTML one, so
-        an `is not None` test would return an empty body for a message that has
-        one.
+        Content is tested, not presence: alternatives often carry an empty plain part.
         """
         if self.given_body is not None:
             return self.given_body.strip()
@@ -986,8 +900,7 @@ class MailMessage:
 
     @cached_property
     def defects(self) -> tuple[str, ...]:
-        """`email.errors` across every part — the structured alternative to an
-        `except Exception` with a debug record (NFRQ-OBS-01)."""
+        """`email.errors` defects across every part (NFRQ-OBS-01)."""
         if self.message is None:
             return ()
         found: list[str] = []
@@ -1000,8 +913,7 @@ class MailMessage:
 
     # region Output
     def header_lines(self) -> list[str]:
-        """Block: `rendered` fields, under their RFC names, so `Bcc`
-        and the delivery trace stay out of document content."""
+        """Rendered fields under their RFC names; `Bcc` and the trace stay out."""
         lines: list[str] = []
         for header in MailHeader.rendered_fields():
             value = self.text(header)
@@ -1023,13 +935,7 @@ class MailMessage:
 
     @cached_property
     def hops(self) -> tuple[MailHop, ...]:
-        """The transport trace, ORIGIN FIRST.
-
-        Each server prepends its own `Received`, so the raw header order runs
-        newest to oldest — the reverse of how a route reads. It is reversed once,
-        here, so every consumer sees the same direction. `index` is the position
-        in this chronological order, not in the header block.
-        """
+        """The transport trace, origin first (the reverse of header order)."""
         raw = self.all_headers(MailHeader.RECEIVED)
         return tuple(MailHop.parse(value, index) for index, value in enumerate(reversed(raw)))
 
@@ -1059,13 +965,7 @@ class MailMessage:
 
     @cached_property
     def originating_ip(self) -> str:
-        """Where the message entered the route.
-
-        `X-Originating-IP` when the gateway recorded one — it names the
-        submitting CLIENT, which no hop does — otherwise the sending address of
-        the first hop. Both are below the trusted boundary and neither is proof
-        on its own; this records what the message claims, not a verdict.
-        """
+        """`X-Originating-IP` when recorded, else the first hop's sender; a claim, not proof."""
         declared = MailHop.address(self.text(MailHeader.ORIGINATING_IP).strip("[] "))
         if declared:
             return declared
@@ -1075,25 +975,12 @@ class MailMessage:
         return ""
 
     def sent_at(self, zone: str | None = None) -> datetime | None:
-        """The send time seen from `zone` — always answerable.
-
-        The one call a consumer makes when it needs a time rather than an
-        argument about zones: `zone` unnamed means the machine's own, a named
-        one is used, and a message that stated no zone is read as UTC (RFC 5322
-        §3.3). `MailKeys.ZONE_KNOWN` says whether the answer rests on that.
-        """
+        """The send time seen from `zone`; see `MailMoment.in_zone`."""
         return self.envelope.date_sent.in_zone(zone)
 
     @cached_property
     def identity(self) -> str:
-        """The fields that make this message THIS message, canonically joined.
-
-        Everything here is normalised rather than raw: the send time as UTC
-        (`-0000` and `+1000` state the same instant), addresses as `addr_spec`
-        (display names are the client's decoration), recipients sorted (To/Cc
-        order is presentation). The raw `Date` header, the file's timestamps and
-        its name are deliberately absent — none of them is the message.
-        """
+        """The normalised fields that identify this message, canonically joined."""
         envelope = self.envelope
         originator = envelope.originator or MailAddress()
         sent = envelope.date_sent.utc
@@ -1109,11 +996,7 @@ class MailMessage:
 
     @cached_property
     def digest(self) -> str:
-        """Content digest of the MESSAGE — not of the container that carried it.
-        Attachment digests are SORTED: MIME part order is how a client chose to
-        lay the message out, not part of its identity. `identity` is not sorted;
-        its field order is fixed by this method.
-        """
+        """Content digest of the message, not its container; part order is ignored."""
         return FileDigest.folded(
             [
                 FileDigest.of(self.identity.encode("utf-8")),
@@ -1123,7 +1006,7 @@ class MailMessage:
         )
 
     def as_metadata(self, with_payload: bool = False) -> dict[str, Any]:
-        """The envelope, raw headers under `msg_*` + attachment summary."""
+        """The envelope, raw headers under `msg_*` and the attachment summary."""
         metadata: dict[str, Any] = {MailKeys.raw(name): value for name, value in self.raw.items() if value}
         metadata.update(self.envelope.as_metadata())
         metadata[MailKeys.ATTACHMENTS] = [attachment.as_dict(with_payload) for attachment in self.attachments]
@@ -1141,15 +1024,9 @@ class MailMessage:
         return metadata
 
     def walk_attachments(self) -> Iterator[MailAttachment]:
-        """Attachments ONE AT A TIME, without building the cached tuple.
+        """Attachments one at a time, without building the cached tuple.
 
-        `attachments` decodes every part and holds them all; for a message whose
-        attachments weigh tens of megabytes that is the whole payload resident
-        at once. This yields each record as it is decoded, so a caller that
-        writes and releases pays for one attachment at a time.
-
-        An OLE2 export has no lazy path — its reader materialises the parts on
-        open — so there the cached tuple is what there is.
+        OLE2 has no lazy path: its reader materialises every part on open.
         """
         if self.given_attachments is not None:
             yield from self.given_attachments
@@ -1180,28 +1057,14 @@ class MailMessage:
 # --------------------------------------------------------------------------- #
 # region Print layouts                                                        #
 # --------------------------------------------------------------------------- #
-# A message that reached us as a PRINTED page — a PDF of an email — has lost its
-# container: there is no RFC envelope left, only the header block the client
-# rendered at the top of the page. Recognising that block is what tells a piece
-# of correspondence from a document, and the block itself is then ordinary
-# input for `MailMessage.from_header_block`.
-#
-# The decisive property is POSITION AND CONTIGUITY, not the presence of labels:
-# a report that quotes an email in an annex carries the same labels further
-# down, and a printed memo carries `To:/From:/Subject:` with no address at all.
-# Both were measured as false positives before those two conditions were added
-# (`FRQ-MAIL-02` §9).
+# A printed email keeps only the header block at the top of the page; position and
+# contiguity, not labels alone, tell it from quoted mail (`FRQ-MAIL-02` §9).
 
 
-#: Labels a mail client prints that are NOT RFC 5322 fields, mapped to the field
-#: they render. `Sent` is the client's rendering of `Date`; `Attachments` renders
-#: the MIME parts and has no header equivalent. Whether they join `MailHeader` —
-#: whose contract is "headers this module reads, with their RFC 5322 §3.6
-#: metadata" — is an open decision (`FRQ-MAIL-02` §11).
+#: Printed labels that are not RFC 5322 fields, mapped to the field they render.
 PRINT_LABELS: Mapping[str, str | None] = MappingProxyType({"Sent": "Date", "Attachments": None})
 
-#: `Label: value` on one printed line. Kept separate from a template's pattern:
-#: that one asks "is this a label we expect", this one splits a line in two.
+#: Splits any printed `Label: value` line, expected label or not.
 _LABEL_VALUE = re.compile(r"^\s*([A-Za-z][\w-]*)\s*:\s*(.*)$")
 
 _ADDR_SPEC = re.compile(r"[\w.+-]+@[\w-]+\.[\w.]+")
@@ -1209,15 +1072,9 @@ _ADDR_SPEC = re.compile(r"[\w.+-]+@[\w-]+\.[\w.]+")
 
 @dataclass(frozen=True, slots=True)
 class MailTemplate:
-    """One client's print layout, declared as data rather than written as code.
+    """One client's print layout, declared as data.
 
-    Several may be offered at once; the first that matches names the layout, and
-    that name travels with the finding — which client printed it is diagnostic
-    in its own right.
-
-    A template with no labels and only ``markers`` matches on those alone: some
-    webmail prints render no header block at all and are recognisable only by
-    what the browser puts in the footer.
+    A template with only ``markers`` matches on those alone (footer-only webmail prints).
     """
 
     name: str
@@ -1232,8 +1089,7 @@ class MailTemplate:
     def labels(self) -> tuple[str, ...]:
         return tuple(self.required) + tuple(self.optional)
 
-    # Plain properties, not `cached_property`: this dataclass uses __slots__, and
-    # `re.compile` keeps its own pattern cache, so there is nothing left to save.
+    # Not `cached_property`: __slots__ forbids it, and `re.compile` caches anyway.
     @property
     def label_pattern(self) -> re.Pattern[str] | None:
         if not self.labels:
@@ -1251,10 +1107,7 @@ class MailTemplate:
     def defaults(cls) -> tuple["MailTemplate", ...]:
         """Layouts the module knows without configuration."""
         return (
-            # Ordered most specific first: a template's name is reported as the
-            # finding, so a generic one matching an Outlook page would put a
-            # false name on a true answer. `Sent` is Outlook's own rendering of
-            # `Date` and is what separates the two client layouts.
+            # Most specific first: the matching template's name is reported as the finding.
             cls(
                 name="outlook-print",
                 required=("From", "Subject", "Sent"),
@@ -1288,11 +1141,7 @@ class MailTemplate:
 
 @dataclass(frozen=True, slots=True)
 class MailHeaderBlock:
-    """A header block found at the top of printed text, and how it was found.
-
-    ``text`` is ready for `MailMessage.from_header_block`; nothing here parses
-    the fields, because the standard's reader already does that better.
-    """
+    """A header block found at the top of printed text, and how it was found."""
 
     template: str
     lines: tuple[str, ...]
@@ -1307,12 +1156,7 @@ class MailHeaderBlock:
 
     @property
     def rfc_text(self) -> str:
-        """The block with print labels renamed to the field they render.
-
-        `MailMessage.from_header_block` reads RFC fields; a client that printed
-        `Sent:` wrote a `Date:`, and renaming it here is what lets the standard's
-        own reader do the work instead of this module re-deriving it.
-        """
+        """The block with print labels renamed to their RFC fields (`Sent:` -> `Date:`)."""
         renamed: list[str] = []
         for line in self.lines:
             hit = _LABEL_VALUE.match(line)
@@ -1329,14 +1173,9 @@ class MailHeaderBlock:
 
     @property
     def sent(self) -> MailMoment:
-        """When the message was sent, as the page states it.
+        """The send time as the page states it, read as printed before RFC.
 
-        The PRINTED reading is tried first, and the RFC one only when the
-        printed pattern does not match. The other order is wrong: the stdlib
-        reads `Thursday, September 4, 2026 2:22 PM` as a time with an obsolete
-        zone named `PM`, drops the meridiem, and returns 02:22 — a value twelve
-        hours out that looks perfectly successful. `PRINTED_RE` is anchored, so
-        a genuine RFC date with an offset cannot match it and falls through.
+        The stdlib reads `2:22 PM` as zone `PM` and returns 02:22, so the order matters.
         """
         for line in self.lines:
             hit = _LABEL_VALUE.match(line)
@@ -1351,13 +1190,7 @@ class MailHeaderBlock:
 
     @property
     def message(self) -> "MailMessage":
-        """The block read by the standard's own reader.
-
-        Everything a printed block can still say — parties, subject, an RFC
-        date — comes from here rather than from a second parse of the same
-        lines. Encoded words (RFC 2047) survive an export and are the reason
-        the subject is not simply split off the line.
-        """
+        """The block read through `MailMessage.from_header_block`."""
         return MailMessage.from_header_block(self.rfc_text)
 
     @property
@@ -1394,12 +1227,7 @@ class MailHeaderBlock:
         text: str,
         templates: Sequence[MailTemplate] | None = None,
     ) -> "MailHeaderBlock | None":
-        """The first template that matches ``text``, or None.
-
-        Deliberately deterministic and cheap: it reads only the top of the text
-        and matches literal labels. Damaged input — a scan whose OCR broke the
-        labels — is out of scope here and belongs to `FRQ-MAIL-02`.
-        """
+        """The first template that matches ``text``, or None; reads only the top of it."""
         candidates = tuple(templates) if templates else MailTemplate.defaults()
         rows = [line for line in text.splitlines() if line.strip()]
 
@@ -1438,8 +1266,7 @@ class MailHeaderBlock:
                     gap = 0
                     continue
                 gap += 1
-                # One unlabelled line inside the block is a wrapped value; two
-                # mean the block has ended.
+                # One unlabelled line is a wrapped value; two end the block.
                 if gap > 1:
                     break
                 lines.append(row)
@@ -1451,8 +1278,7 @@ class MailHeaderBlock:
                 continue
 
             addresses = len(set(_ADDR_SPEC.findall("\n".join(lines))))
-            # A printed memo carries To/From/Subject and no address at all; the
-            # addr-spec is what separates correspondence from a form.
+            # A printed memo has the labels but no address; the addr-spec marks mail.
             if template.require_address and addresses < 1:
                 continue
 
@@ -1475,26 +1301,9 @@ class MailHeaderBlock:
 
 
 class MailTemplateParser(GenericParser):
-    """Read print layouts from JSON into `MailTemplate` objects.
+    """Read print layouts from JSON into `MailTemplate` objects; not in `ParserFactory`.
 
-    Like `RepairDictionaryParser`, this is **not** registered in
-    `ParserFactory`: a layout set is configuration, not a document travelling
-    the driver read path, so the consumer opens the file and instantiates this
-    directly. Same contract as every other parser — one `deserialise`.
-
-    Payload::
-
-        {"version": "1.0", "templates": [
-            {"name": "outlook-print",
-             "required": ["From", "Subject"],
-             "optional": ["Sent", "To", "Cc", "Attachments"],
-             "min_labels": 3, "start_within": 3, "require_address": true},
-            {"name": "our-gateway", "markers": ["ticket\\.example\\.com"],
-             "min_labels": 0, "require_address": false}
-        ]}
-
-    ``extend`` keeps `MailTemplate.defaults()` ahead of the file's entries, so a
-    deployment adds a client without restating the ones the module knows.
+    With ``extend``, `MailTemplate.defaults()` come before the file's entries.
     """
 
     ALLOWED = ["extend"]
@@ -1522,9 +1331,7 @@ class MailTemplateParser(GenericParser):
             optional = tuple(str(x) for x in entry.get("optional", ()))
             unknown = sorted(label for label in required + optional if label.lower() not in known)
             if unknown:
-                # Reported, not refused: a client may print a label this module
-                # has never seen, and refusing would make the file unusable for
-                # the one case it was written for.
+                # Reported, not refused: the file exists for labels this module lacks.
                 self.warning(
                     msg=Event.Read.name,
                     step=Event.Check.name,
@@ -1554,24 +1361,7 @@ class MailTemplateParser(GenericParser):
 class AttachmentPolicy:
     """Which attachment records become documents, and why the rest do not.
 
-    A signature logo and an attached invoice are both attachments; only the
-    message says which is which, and it says it in three places of decreasing
-    reliability:
-
-    1. ``inline`` — Content-Disposition for RFC 822, the Content-ID / hidden
-       flag for OLE2. Standards-based, so it decides first.
-    2. ``content_id`` present — a Content-ID exists so the body can address the
-       part as a ``cid:`` URL (RFC 2392); carrying one makes it a resource OF
-       the body, not a payload sent alongside it. The body is not scanned to
-       confirm: ``MailMessage.body`` strips markup, so the ``<img src="cid:…">``
-       that would prove the reference is gone before this step can see it.
-    3. type and size together — for clients that ship a logo as an ordinary
-       attachment with no marking left to read.
-
-    Rule 3 needs BOTH halves. A 3 MB photograph is `image/jpeg` exactly like an
-    8 kB signature logo, and dropping it because of its type alone would lose a
-    document the sender meant to send. Both halves are therefore off by default:
-    silently discarding evidence is worse than exporting a logo.
+    Inline or Content-ID parts are rejected, then small parts of a skipped type (off by default).
     """
 
     __slots__ = ("skip_inline", "skip_types", "skip_below")
@@ -1591,9 +1381,7 @@ class AttachmentPolicy:
 
     @classmethod
     def content_type(cls, record: Mapping[str, Any]) -> str:
-        """The record's type, falling back to the filename when the container
-        reported nothing usable — an OLE2 part without a MIME tag arrives as
-        the generic octet-stream, which no type rule can act on."""
+        """The declared type, or one guessed from the filename when it is generic."""
         declared = str(record.get(MailKeys.CONTENT_TYPE) or "").strip().lower()
         if declared and declared != GENERIC_TYPE:
             return declared
@@ -1620,33 +1408,19 @@ class AttachmentPolicy:
 
 
 class MailParser(GenericParser[MailMessage]):
-    """Reads a message from any declared source, and extracts from it.
+    """Reads a message from a declared source and extracts its attachments.
 
-    What a message IS — its digest, its parts, how they decode — belongs to
-    `MailMessage` and is not repeated here; `read()` hands that model back.
-    What this class adds is everything that spans CALLS and therefore cannot
-    live on an immutable model: resolving the source, a one-slot memo over the
-    last message read from a `path`, and a walk cursor so consecutive
-    extractions are a single pass.
-
-    That is why `extract()` is here rather than a caller's loop: the write path
-    asks one source for the digest and then for each attachment in turn, and
-    without the memo and the cursor that message would be read N+1 times and its
-    parts decoded N²/2 times. Only `path` is memoised — a stream or a payload is
-    consumed by the read and cannot be answered again from a key. One slot
-    deliberately: a larger cache would hold several whole messages resident,
-    which is the retention this exists to avoid.
+    A one-slot memo (for `path`) and a walk cursor make consecutive extractions one pass.
     """
 
     __slots__ = ("_memo_key", "_memo", "_walk", "_walk_next")
-    # Tolerate malformed or unknown attachments headers-body stay reachable.
+    # Tolerated so headers and body stay reachable despite broken attachments.
     OLE2_TOLERANCE: tuple[str, ...] = (
         "ATTACH_BROKEN",
         "ATTACH_NOT_IMPLEMENTED",
         "STANDARDS_VIOLATION",
     )
-    # RFC name -> property the OLE2 reader exposes. Used only when the message
-    # never travelled and therefore carries no transport header block.
+    # RFC name -> OLE2 property; used only when there is no transport header block.
     OLE2_PROPERTIES: tuple[tuple[str, str], ...] = (
         ("from", "sender"),
         ("to", "to"),
@@ -1691,35 +1465,15 @@ class MailParser(GenericParser[MailMessage]):
         return message
 
     def digest(self, **source: Any) -> str:
-        """Content digest of the message at the declared source.
-
-        Over the message, not over the container that carried it — identity,
-        body and the attachments' own content digests. See `MailMessage.digest`.
-        """
+        """Content digest of the message at the declared source (`MailMessage.digest`)."""
         return self.read(**source).digest
 
     def extract(self, index: int, *, expected: str = "", **source: Any) -> MailAttachment:
-        """Extract ONE attachment (0-based), verified against `expected`.
+        """One attachment (0-based), verified against `expected`; ask in order for one pass.
 
-        The whole point of asking the parser rather than walking the message
-        from outside: a caller that wants to write attachment 3 says so, and
-        gets bytes it can trust. Verification belongs here because the digest is
-        this module's own product — it was computed the first time the message
-        was read, so a mismatch means the source changed under the run, which is
-        worth failing on rather than writing a file no manifest describes.
-
-        A WALK CURSOR makes consecutive requests one pass: `extract(0)`,
-        `extract(1)` … decode each part once between them. Asking out of order
-        restarts the walk, which is correct but pays for the parts it re-reads,
-        so a caller writing a whole bundle should ask in order.
-
-        Raises IndexError when the part is not there, ValueError when it no
-        longer matches `expected`.
+        Raises IndexError when the part is absent, ValueError when it no longer matches.
         """
-        # Resolve the source FIRST, even when the cursor could carry on: a new
-        # source re-parses and drops the cursor, so a caller that switches
-        # messages mid-sequence cannot be served the previous one's parts.
-        # The memo makes this free when the source has not changed.
+        # Resolve the source first: a new source must drop the cursor (the memo makes it free).
         message = self.read(**source)
         if self._walk is None or index < self._walk_next:
             self._walk, self._walk_next = message.walk_attachments(), 0
@@ -1740,9 +1494,7 @@ class MailParser(GenericParser[MailMessage]):
         return record
 
     def release(self) -> None:
-        """Drop the memo and the walk cursor — call once a source's attachments
-        are all written, so one whole message does not stay resident until the
-        next one arrives."""
+        """Drop the memo and the walk cursor so the message does not stay resident."""
         self._memo_key, self._memo = "", None
         self._walk, self._walk_next = None, 0
 
@@ -1778,16 +1530,11 @@ class MailParser(GenericParser[MailMessage]):
 
     @staticmethod
     def _ole2_text(value: Any) -> str:
-        """One OLE2 string, without the control characters the container adds.
-
-        OLE2 stores strings NUL-terminated and the terminator survives the
-        reader, so a name still carrying it reaches the filesystem as one no
-        `open()` accepts. Tab and newline stay — a body needs them.
-        """
+        """One OLE2 string without its control characters, e.g. the NUL terminator."""
         return OLE2_CONTROL_RE.sub("", str(value or "")).strip()
 
     def _ole2_block(self, message: Any) -> str:
-        """transport header block text, or "" when the message never travelled."""
+        """The transport header block, or "" when the message never travelled."""
         try:
             header = getattr(message, "header", None)
             return header.as_string() if header is not None else ""
@@ -1795,7 +1542,7 @@ class MailParser(GenericParser[MailMessage]):
             return ""
 
     def _ole2_headers(self, message: Any) -> dict[str, str]:
-        """properties of a message that never left the client, under the RFC names."""
+        """Properties of a message that never left the client, under RFC names."""
         headers: dict[str, str] = {}
         for name, prop in MailParser.OLE2_PROPERTIES:
             header = MailHeader.resolve(name)
@@ -1812,8 +1559,7 @@ class MailParser(GenericParser[MailMessage]):
             return ()
 
         def prop(item: Any, name: str) -> Any:
-            # Every extract_msg attachment field is a lazy property over the OLE2
-            # stream, so a malformed part raises on access, not on open.
+            # extract_msg fields are lazy, so a malformed part raises on access.
             try:
                 return getattr(item, name, None)
             except Exception:
@@ -1826,9 +1572,7 @@ class MailParser(GenericParser[MailMessage]):
                 continue
             name = prop(item, "longFilename") or prop(item, "shortFilename")
             name = self._ole2_text(name) or f"attachment-{len(records) + 1}.bin"
-            # OLE2 has no Content-Disposition. An embedded resource is marked
-            # either by a Content-ID the body references or by the hidden flag
-            # (PidTagAttachmentHidden), which is what a signature image carries.
+            # OLE2 has no Content-Disposition: a Content-ID or the hidden flag marks a resource.
             content_id = self._ole2_text(prop(item, "cid")).strip("<> ")
             hidden = bool(prop(item, "hidden"))
             records.append(

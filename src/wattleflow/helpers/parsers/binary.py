@@ -18,7 +18,9 @@ from dataclasses import dataclass
 from io import BytesIO
 from typing import Any, BinaryIO, Callable, ClassVar
 from wattleflow.concrete.serialisation import GenericParser, ParserError
+from wattleflow.enums.event import Event
 from wattleflow.helpers.image_security import ImageSecurityGuard
+from wattleflow.helpers.parsers.tika import TikaParser
 # --------------------------------------------------------------------------- #
 # endregion Imports                                                           #
 # --------------------------------------------------------------------------- #
@@ -48,12 +50,17 @@ class PdfParser(GenericParser):
 
     ``backend`` is ``auto`` (first installed of pymupdf, pypdf, pdfminer) or a
     named one, in which case a missing library is an error rather than a silent
-    fallback. Tika is deliberately NOT among them: it needs a server, which is a
-    connection's business, not a parser's.
+    fallback.
+
+    When the local library cannot read the file, or any page yields no text — a
+    scan, or a scanned page inside a text document — the file is read through
+    Apache Tika, which OCRs it (author, 2026-09-11). Tika is reached through
+    ``tika``, the client its connection yields; without one the local result is
+    returned as it is.
     """
 
     # PresetGate unions ALLOWED across the MRO; `encoding` comes from the base.
-    ALLOWED = ["backend", "password", "preserve_layout"]
+    ALLOWED = ["backend", "password", "preserve_layout", "tika", "ocr_language"]
 
     BACKENDS: ClassVar[tuple[str, ...]] = ("auto", "pymupdf", "pypdf", "pdfminer")
     DEFAULT_BACKEND: ClassVar[str] = "auto"
@@ -65,6 +72,10 @@ class PdfParser(GenericParser):
     }
     #: pdfminer returns one string with a form feed between pages
     PAGE_BREAK: ClassVar[str] = "\x0c"
+    TIKA_BACKEND: ClassVar[str] = "tika"
+    # Explicit, because a Tika server's default PDF OCR strategy is configuration.
+    OCR_HEADERS: ClassVar[dict[str, str]] = {"X-Tika-PDFOcrStrategy": "auto"}
+    OCR_LANGUAGE: ClassVar[str] = "eng"
 
     def deserialise(self, reader: BinaryIO, **opts: Any) -> object:
         if not opts.pop("extract_text", False):
@@ -81,9 +92,38 @@ class PdfParser(GenericParser):
         layout = opts.pop("preserve_layout", None)
         layout = self.preserve_layout if layout is None else layout
 
+        tika = opts.pop("tika", None) or self.tika
+        language = str(opts.pop("ocr_language", None) or self.ocr_language or self.OCR_LANGUAGE)
+
         payload = reader.read()
         name, extract = self._resolve(requested)
-        return PdfText(pages=tuple(extract(payload, password, bool(layout))), backend=name)
+        failure: Exception | None = None
+        try:
+            pages: tuple[str, ...] = tuple(extract(payload, password, bool(layout)))
+        except Exception as e:
+            pages, failure = (), e
+
+        if failure is None and pages and all(page.strip() for page in pages):
+            return PdfText(pages=pages, backend=name)
+        if tika is None:
+            if failure is not None:
+                self.debug(msg=Event.Read.name, step=Event.Failed.name, backend=name, error=str(failure))
+                raise failure
+            return PdfText(pages=pages, backend=name)
+
+        self.debug(
+            msg=Event.Read.name,
+            step=Event.Check.name,
+            reason="unreadable or a page without text; read through Tika",
+            backend=name,
+            pages=len(pages),
+            error=str(failure) if failure else None,
+        )
+        text = TikaParser(client=tika).parse(
+            payload=payload, headers={**self.OCR_HEADERS, "X-Tika-OCRLanguage": language}
+        )
+        # Tika answers for the whole document, so its text is one page.
+        return PdfText(pages=(text,), backend=self.TIKA_BACKEND)
 
     # region Backends
 

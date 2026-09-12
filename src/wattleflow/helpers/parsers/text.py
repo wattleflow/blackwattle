@@ -16,6 +16,8 @@ no I/O policy, no logging).
 from __future__ import annotations
 from typing import Any, BinaryIO
 from wattleflow.concrete.serialisation import GenericParser
+from wattleflow.helpers.converters.rss import RssConverter, RssFeed
+from wattleflow.helpers.converters.xml import XmlConverter
 # --------------------------------------------------------------------------- #
 # endregion Imports                                                           #
 # --------------------------------------------------------------------------- #
@@ -26,6 +28,8 @@ __all__ = [
     "MarkdownParser",
     "JsonParser",
     "GraphParser",
+    "RssParser",
+    "XmlParser",
 ]
 
 # --------------------------------------------------------------------------- #
@@ -63,6 +67,21 @@ class GraphParser(GenericParser):
         graph = Graph()
         graph.parse(source=reader, format=fmt) if fmt else graph.parse(source=reader)
         return graph
+
+
+
+class RssParser(GenericParser):
+    """Read an RSS document into an RssFeed; the XML declaration decides the encoding."""
+
+    def deserialise(self, reader: BinaryIO, **opts: Any) -> RssFeed:
+        return RssConverter.to_feed(reader.read())
+
+
+class XmlParser(GenericParser):
+    """Read an XML document into flat records; the `record` option names the repeating element."""
+
+    def deserialise(self, reader: BinaryIO, **opts: Any) -> list[dict[str, Any]]:
+        return XmlConverter.to_records(reader.read(), opts.get("record"))
 
 
 # --------------------------------------------------------------------------- #

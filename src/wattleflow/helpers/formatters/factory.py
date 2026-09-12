@@ -21,7 +21,15 @@ from wattleflow.core import IFormatter
 from wattleflow.enums.filetype import FileType
 from .binary import PdfFormatter, PickleFormatter, PngFormatter, ProtobufFormatter
 from .tabular import AvroFormatter, CsvFormatter, ExcelFormatter, OrcFormatter
-from .text import GraphFormatter, JsonFormatter, LogFormatter, MarkdownFormatter, TextFormatter
+from .text import (
+    GraphFormatter,
+    JsonFormatter,
+    LogFormatter,
+    MarkdownFormatter,
+    RssFormatter,
+    TextFormatter,
+    XmlFormatter,
+)
 from .word import DocFormatter, WordFormatter
 # --------------------------------------------------------------------------- #
 # endregion Imports                                                           #
@@ -44,6 +52,8 @@ class FormatterFactory:
         FileType.MARKDOWN: MarkdownFormatter,
         FileType.JSON: JsonFormatter,
         FileType.GRAPH: GraphFormatter,
+        FileType.RSS: RssFormatter,
+        FileType.XML: XmlFormatter,
         FileType.CSV: CsvFormatter,
         FileType.DATAFRAME: CsvFormatter,
         FileType.XLS: ExcelFormatter,

@@ -22,7 +22,15 @@ from wattleflow.core import IParser
 from wattleflow.enums.filetype import FileType
 from .binary import PdfParser, PickleParser, PngParser, ProtobufParser
 from .tabular import AvroParser, CsvParser, ExcelParser, OrcParser
-from .text import GraphParser, JsonParser, LogParser, MarkdownParser, TxtParser
+from .text import (
+    GraphParser,
+    JsonParser,
+    LogParser,
+    MarkdownParser,
+    RssParser,
+    TxtParser,
+    XmlParser,
+)
 from .word import DocParser, DocxParser
 # --------------------------------------------------------------------------- #
 # endregion Imports                                                           #
@@ -53,9 +61,11 @@ class ParserFactory:
         FileType.PICKLE: PickleParser,
         FileType.PNG: PngParser,
         FileType.PROTOBUF: ProtobufParser,
+        FileType.RSS: RssParser,
         FileType.TXT: TxtParser,
         FileType.UNKNOWN: TxtParser,
         FileType.XLS: ExcelParser,
+        FileType.XML: XmlParser,
     }
 
     @classmethod

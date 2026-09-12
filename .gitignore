@@ -9,6 +9,7 @@ build/
 develop-eggs/
 dist/
 documentation/
+documentation
 downloads/
 eggs/
 .eggs/
@@ -197,5 +198,9 @@ cython_debug/
 # PyPI configuration file
 .pypirc
 .yaml
+Makefile
 CLAUDE.md
 documentation/
+documentation
+tests/
+*enti*.py

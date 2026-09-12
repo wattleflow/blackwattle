@@ -33,6 +33,8 @@ _EXPORTS: dict[str, str] = {
     "OrcReadProcessor": "orc",
     "OrcWriteProcessor": "orc",
     "PostgresReadProcessor": "postgres",
+    "SDRPassSummary": "sdr",
+    "SDRReadProcessor": "sdr",
     "SolrReadProcessor": "solr",
     "SolrWriteProcessor": "solr",
     "SparkReadProcessor": "spark",

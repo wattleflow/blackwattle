@@ -598,6 +598,22 @@ class TikaConnection(GenericConnection, ABC):
             return False
         return self._reachable(endpoint, self._probe_timeout())
 
+    @classmethod
+    def from_environment(cls, connection_name: str, **kwargs: Any) -> Optional["TikaConnection"]:
+        """The lazy connection the process environment describes, or None.
+
+        `TIKA_SERVER_ENDPOINT` names a running server, `TIKA_SERVER_JAR` a local
+        one — both set by the workflow `runtime:` section.
+        """
+        endpoint = os.environ.get("TIKA_SERVER_ENDPOINT", "").strip()
+        if endpoint:
+            return TikaServerConnection(
+                connection_name=connection_name, endpoint=endpoint, lazy_loading=True, **kwargs
+            )
+        if os.environ.get("TIKA_SERVER_JAR", "").strip():
+            return TikaLocalConnection(connection_name=connection_name, lazy_loading=True, **kwargs)
+        return None
+
     # endregion Public
 
     def __repr__(self) -> str:

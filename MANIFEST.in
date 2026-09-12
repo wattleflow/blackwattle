@@ -61,10 +61,21 @@ recursive-include src/wattleflow/strategies *.py
 prune src/wattleflow/core
 prune src/wattleflow/concrete
 
+# --- Modules held back from release ---
+# An sdist is built from the WORKING TREE, not from git: a module that is
+# present on disk but untracked still ships unless a rule drops it. These files
+# are untracked by `.gitignore` and must stay out of the distribution too — the
+# pattern is kept identical to the one in `.gitignore` so the two cannot drift.
+# Must follow the `recursive-include` lines above: later rules win.
+global-exclude *enti*.py
+
 # --- Documentation lives in its own repository ---
-# `documentation/` is a symlink to the separate, local-only documentation
-# repository (CLAUDE.md §8). Pruning keeps another repository's content — and its
-# C-snapshots — out of this distribution (NFRQ-SEC-02, minimal surface).
+# `documentation` is a symlink to the separate, local-only documentation
+# repository (CLAUDE.md §8); it is no longer tracked here, but it still resolves
+# in a developer tree, which is exactly when this rule matters. Pruning keeps
+# another repository's content — and its C-snapshots — out of this distribution
+# (NFRQ-SEC-02, minimal surface). `Makefile`, likewise a dev symlink and no
+# longer tracked, needs no rule: `global-exclude *` never included it.
 prune documentation
 
 # --- Package data: vendored OSCAL catalogues, read at runtime by the loaders ---

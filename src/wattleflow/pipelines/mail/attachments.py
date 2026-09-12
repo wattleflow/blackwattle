@@ -91,9 +91,7 @@ class PipelineMailExtractAttachment(GenericPipeline):
         document: FileDocument = facade.request()
         source_path = Path(document.filename)
 
-        parent_digest = document.metadata.get(
-            MailKeys.CONTENT_DIGEST
-        ) or document.metadata.get(MailKeys.FILE_DIGEST)
+        parent_digest = document.metadata.get(MailKeys.CONTENT_DIGEST) or document.metadata.get(MailKeys.FILE_DIGEST)
         if not parent_digest:
             parent_digest = document.metadata.get("digest")
         if not parent_digest and source_path.is_file():
@@ -102,9 +100,7 @@ class PipelineMailExtractAttachment(GenericPipeline):
         if parent_digest:
             document.update_metadata(MailKeys.CONTENT_DIGEST, str(parent_digest))
 
-        attachments: list[dict[str, Any]] = list(
-            document.metadata.get(MailKeys.ATTACHMENTS) or []
-        )
+        attachments: list[dict[str, Any]] = list(document.metadata.get(MailKeys.ATTACHMENTS) or [])
         document.update_metadata(MailKeys.HAS_ATTACHMENTS, bool(attachments))
 
         # Re-write the parent so the blackboard keys it stably before children link.
@@ -135,9 +131,7 @@ class PipelineMailExtractAttachment(GenericPipeline):
                     size=att.get("size"),
                 )
                 continue
-            child = self._build_child(
-                att, idx, str(parent_digest or ""), document, source_path
-            )
+            child = self._build_child(att, idx, str(parent_digest or ""), document, source_path)
             processor.blackboard.write(facade=child, processor=processor, pipeline=self)
             emitted += 1
 
@@ -159,19 +153,10 @@ class PipelineMailExtractAttachment(GenericPipeline):
         source_path: Path,
     ) -> ITarget:
         name = str(att.get("name") or f"attachment-{idx + 1}.bin")
-        # COORDINATES, not content. The child says which message it came out of
-        # and which part it is; the write strategy reads those bytes back at the
-        # moment it hands them to the driver. A payload stamped here would sit on
-        # the canvas until the flush — once per attachment, for the whole cycle —
-        # to say nothing the digest does not already say.
         document = AttachmentDocument(filename=name)
         document.update_metadata(MailKeys.IS_ATTACHMENT, True)
-        # Digested over the payload at parse time — the attachment's identity is
-        # its content, so the same file attached to two messages deduplicates.
         document.update_metadata(MailKeys.CONTENT_DIGEST, str(att.get("digest") or ""))
         document.update_metadata(MailKeys.PARENT_DIGEST, parent_digest)
-        # The run's zone travels with the child so the write side can name in
-        # it; that is provenance, not a name.
         zone = parent.metadata.get("archive_zone")
         if zone:
             document.update_metadata("archive_zone", zone)

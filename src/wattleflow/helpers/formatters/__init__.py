@@ -37,6 +37,8 @@ _EXPORTS: dict[str, str] = {
     "MarkdownFormatter": "text",
     "JsonFormatter": "text",
     "GraphFormatter": "text",
+    "RssFormatter": "text",
+    "XmlFormatter": "text",
     "WordFormatter": "word",
     "DocFormatter": "word",
 }
@@ -56,6 +58,8 @@ __all__ = [
     "MarkdownFormatter",
     "JsonFormatter",
     "GraphFormatter",
+    "RssFormatter",
+    "XmlFormatter",
     "WordFormatter",
     "DocFormatter",
 ]

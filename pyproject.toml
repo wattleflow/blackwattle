@@ -66,7 +66,7 @@ name = "blackwattle"
 # the version from git tags instead, remove this line, add `dynamic = ["version"]`
 # and a [tool.setuptools_scm] table. Do not do both — a static version silently
 # wins and the tags stop meaning anything.
-version = "0.0.1"
+version = "0.0.2"
 
 description = "Blackwattle - non-zero-trust extension layer and end-to-end pipelines for the Wattleflow framework."
 readme = "README.md"
@@ -132,8 +132,10 @@ classifiers = [
 # promise across the third component, so `<0.0.2` is the honest cap. Relax it
 # once (b) reaches 1.0 and adopts a stability policy.
 dependencies = [
-    "wattleflow-workflow>=0.0.1.12,<0.0.2",
+    "wattleflow>=0.0.0.52",
+    "wattleflow-workflow>=0.0.1.13,<0.0.2",
 ]
+
 
 # -----------------------------------------------------------------------------
 # Optional dependencies — the unvetted surface, grouped by domain
@@ -145,6 +147,10 @@ dependencies = [
 # requirements.txt — add them deliberately, per library, rather than in bulk.
 # Reproducibility belongs in a lockfile or constraints file, not here.
 [project.optional-dependencies]
+# Alias extra: `pip install wattleflow-workflow[blackwattle]` povlaci (c).
+# Ime mora biti jedna rijec - po PEP 685 `black-wattle` je DRUGO ime i pip bi
+# javio isto upozorenje, ne gresku.
+blackwattle = ["blackwattle>=0.0.1"]
 
 # Cryptographic primitives used by connection and credential handling.
 security = [
@@ -240,12 +246,31 @@ media = [
     "yt-dlp",
 ]
 
+# Software-defined radio (HLRQ-16): the RTL2832U family through pyrtlsdr.
+# LICENCE MARKER: pyrtlsdr is GPL-3.0-or-later and the native librtlsdr it loads
+# is GPL-2.0-or-later. Accepted by the author 2026-09-11 as an optional
+# dependency: it does not change this distribution's Apache-2.0 terms, but a
+# consumer who redistributes an install with this extra inherits GPL obligations.
+# The `lib` extra pulls pyrtlsdrlib (MIT), which bundles a prebuilt librtlsdr
+# from the github.com/librtlsdr fork — pyrtlsdr 0.5.0 fails at import against
+# the distribution package librtlsdr 2.0.1. Its SBOM does not list that binary:
+# a supply-chain gap, declared, not closed.
+# Floors are the latest releases on 2026-09-11. numpy 2.5 needs Python 3.12, so
+# its floor is the newest release that still installs on 3.11.
+sdr = [
+    "pyrtlsdr[lib]>=0.5.0",
+    "pyrtlsdrlib>=0.0.5",
+    "numpy>=2.4.6",
+]
+
 # Convenience aggregate. PEP 508 permits a distribution to depend on itself
 # with extras, which is the standard idiom for an "everything" group and avoids
 # duplicating the lists above.
 #
 # `all` deliberately EXCLUDES nlp. A consumer typing `[all]` is asking for
 # breadth, not for a multi-gigabyte model runtime; make that opt-in by name.
+# It EXCLUDES sdr for the same reason: a GPL licence and a bundled native
+# binary are opted into by name, never by breadth.
 all = [
     "blackwattle[security,sql,search,streaming,cloud,data,documents,media]",
 ]
@@ -396,7 +421,6 @@ target-version = "py311"
 [tool.ruff.lint]
 select = ["E", "W", "F", "I", "B", "S"]   # S = flake8-bandit
 ignore = ["E203", "E731", "I001"]
-[tool.ruff.lint]
 
 [tool.bandit]
 exclude_dirs = ["tests", ".venv", "build", "dist"]

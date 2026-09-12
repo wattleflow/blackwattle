@@ -41,6 +41,8 @@ _EXPORTS: dict[str, str] = {
     "PostgresError": "postgres",
     "SFTPConnection": "sftp_paramiko",
     "SFTPConnectionError": "sftp_paramiko",
+    "SDRConnection": "sdr",
+    "SDRConnectionError": "sdr",
     "SolrConnection": "solr",
     "SqliteConnection": "sqlite",
     "SqliteConnectionError": "sqlite",

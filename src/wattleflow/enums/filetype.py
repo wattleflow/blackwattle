@@ -54,6 +54,7 @@ _EXT_MAP: dict[str, str] = {
     ".orc": "ORC",
     ".pb": "PROTOBUF",
     ".protobuf": "PROTOBUF",
+    ".rss": "RSS",
     ".ttl": "GRAPH",
     ".n3": "GRAPH",
     ".nt": "GRAPH",
@@ -75,6 +76,8 @@ _MD_RE: re.Pattern[str] = re.compile(
     r"|```[\w]*$"  # fenced code block opener
     r"|[-=]{3,}\s*$)"  # setext underline
 )
+# RSS 0.9x/2.0 roots on <rss>; RSS 1.0 is RDF/XML told apart by its namespace.
+_RSS_RE: re.Pattern[str] = re.compile(r"<rss\b|http://purl\.org/rss/1\.0/")
 # Maximum bytes read from disk during content-based detection (prevents OOM)
 _DETECT_MAX_BYTES: int = 50 * 1024 * 1024  # 50 MB
 # XLS stream names encoded as UTF-16LE (present in OLE2 directory sectors)
@@ -111,9 +114,11 @@ class FileType(Enum):
     PICKLE = auto()
     PROTOBUF = auto()
     PNG = auto()
+    RSS = auto()  # v0.0.1 (DR-PRC-004)
     TIFF = auto()
     TXT = auto()
     XLS = auto()
+    XML = auto()  # v0.0.1 (DR-PRC-004)
     UNKNOWN = auto()
 
     @classmethod
@@ -154,11 +159,13 @@ class FileType(Enum):
           7. PICKLE   — protocol 2-5 magic (\\x80\\x02 … \\x80\\x05)
           8. GRAPH    — JSON-LD (@context), Turtle (@prefix/@base), N-Triples
           9. JSON     — UTF-8 starting with { or [
-         10. MARKDOWN — heading / fenced code / setext heuristics
-         11. LOG      — lines with timestamps / log-level keywords
-         12. CSV      — consistent comma / semicolon / tab columns
-         13. TXT      — any valid UTF-8 text
-         14. UNKNOWN  — binary or unrecognised
+         10. RSS      — <rss> root, or the RSS 1.0 namespace
+         11. XML      — XML declaration (a bare .xml suffix is not mapped, so a feed stays RSS)
+         12. MARKDOWN — heading / fenced code / setext heuristics
+         13. LOG      — lines with timestamps / log-level keywords
+         14. CSV      — consistent comma / semicolon / tab columns
+         15. TXT      — any valid UTF-8 text
+         16. UNKNOWN  — binary or unrecognised
         """
         if not data:
             return cls.UNKNOWN
@@ -281,7 +288,7 @@ class FileType(Enum):
 
     @classmethod
     def _detect_text(cls, data: bytes) -> "FileType":
-        """Detect text-based types: GRAPH, JSON, LOG, CSV, TXT.
+        """Detect text-based types: GRAPH, JSON, RSS, XML, LOG, CSV, TXT.
 
         Reads at most 8 KiB to keep detection fast for large files.
         Binary data that cannot be decoded as strict UTF-8 returns UNKNOWN.
@@ -304,6 +311,14 @@ class FileType(Enum):
             if b'"@context"' in data[:1024]:
                 return cls.GRAPH
             return cls.JSON
+
+        # --- RSS ---
+        if stripped[0] == "<" and _RSS_RE.search(stripped[:1024]):
+            return cls.RSS
+
+        # --- XML ---
+        if stripped.startswith("<?xml"):
+            return cls.XML
 
         # --- RDF Turtle / N3 / N-Triples ---
         prefix = stripped[:256].lower()
