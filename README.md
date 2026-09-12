@@ -19,7 +19,7 @@ reference flows that scale.
 > transitive import closure is the standard library plus each other. **Blackwattle
 > is deliberately outside that boundary.** It is the extension layer, and it exists
 > to reach third-party subsystems — databases, message brokers, OCR engines, NLP
-> models, cloud APIs.
+> models, cloud APIs, radio hardware.
 >
 > The components shipped here are **reference implementations over existing
 > open-source subsystems**, not audited software supply chain. Every optional
@@ -36,7 +36,7 @@ reference flows that scale.
 | **Python Compatibility** | [![Python versions](https://img.shields.io/pypi/pyversions/blackwattle.svg)](https://pypi.org/project/blackwattle/) |
 | **Maturity** | Beta — deliberately below the Production/Stable carried by core and workflow |
 | **Required dependencies** | [wattleflow-workflow](https://www.github.com/wattleflow/workflow.git) only, which brings [wattleflow](https://www.github.com/wattleflow/core.git) transitively |
-| **Optional dependencies** | Ten named extras, none installed by default — see below |
+| **Optional dependencies** | Eleven named extras, none installed by default — see below |
 | **Documentation** | [Wattleflow **Documentation**](https://github.com/wattleflow/documentation.git) |
 
 # Blackwattle
@@ -84,12 +84,36 @@ pip install wattleflow-workflow[blackwattle]"
 | `documents` | python-docx, pypdf, pdfminer.six, PyMuPDF, Pillow, pytesseract, tika, extract-msg | **See the licence warning below.** pytesseract needs the `tesseract` binary; tika needs a JVM |
 | `nlp` | spacy, stanza, flair, gliner, transformers, torch, wordfreq | Multi-gigabyte; several need runtime model downloads pip does not manage |
 | `media` | anthropic, youtube-transcript-api, yt-dlp | |
-| `all` | everything **except** `nlp` | Breadth without a model runtime |
+| `sdr` | pyrtlsdr[lib], numpy | **See the licence warning below.** Needs an RTL2832U receiver on USB; the bundled librtlsdr is used because the one shipped by a distribution is too old for this wrapper |
+| `all` | everything **except** `nlp` and `sdr` | Breadth without a model runtime or a radio |
 
 > **Licence warning — `documents`.** PyMuPDF is AGPL-3.0 (or commercial). It is an
 > optional dependency and not vendored, so it does not change the Apache-2.0 terms
 > of this distribution — but if you install this extra and redistribute the result,
 > you inherit AGPL obligations. Decide that deliberately.
+
+> **Licence warning — `sdr`.** pyrtlsdr is GPL-3.0-or-later, and the native
+> librtlsdr it loads is GPL-2.0-or-later. Same reasoning as above: optional and not
+> vendored, so the Apache-2.0 terms of this distribution stand, while a
+> redistributed install carries GPL obligations. The `lib` extra also brings a
+> prebuilt library binary that its own SBOM does not list — a supply-chain fact
+> worth knowing before you install it.
+
+## Radio capture (`sdr`)
+
+One receiver is one connection: the device is claimed exclusively, addressed by a
+selector that must resolve to exactly one unit, and every parameter is read back
+from the device rather than assumed. A model is configuration — a profile verified
+against what the device reports — not a class, so a new model needs no code.
+
+```bash
+pip install "blackwattle[sdr]"
+```
+
+Verified on a Nooelec NESDR SMArt v5 (RTL2832U + R820T): claim by serial, read-back
+of rate, frequency and gain, blocks at the configured rate, retuning across a plan,
+and release. Losses are **not measurable** through this library's synchronous read,
+so they are reported as unmeasured, never as zero.
 
 # Key Features
 
