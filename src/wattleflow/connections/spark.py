@@ -43,54 +43,6 @@ from wattleflow.decorators.oscal import oscal_connection
 # --------------------------------------------------------------------------- #
 # region Helpers                                                              #
 # --------------------------------------------------------------------------- #
-
-
-def _check_java() -> tuple[Optional[str], Optional[str]]:
-    """Check Java availability.
-
-    Returns:
-        (error_message, None) — Java is not usable; error_message explains why.
-        (None, version_line)  — Java is OK; version_line is the first line of
-                                ``java -version`` output.
-    """
-    java_home = os.environ.get("JAVA_HOME")
-
-    if java_home:
-        java_bin = os.path.join(java_home, "bin", "java")
-        if not os.path.isfile(java_bin):
-            return (
-                f"JAVA_HOME is set to '{java_home}' but '{java_bin}' was not found. "
-                "Verify that JAVA_HOME points to a valid JDK/JRE installation.",
-                None,
-            )
-        java_exe = java_bin
-    else:
-        java_exe = shutil.which("java")
-        if java_exe is None:
-            return (
-                "Java executable was not found on PATH and JAVA_HOME is not set. "
-                "Install Java 8, 11, or 17 and set the JAVA_HOME environment variable "
-                "before starting a Spark session.",
-                None,
-            )
-
-    try:
-        result = subprocess.run(
-            [java_exe, "-version"],
-            capture_output=True,
-            text=True,
-            timeout=10,
-        )
-        version_output = (result.stderr or result.stdout).strip().splitlines()
-        version_line = version_output[0] if version_output else ""
-        return None, version_line
-    except Exception as e:
-        return (
-            f"Java was found at '{java_exe}' but could not be executed: {e}",
-            None,
-        )
-
-
 # --------------------------------------------------------------------------- #
 # endregion Helpers                                                           #
 # --------------------------------------------------------------------------- #
@@ -128,6 +80,52 @@ class SparkConnection(GenericConnection):
     # gate (FR-OSCAL-14.13), not an omission.
     OSCAL_CONTROLS: ClassVar[Tuple[str, ...]] = ()
 
+    @staticmethod
+    def _check_java() -> tuple[Optional[str], Optional[str]]:
+        """Check Java availability.
+
+        Returns:
+            (error_message, None) — Java is not usable; error_message explains why.
+            (None, version_line)  — Java is OK; version_line is the first line of
+                                    ``java -version`` output.
+        """
+        java_home = os.environ.get("JAVA_HOME")
+
+        if java_home:
+            java_bin = os.path.join(java_home, "bin", "java")
+            if not os.path.isfile(java_bin):
+                return (
+                    f"JAVA_HOME is set to '{java_home}' but '{java_bin}' was not found. "
+                    "Verify that JAVA_HOME points to a valid JDK/JRE installation.",
+                    None,
+                )
+            java_exe = java_bin
+        else:
+            java_exe = shutil.which("java")
+            if java_exe is None:
+                return (
+                    "Java executable was not found on PATH and JAVA_HOME is not set. "
+                    "Install Java 8, 11, or 17 and set the JAVA_HOME environment variable "
+                    "before starting a Spark session.",
+                    None,
+                )
+
+        try:
+            result = subprocess.run(
+                [java_exe, "-version"],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            version_output = (result.stderr or result.stdout).strip().splitlines()
+            version_line = version_output[0] if version_output else ""
+            return None, version_line
+        except Exception as e:
+            return (
+                f"Java was found at '{java_exe}' but could not be executed: {e}",
+                None,
+            )
+
     def create_connection(self) -> None:
         self.debug(
             msg=Event.Create.name,
@@ -155,7 +153,7 @@ class SparkConnection(GenericConnection):
                 error=f"Cannot create connection in state '{self.state.value}'",
             )
 
-        error, java_version = _check_java()
+        error, java_version = self._check_java()
         if error:
             raise SparkConnectionError(caller=self, error=error)
         self.debug(msg=Event.Create.name, java=java_version)

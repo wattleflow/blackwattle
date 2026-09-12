@@ -68,7 +68,6 @@ _EXPORTS: dict[str, str] = {
     "DriverS3": "s3bucket",
     "DriverSDR": "sdr",
     "DriverSDRError": "sdr",
-    "IQSampleParser": "sdr",
     "SDRDeviceLost": "sdr",
     "SDRSampleBlock": "sdr",
     "SDRTransmitNotSupported": "sdr",

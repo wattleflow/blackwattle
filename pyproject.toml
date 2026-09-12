@@ -66,7 +66,7 @@ name = "blackwattle"
 # the version from git tags instead, remove this line, add `dynamic = ["version"]`
 # and a [tool.setuptools_scm] table. Do not do both — a static version silently
 # wins and the tags stop meaning anything.
-version = "0.0.2"
+version = "0.0.3"
 
 description = "Blackwattle - non-zero-trust extension layer and end-to-end pipelines for the Wattleflow framework."
 readme = "README.md"

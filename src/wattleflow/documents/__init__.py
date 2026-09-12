@@ -9,6 +9,7 @@
 from .dictionary import DictDocument
 from .file import FileDocument
 from .item import ItemDocument
+from .sdr import SDRSampleDocument
 
 # NOTE: third-party-backed document types are intentionally NOT re-exported here.
 # `documents/` is shared with the core `wattleflow` / `wattleflow-workflow`
@@ -23,4 +24,5 @@ __all__ = [
     "DictDocument",
     "FileDocument",
     "ItemDocument",
+    "SDRSampleDocument",
 ]

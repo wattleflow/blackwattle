@@ -24,6 +24,7 @@ from typing import Any
 # the single declaration of what this package exposes and from where.
 _EXPORTS: dict[str, str] = {
     "PdfParser": "binary",
+    "IQSampleParser": "iq",
     "PdfText": "binary",
     "PickleParser": "binary",
     "ProtobufParser": "binary",

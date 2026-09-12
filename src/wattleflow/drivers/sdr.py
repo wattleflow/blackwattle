@@ -4,14 +4,13 @@
 # License: Apache 2 Licence
 
 
-# --------------------------------------------------------------------------- #
-# Dependency (optional, extra `sdr`): numpy, loaded on the first block.       #
-# --------------------------------------------------------------------------- #
-
 """DriverSDR — the only component that touches the sample stream (FRQ-DRV-16.2).
 
-`read` is one implementation for every family: the profile supplies the format
-and full scale, the parser turns bytes into samples, and the connection owns the
+`read` is one implementation for every family and delivers the stream AS IT
+COMES: raw bytes with the description of how they were taken. `convert` moves
+the conversion here instead, and the blocks carry the working table — the other
+place for it is the create strategy, and the configuration chooses (author,
+2026-09-12). The profile supplies format and full scale; the connection owns the
 unit, its direction and its tuning plan (BR-13).
 """
 
@@ -23,11 +22,9 @@ from collections.abc import Generator
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from importlib import metadata
-from io import BytesIO
-from typing import Any, BinaryIO, ClassVar
+from typing import Any, ClassVar
 from wattleflow.concrete.driver import DriverMetadata, GenericDriver
 from wattleflow.concrete.exception import DriverException
-from wattleflow.concrete.serialisation import GenericParser, ParserError
 from wattleflow.connections.sdr.connection import SDRConnection
 from wattleflow.connections.sdr.profile import Direction, SampleFormat, SDREffective
 from wattleflow.enums.event import Event
@@ -38,7 +35,6 @@ from wattleflow.enums.event import Event
 __all__ = [
     "DriverSDR",
     "DriverSDRError",
-    "IQSampleParser",
     "SDRDeviceLost",
     "SDRSampleBlock",
     "SDRTransmitNotSupported",
@@ -72,9 +68,10 @@ class SDRDeviceLost(DriverSDRError):
 
 @dataclass(frozen=True)
 class SDRSampleBlock:
-    """Samples with one description of how they were taken (FRQ-DRV-16.2 k.2)."""
+    """What one read produced — bytes as the unit gave them, or the converted table —
+    with one description of how it was taken."""
 
-    samples: Any
+    payload: Any
     sequence_no: int
     started_at: datetime
     sample_count: int
@@ -85,10 +82,16 @@ class SDRSampleBlock:
     # None when the access mechanism cannot see losses at all (BR-07).
     lost_before: int | None
 
+    #: Bytes the unit delivered, kept even when the payload is no longer bytes.
+    raw_bytes: int = 0
+    payload_kind: str = "bytes"
+
     def description(self) -> dict[str, Any]:
-        """Everything but the samples — safe for metadata and records (NFRQ-SEC-06)."""
+        """Everything but the payload — safe for metadata and records (NFRQ-SEC-06)."""
         return {
             "sequence_no": self.sequence_no,
+            "bytes": self.raw_bytes,
+            "payload_kind": self.payload_kind,
             "started_at": self.started_at.isoformat(),
             "sample_count": self.sample_count,
             "effective_rate": self.effective_rate,
@@ -108,38 +111,6 @@ class SDRSampleBlock:
 # --------------------------------------------------------------------------- #
 
 
-class IQSampleParser(GenericParser):
-    """Interleaved I/Q bytes → complex64 samples normalised by the profile full scale.
-
-    Domain-local helper (NFRQ-ORG-01): only this driver reads sample formats.
-    """
-
-    ALLOWED = ["format", "full_scale"]
-    DTYPE: ClassVar[dict[SampleFormat, str]] = {
-        SampleFormat.U8_IQ: "u1",
-        SampleFormat.S8_IQ: "i1",
-        SampleFormat.S16_IQ: "<i2",
-        SampleFormat.CF32_IQ: "<f4",
-    }
-    # Unsigned samples sit around mid-scale.
-    OFFSET: ClassVar[dict[SampleFormat, float]] = {SampleFormat.U8_IQ: 127.5}
-
-    def deserialise(self, reader: BinaryIO, **kwargs) -> Any:
-        import numpy
-
-        fmt = SampleFormat(kwargs.pop("format", None) or self.format)
-        scale = float(kwargs.pop("full_scale", None) or self.full_scale or fmt.full_scale)
-        raw = numpy.frombuffer(reader.read(), dtype=self.DTYPE[fmt])
-        if raw.size % 2:
-            raise ParserError(caller=self, error=f"{raw.size} values: I and Q must pair")
-        values = raw.astype(numpy.float32)
-        offset = self.OFFSET.get(fmt, 0.0)
-        if offset:
-            values -= offset
-        values /= scale
-        return values.view(numpy.complex64)
-
-
 # --------------------------------------------------------------------------- #
 # endregion Parser                                                            #
 # --------------------------------------------------------------------------- #
@@ -150,7 +121,9 @@ class IQSampleParser(GenericParser):
 
 
 class DriverSDR(GenericDriver):
-    ALLOWED = ["connection_name", "connection_manager", "block_size", "settle_blocks"]
+    ALLOWED = ["connection_name", "connection_manager", "block_size", "settle_blocks", "convert"]
+    #: What a block carries: the bytes as they came, or the working table.
+    CONVERSIONS: ClassVar[tuple[str, ...]] = ("none", "frame")
     # rtl_sdr default: 16 × 16384 bytes of 8-bit I/Q.
     BLOCK_SIZE: ClassVar[int] = 131_072
     # Blocks dropped after a retune; the PLL lock is not observable through the
@@ -160,7 +133,7 @@ class DriverSDR(GenericDriver):
     def __init__(self, **kwargs) -> None:
         super().__init__(**kwargs)
         self._connection: SDRConnection | None = None
-        self._parser: IQSampleParser | None = None
+        self._convert: str = "none"
         self._format: SampleFormat | None = None
         self._full_scale: float = 0.0
         self._block_bytes: int = 0
@@ -217,22 +190,26 @@ class DriverSDR(GenericDriver):
                 f"not a multiple of {align}",
             )
 
+        convert = str(self.convert or "none").lower()
+        if convert not in self.CONVERSIONS:
+            raise DriverSDRError(
+                caller=self, error=f"convert must be one of {self.CONVERSIONS}, got {convert!r}"
+            )
+        self._convert = convert
         self._connection = connection
         self._format = fmt
         self._full_scale = profile.formats[fmt]
-        self._parser = IQSampleParser(format=fmt.value, full_scale=self._full_scale)
         self._block_bytes = block_bytes
         self._lost_total = 0 if connection.backend.MEASURES_LOSS else None
         self.debug(msg=Event.Load.name, step=Event.Completed.name, format=fmt.value)
 
     def close(self) -> None:
         # The unit belongs to the connection; the driver only lets go of it.
-        self._parser = None
         self._connection = None
         self.debug(msg=Event.Close.name, step=Event.Completed.name)
 
     def read(self, uri: str = "", **kwargs) -> Generator[SDRSampleBlock, None, None]:
-        """Blocks as a generator; nothing accumulates beyond one block (k.1)."""
+        """Raw blocks as a generator; nothing accumulates beyond one block (k.1)."""
         self.ensure_live()
         if self._connection.direction is not Direction.RECEIVE:
             raise DriverSDRError(caller=self, error="the connection is not in receive")
@@ -246,6 +223,12 @@ class DriverSDR(GenericDriver):
             else "no family backend transmits yet"
         )
         raise SDRTransmitNotSupported(caller=self, error=f"write refused: {reason}")
+
+    def _table(self, raw: bytes) -> Any:
+        """The conversion, where the configuration asked for it — one definition (BR-13)."""
+        from wattleflow.helpers.parsers.iq import IQSampleParser
+
+        return IQSampleParser.frame(raw, self._format, self._full_scale)
 
     def _pull(self, session: Any) -> bytes:
         try:
@@ -270,14 +253,16 @@ class DriverSDR(GenericDriver):
                 while dwell is None or kept < dwell:
                     raw = self._pull(session)
                     effective = connection.effective
-                    samples = self._parser.deserialise(BytesIO(raw))
-                    count = int(samples.shape[0])
+                    count = len(raw) // self._format.bytes_per_sample
+                    payload = raw if self._convert == "none" else self._table(raw)
                     # Host clock at read completion minus the block's duration.
                     started = datetime.now(timezone.utc) - timedelta(
                         seconds=count / effective.sample_rate
                     )
                     yield SDRSampleBlock(
-                        samples=samples,
+                        payload=payload,
+                        raw_bytes=len(raw),
+                        payload_kind="bytes" if self._convert == "none" else "frame",
                         sequence_no=sequence,
                         started_at=started,
                         sample_count=count,

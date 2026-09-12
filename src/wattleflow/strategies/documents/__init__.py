@@ -47,6 +47,8 @@ _EXPORTS: dict[str, str] = {
     "ReadOpenSearchDocument": "opensearch",
     "WriteOpenSearchDocument": "opensearch",
     "CreateOrcDocument": "orc",
+    "CreateSDRDataframeDocument": "sdr",
+    "CreateSDRSampleDocument": "sdr",
     "ReadOrcDocument": "orc",
     "WriteOrcDocument": "orc",
     "WriteRedactedImage": "image",

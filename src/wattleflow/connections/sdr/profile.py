@@ -17,6 +17,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import Enum
+from wattleflow.enums.sampleformat import SampleFormat
 from typing import Any, ClassVar
 # --------------------------------------------------------------------------- #
 # endregion Imports                                                           #
@@ -49,22 +50,6 @@ class Duplex(str, Enum):
     NONE = "none"
     HALF = "half"
     FULL = "full"
-
-
-class SampleFormat(str, Enum):
-    U8_IQ = "u8_iq"
-    S8_IQ = "s8_iq"
-    S16_IQ = "s16_iq"
-    CF32_IQ = "cf32_iq"
-
-    @property
-    def bytes_per_sample(self) -> int:
-        return {"u8_iq": 2, "s8_iq": 2, "s16_iq": 4, "cf32_iq": 8}[self.value]
-
-    @property
-    def full_scale(self) -> float:
-        """Raw amplitude that maps to 1.0 unless the profile states otherwise."""
-        return {"u8_iq": 127.5, "s8_iq": 128.0, "s16_iq": 32768.0, "cf32_iq": 1.0}[self.value]
 
 
 # --------------------------------------------------------------------------- #

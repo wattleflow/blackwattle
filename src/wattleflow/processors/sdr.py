@@ -86,21 +86,27 @@ class SDRReadProcessor(GenericProcessor):
         return self._stop_seconds is not None and time.monotonic() - started >= self._stop_seconds
 
     def _emit(self, segment: list) -> ITarget:
+        """The segment as it came off the unit; what it MEANS is the strategy's business."""
         first = segment[0]
-        if len(segment) == 1:
-            content = first.samples
-        else:
-            import numpy
-
-            content = numpy.concatenate([block.samples for block in segment])
+        content = first.payload if len(segment) == 1 else self._joined(segment)
         metadata = first.description()
         metadata.update(
             sample_count=sum(block.sample_count for block in segment),
+            bytes=sum(block.raw_bytes for block in segment),
             blocks=len(segment),
             loss_measured=first.lost_before is not None,
         )
         self._summary.documents += 1
         return self.blackboard.create(caller=self, content=content, metadata=metadata)
+
+    @staticmethod
+    def _joined(segment: list) -> Any:
+        """One segment out of several blocks, in whatever form the driver delivered."""
+        if isinstance(segment[0].payload, (bytes, bytearray, memoryview)):
+            return b"".join(bytes(block.payload) for block in segment)
+        import pandas
+
+        return pandas.concat([block.payload for block in segment], ignore_index=True)
 
     def _close(self, blocks: Any, started: float, reason: str | None = None) -> None:
         summary = self._summary
