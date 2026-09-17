@@ -19,6 +19,7 @@ from __future__ import annotations
 import io
 from typing import Any
 from wattleflow.concrete.serialisation import GenericFormatter
+from wattleflow.helpers.resource_config import ResourceConfig
 from wattleflow.enums.imageformat import ImageFormat
 from wattleflow.helpers.image_security import ImageSecurityGuard
 # --------------------------------------------------------------------------- #
@@ -40,6 +41,7 @@ class PdfFormatter(GenericFormatter):
     """
 
     SUFFIX = ".pdf"
+    TEMPLATE = "pdf"
 
     def serialise(self, content: Any, **opts: Any) -> bytes:
         if not isinstance(content, (bytes, bytearray, memoryview)):
@@ -61,11 +63,12 @@ class PdfFormatter(GenericFormatter):
 
 class PickleFormatter(GenericFormatter):
     SUFFIX = ".pkl"
+    TEMPLATE = "pickle"
 
     def serialise(self, content: Any, **opts: Any) -> bytes:
         import pickle
 
-        return pickle.dumps(content, protocol=opts.get("protocol", pickle.HIGHEST_PROTOCOL))
+        return pickle.dumps(content, protocol=ResourceConfig.formatter(self.TEMPLATE, opts)["protocol"])
 
 
 # --------------------------------------------------------------------------- #
@@ -79,6 +82,7 @@ class PickleFormatter(GenericFormatter):
 
 class ProtobufFormatter(GenericFormatter):
     SUFFIX = ".pb"
+    TEMPLATE = "protobuf"
 
     def serialise(self, content: Any, **opts: Any) -> bytes:
         from wattleflow.helpers.protobuf import (
@@ -103,24 +107,14 @@ class ProtobufFormatter(GenericFormatter):
 
 
 class PngFormatter(GenericFormatter):
-    """Serialise a PNG image, optionally applying PII redaction boxes.
+    """Serialise a PNG image, optionally drawing redaction boxes and replacement text.
 
-    opts (all optional unless noted):
-        source_path   : str   - origin file; read when content is not an
-                                in-memory image. Required if no content
-                                object is supplied.
-        redact_boxes  : list[tuple[int, int, int, int]]
-                              - (x0, y0, x1, y1) pixel rectangles filled with
-                                opaque black to obscure PII.
-        replacements  : list[tuple[tuple[int, int, int, int], str]]
-                              - substitute strings drawn over the rectangles.
-        strip_metadata: bool  - default True; removes EXIF/tEXt chunks.
-        blackout      : bool  - default True; fill redact boxes with solid
-                                black and draw replacements in white. If False,
-                                fill boxes with white and draw text in black.
+    Call options: source_path, redact_boxes, replacements; every other setting comes from the
+    `png` template and may be overridden per call.
     """
 
     SUFFIX = ImageFormat.PNG.suffix
+    TEMPLATE = "png"
 
     def serialise(self, content: Any, **opts: Any) -> bytes:
         try:
@@ -130,14 +124,12 @@ class PngFormatter(GenericFormatter):
                 "PIL library is missing. Add it manually: pip install Pillow"
             ) from e
 
-        source_path = opts.get("source_path", None)
-        redact_boxes = opts.get("redact_boxes", []) or []
-        replacements = opts.get("replacements", []) or []
-        strip_metadata = opts.get("strip_metadata", True)
-        blackout = opts.get("blackout", True)
-
-        box_fill = (0, 0, 0) if blackout else (255, 255, 255)
-        text_fill = (255, 255, 255) if blackout else (0, 0, 0)
+        settings = ResourceConfig.formatter(self.TEMPLATE, opts)
+        source_path = settings.find("source_path")
+        redact_boxes = settings.find("redact_boxes") or []
+        replacements = settings.find("replacements") or []
+        dark, light = f"#{settings['dark']}", f"#{settings['light']}"
+        box_fill, text_fill = (dark, light) if settings["blackout"] else (light, dark)
 
         if isinstance(content, Image.Image):
             image = content.copy()
@@ -151,19 +143,14 @@ class PngFormatter(GenericFormatter):
             raise ValueError("PNG render requires in-memory image, bytes or source_path")
 
         image = image.convert("RGBA" if image.mode == "RGBA" else "RGB")
-
         draw = ImageDraw.Draw(image)
 
-        # Tesseract bbox 'top' rides cap-line, missing the actual glyph ascender
-        # (and our č/š/ž diacritics). Pad upward more than downward.
-        _PAD_TOP_RATIO = 0.18
-        _PAD_BOT_RATIO = 0.06
-
         def _pad_box(box):
+            # Tesseract bbox 'top' rides the cap line and misses ascenders and diacritics.
             x0, y0, x1, y1 = box
             h = y1 - y0
-            pad_t = max(2, int(h * _PAD_TOP_RATIO))
-            pad_b = max(1, int(h * _PAD_BOT_RATIO))
+            pad_t = max(settings["pad_top_min"], int(h * settings["pad_top_ratio"]))
+            pad_b = max(settings["pad_bottom_min"], int(h * settings["pad_bottom_ratio"]))
             return (x0, max(0, y0 - pad_t), x1, y1 + pad_b)
 
         padded = [_pad_box(b) for b in redact_boxes]
@@ -173,11 +160,11 @@ class PngFormatter(GenericFormatter):
         if replacements:
 
             def _pick_font(box_h: int):
-                # Roughly 55% of box height; clamped so labels stay legible
-                # without overflowing in narrow OCR cells.
-                target = max(7, min(int(box_h * 0.55), 16))
+                target = max(
+                    settings["font_size_min"], min(int(box_h * settings["font_scale"]), settings["font_size_max"])
+                )
                 try:
-                    return ImageFont.truetype("DejaVuSans.ttf", size=target)
+                    return ImageFont.truetype(settings["font"], size=target)
                 except (OSError, IOError):
                     try:
                         return ImageFont.load_default(size=target)
@@ -195,14 +182,13 @@ class PngFormatter(GenericFormatter):
                     th = ty1 - ty0
                 except AttributeError:
                     th = y1 - y0
-                cx = x0 + 2
+                cx = x0 + settings["text_offset"]
                 cy = y0 + max(0, ((y1 - y0) - th) // 2)
                 draw.text((cx, cy), str(text), fill=text_fill, font=font)
 
-        save_kwargs: dict = {"format": "PNG", "optimize": True}
-        if strip_metadata:
-            # Writing without pnginfo discards all ancillary chunks (tEXt, iTXt,
-            # zTXt, eXIf) — required for forensically clean redaction output.
+        save_kwargs: dict = {"format": "PNG", "optimize": settings["optimise"]}
+        if settings["strip_metadata"]:
+            # Writing without pnginfo discards all ancillary chunks (tEXt, iTXt, zTXt, eXIf).
             save_kwargs["pnginfo"] = None
 
         buf = io.BytesIO()

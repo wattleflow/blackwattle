@@ -2,7 +2,7 @@
   "_about": [
     "Criterion dictionary for tools/wem_lint.py — the controlled vocabulary of CODE",
     "IDENTIFIERS the NFR lint measures src/wattleflow against, for the",
-    "`wattleflow-processors` distribution (NFRQ-ORG-01/02/03/04, NFRQ-SEC-03).",
+    "`blackwattle` distribution (NFRQ-ORG-01/02/03/04, NFRQ-SEC-03).",
     "Written 2026-07-31 (analysis tools/2026-07-31-analysis-changes.md §2.1) by",
     "translating tools/naming_registry.yaml — which the tool stopped reading in",
     "v1.4.0/1.5.0 when the criterion moved to JSON, leaving this distribution with",
@@ -21,8 +21,16 @@
     "subject, operation, acronym or TypeVar role — requires a DR record."
   ],
   "registry": "wattleflow-code-vocabulary",
-  "distribution": "wattleflow-processors",
+  "distribution": "blackwattle",
   "_criterion_version": [
+    "0.11.0 (2026-09-15) — foundation_packages lists enums (DR-WFL-016, already",
+    "recorded in _domains) and resources (distribution templates, DR-PRC-008):",
+    "material every layer may read, not a domain. Authority: autor, 2026-09-15 (DR-",
+    "PRC-008). Proven by wem_criterion 0.2.0: 0 finding(s) removed, none added.",
+    "0.10.0 (2026-09-14) — The distribution is named blackwattle (DR-PRC-002;",
+    "pyproject name = blackwattle); wattleflow-processors no longer exists.",
+    "Authority: autor, 2026-09-14 (DR-PRC-002). Proven by wem_criterion 0.1.0: 0",
+    "finding(s) removed, none added.",
     "0.9.0 (2026-09-11) — the three unmapped pipeline packages get a subject.",
     "`package_subject` gains `rss` -> RSS, `xml` -> XML and `quality` -> Quality,",
     "and `subjects` the same three; `identifier_acronyms` gains `RSS`. Before",
@@ -147,7 +155,7 @@
     "    collapse to it, NFRQ-ORG-02 DRY note) is an open question the run surfaces",
     "    as findings rather than a gap this file quietly fills."
   ],
-  "criterion_version": "0.9.0",
+  "criterion_version": "0.11.0",
   "dictionary_version": "0.2.0",
   "dictionary_source": "tools/naming_registry.yaml (retired by DR-PRC-001)",
   "_python_reference": "Defines the 'stdlib' set for ORG-01; must track requires-python in pyproject.toml.",
@@ -183,7 +191,7 @@
     "The rule table as the NFR registry declares it: id, requirement, check,",
     "severity and waiver policy. The tool resolves severity from here (POLICY §9).",
     "`clean_core_imports` is WARNING in this distribution, not ERROR:",
-    "wattleflow-processors is the NON-core tier — third-party is legitimate here,",
+    "blackwattle is the NON-core tier — third-party is legitimate here,",
     "so the check measures departure from the DECLARED tier and feeds a migration",
     "worklist (the ORG-01 tolerance policy) rather than blocking a build."
   ],
@@ -306,7 +314,7 @@
   "_report_language": "Default report language; --lang overrides it per run. Presentation, not criterion (D-13).",
   "report_language": "en",
   "_scope": [
-    "Distribution tier. wattleflow-processors is the NON-core distribution: it is",
+    "Distribution tier. blackwattle is the NON-core distribution: it is",
     "the home of third-party-bound modules (NFRQ-SEC-03) — but 'non-core' is not",
     "'anything goes'. `core_libraries` declares the tier this distribution INTENDS",
     "to carry; a module importing outside it is reported (K9) and skipped by the",
@@ -712,5 +720,14 @@
     "the list disagree with the blind spot, which names `nlp` alone.",
     "Do not pre-emptively exempt a package: declare the exemption when a name",
     "actually needs it, through a DR."
+  ],
+  "foundation_packages": [
+    "enums",
+    "resources"
+  ],
+  "_foundation_packages": [
+    "Top-level packages that are foundation material, not domains: they import",
+    "nothing intra-project and every layer may read them. The lint skips them;",
+    "wem_criterion counts them as declared."
   ]
 }

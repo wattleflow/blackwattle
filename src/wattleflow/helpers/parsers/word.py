@@ -46,45 +46,17 @@ class DocParser(GenericParser):
     """
 
     def deserialise(self, reader: BinaryIO, **opts: Any) -> str:
-        import shutil
-        import subprocess
         import tempfile
 
         from wattleflow.helpers.converters import WordConverter
+        from wattleflow.helpers.converters.office import OfficeConverter
 
-        binary = shutil.which("libreoffice") or shutil.which("soffice")
-        if binary is None:
-            raise RuntimeError(
-                "LibreOffice not found. Install: sudo apt install libreoffice"
-            )
-
+        OfficeConverter.binary()  # fail before touching the payload when LibreOffice is absent
         with tempfile.TemporaryDirectory() as tmpdir:
             source = Path(tmpdir) / "input.doc"
             source.write_bytes(reader.read())
-            result = subprocess.run(
-                [
-                    binary,
-                    "--headless",
-                    "--convert-to",
-                    "docx",
-                    "--outdir",
-                    tmpdir,
-                    str(source),
-                ],
-                capture_output=True,
-                text=True,
-                timeout=opts.pop("timeout", 120),
-                check=False,
-            )
-            if result.returncode != 0:
-                detail = result.stderr.strip() or result.stdout.strip()
-                raise RuntimeError(f"LibreOffice .doc conversion failed: {detail}")
-            docx_path = next(Path(tmpdir).glob("*.docx"), None)
-            if docx_path is None:
-                raise RuntimeError(
-                    "LibreOffice produced no .docx output for .doc input"
-                )
-            return WordConverter.read_docx(docx_path)
+            produced = OfficeConverter.convert(source, "docx", Path(tmpdir), opts.get("timeout"))
+            return WordConverter.read_docx(produced)
 
 
 # --------------------------------------------------------------------------- #

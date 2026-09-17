@@ -387,6 +387,7 @@ include = [
     "wattleflow.pipelines*",
     "wattleflow.processors*",
     "wattleflow.repositories*",
+    "wattleflow.resources*",
     "wattleflow.strategies*",
 ]
 
@@ -408,6 +409,7 @@ include = [
 # the matching entries below, and is a decision, not a one-line fix.
 [tool.setuptools.package-data]
 "wattleflow.oscal" = ["resources/**/*.json"]
+"wattleflow.resources" = ["**/*.json"]
 
 [tool.ruff]
 # 120, matching the core distribution (which has carried 120 all along). This

@@ -158,9 +158,7 @@ class WriteEmailCopyOLD(StrategyWrite):
             assert isinstance(facade, ITarget), "Expected ITarget. Found %s" % type(facade)
 
             driver = kwargs.get("driver") or getattr(caller, "driver", None)
-            assert driver is not None, (
-                "Driver not available — strategy requires RepositoryWithDriver"
-            )
+            assert driver is not None, "Driver not available — strategy requires RepositoryWithDriver"
 
             document: FileDocument = facade.request()
             source = Path(document.filename)
@@ -228,9 +226,7 @@ class WriteEmailWithAttachmentOLD(WriteEmailCopyOLD):
         taken.add(candidate.lower())
         return candidate
 
-    def _write_attachments(
-        self, driver: Any, document: FileDocument, source: Path, stem: str
-    ) -> list[str]:
+    def _write_attachments(self, driver: Any, document: FileDocument, source: Path, stem: str) -> list[str]:
         records = list(document.metadata.get(MailKeys.ATTACHMENTS) or [])
         written: list[str] = []
         taken: set[str] = set()
@@ -349,11 +345,7 @@ class WriteEmailCopy(StrategyWrite):
 
     def _subject(self, document: FileDocument, source: Path) -> str:
         subject = document.metadata.get(MailKeys.raw(MailHeader.SUBJECT.value))
-        return (
-            self._clean(subject)
-            or self._clean(self.STAMPED_RE.sub("", source.stem))
-            or self.FALLBACK
-        )
+        return self._clean(subject) or self._clean(self.STAMPED_RE.sub("", source.stem)) or self.FALLBACK
 
     def output_name(self, document: FileDocument, source: Path) -> str:
         stamp = self._sent(document)
@@ -368,9 +360,7 @@ class WriteEmailCopy(StrategyWrite):
 
             driver = kwargs.get("driver") or getattr(caller, "driver", None)
             if driver is None:
-                raise StrategyException(
-                    self, error="Driver not available — strategy requires RepositoryWithDriver"
-                )
+                raise StrategyException(self, error="Driver not available — strategy requires RepositoryWithDriver")
 
             document: FileDocument = facade.request()
             source = Path(str(document.filename))
@@ -457,9 +447,7 @@ class WriteEmailAttachments(StrategyWrite):
 
     MAX_DEPTH: ClassVar[int] = 8
     PDF_TYPES: ClassVar[frozenset[str]] = frozenset({"application/pdf"})
-    MAIL_TYPES: ClassVar[frozenset[str]] = frozenset(
-        {"message/rfc822", "application/vnd.ms-outlook"}
-    )
+    MAIL_TYPES: ClassVar[frozenset[str]] = frozenset({"message/rfc822", "application/vnd.ms-outlook"})
     MAIL_SUFFIXES: ClassVar[frozenset[str]] = frozenset({".eml", ".msg"})
     TEXT_SUFFIX: ClassVar[str] = ".txt"
     OUTCOMES: ClassVar[tuple[str, ...]] = (
@@ -502,7 +490,7 @@ class WriteEmailAttachments(StrategyWrite):
 
     @classmethod
     def _kind(cls, record: dict[str, Any]) -> str | None:
-        """"mail", "pdf", or None for a part that has no text of its own to write."""
+        """ "mail", "pdf", or None for a part that has no text of its own to write."""
         content_type = AttachmentPolicy.content_type(record)
         suffix = Path(str(record.get("name") or "")).suffix.lower()
         if content_type in cls.MAIL_TYPES or suffix in cls.MAIL_SUFFIXES:
@@ -518,9 +506,7 @@ class WriteEmailAttachments(StrategyWrite):
             self._tika_checked = True
             from wattleflow.connections.tika import TikaConnection
 
-            self._tika = TikaConnection.from_environment(
-                f"{self.name}-tika", level=self._level, handler=self._handler
-            )
+            self._tika = TikaConnection.from_environment(f"{self.name}-tika", level=self._level, handler=self._handler)
             if self._tika is None:
                 self.warning(
                     msg=Event.Write.name,
@@ -583,7 +569,7 @@ class WriteEmailAttachments(StrategyWrite):
 
         try:
             output = driver.write(
-                self._text.serialise(text),
+                self._text.render(content=text),
                 filename=Path(name).stem,
                 suffix=self.TEXT_SUFFIX,
                 encoding="utf-8",
@@ -657,9 +643,7 @@ class WriteEmailAttachments(StrategyWrite):
                 depth=depth,
             )
             return
-        self._write_nested(
-            driver, message, f"{subdir}/{Path(name).stem}", policy, depth + 1, outcome
-        )
+        self._write_nested(driver, message, f"{subdir}/{Path(name).stem}", policy, depth + 1, outcome)
 
     def _write_nested(
         self,
@@ -757,9 +741,7 @@ class WriteEmailAttachments(StrategyWrite):
 
             driver = kwargs.get("driver") or getattr(caller, "driver", None)
             if driver is None:
-                raise StrategyException(
-                    self, error="Driver not available — strategy requires RepositoryWithDriver"
-                )
+                raise StrategyException(self, error="Driver not available — strategy requires RepositoryWithDriver")
 
             document: FileDocument = facade.request()
 
@@ -862,9 +844,7 @@ class WriteEmailText(StrategyWrite):
 
             driver = kwargs.get("driver") or getattr(caller, "driver", None)
             if driver is None:
-                raise StrategyException(
-                    self, error="Driver not available — strategy requires RepositoryWithDriver"
-                )
+                raise StrategyException(self, error="Driver not available — strategy requires RepositoryWithDriver")
 
             document: FileDocument = facade.request()
 
@@ -890,7 +870,8 @@ class WriteEmailText(StrategyWrite):
 
             message = self._reader.read(path=source)
             formatter = FormatterFactory.create(FileType.TXT)
-            payload = formatter.serialise(message.render())
+            # v0.0.4 (DR-PRC-006): render is the contract; serialise is its internal hook.
+            payload = formatter.render(content=message.render())
 
             if not payload.strip():
                 self.warning(

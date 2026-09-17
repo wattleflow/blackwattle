@@ -20,6 +20,7 @@ import csv
 import io
 from typing import Any, BinaryIO
 from wattleflow.concrete.serialisation import GenericFormatter
+from wattleflow.helpers.resource_config import ResourceConfig
 # --------------------------------------------------------------------------- #
 # endregion Imports                                                           #
 # --------------------------------------------------------------------------- #
@@ -35,6 +36,7 @@ class CsvFormatter(GenericFormatter):
     """CSV — a pandas DataFrame, or a list of records."""
 
     SUFFIX = ".csv"
+    TEMPLATE = "csv"
 
     def serialise(self, content: Any, **opts: Any) -> str:
         # v0.0.1 (DR-PRC-004): records need no pandas.
@@ -45,7 +47,7 @@ class CsvFormatter(GenericFormatter):
 
         if not isinstance(content, pd.DataFrame):
             raise TypeError(f"CsvFormatter: unsupported content type {type(content).__name__}")
-        return content.to_csv(**opts)
+        return content.to_csv(**ResourceConfig.formatter(self.TEMPLATE, opts).settings)
 
     @staticmethod
     def from_records(records: list[dict]) -> str:
@@ -61,6 +63,7 @@ class CsvFormatter(GenericFormatter):
 
 class ExcelFormatter(GenericFormatter):
     SUFFIX = ".xlsx"
+    TEMPLATE = "excel"
 
     def serialise(self, content: Any, **opts: Any) -> bytes:
         import pandas as pd
@@ -71,17 +74,13 @@ class ExcelFormatter(GenericFormatter):
         if not isinstance(content, pd.DataFrame):
             raise TypeError(f"ExcelFormatter: unsupported content type {type(content).__name__}")
         buf = io.BytesIO()
-        content.to_excel(
-            buf,
-            sheet_name=opts.pop("sheet_name", "Sheet1"),
-            index=opts.pop("index", False),
-            **opts,
-        )
+        content.to_excel(buf, **ResourceConfig.formatter(self.TEMPLATE, opts).settings)
         return buf.getvalue()
 
 
 class OrcFormatter(GenericFormatter):
     SUFFIX = ".orc"
+    TEMPLATE = "orc"
 
     def _build_table(self, content: Any, **opts: Any):
         import pyarrow as pa
@@ -99,7 +98,7 @@ class OrcFormatter(GenericFormatter):
         import pyarrow.orc as _orc
 
         table = self._build_table(content, **opts)
-        _orc.write_table(table, fh, compression=opts.get("compression", "ZSTD"))
+        _orc.write_table(table, fh, compression=ResourceConfig.formatter(self.TEMPLATE, opts)["compression"])
 
     def serialise(self, content: Any, **opts: Any) -> bytes:
         buf = io.BytesIO()
@@ -109,6 +108,7 @@ class OrcFormatter(GenericFormatter):
 
 class AvroFormatter(GenericFormatter):
     SUFFIX = ".avro"
+    TEMPLATE = "avro"
 
     def stream(self, fh: BinaryIO, content: Any, **opts: Any) -> None:
         try:
@@ -121,7 +121,8 @@ class AvroFormatter(GenericFormatter):
         schema = opts.get("schema", None)
         if schema is None:
             raise ValueError("Avro write requires a 'schema' kwarg (parsed dict).")
-        _avro_writer(fh, parse_schema(schema), content, codec=opts.get("codec", "deflate"))
+        codec = ResourceConfig.formatter(self.TEMPLATE, opts)["codec"]
+        _avro_writer(fh, parse_schema(schema), content, codec=codec)
 
     def serialise(self, content: Any, **opts: Any) -> bytes:
         buf = io.BytesIO()

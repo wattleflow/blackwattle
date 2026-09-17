@@ -20,6 +20,7 @@ from wattleflow.core import (
 from wattleflow.concrete import (
     DocumentFacade,
     StrategyCreate,
+    StrategyRead,
     StrategyWrite,
 )
 from wattleflow.concrete.exception import StrategyException
@@ -126,22 +127,26 @@ class WriteMarkdownToWordDocument(StrategyWrite):
 
             document: FileDocument = facade.request()
 
-            if document.size <= 0:
-                self.warning(
-                    msg=Event.Write.name,
-                    step=Event.Check.name,
-                    reason="Markdown content is empty — nothing to write.",
-                    document=document,
-                    size=document.size,
-                )
-                return False
+            # v0.0.4 (DR-PRC-005): document content first; the source file only when it is empty.
+            filepath = Path(str(document.metadata.get("filename") or document.identifier))
+            content = document.content if isinstance(document.content, str) else ""
+            if not content.strip():
+                if document.size <= 0:
+                    self.warning(
+                        msg=Event.Write.name,
+                        step=Event.Check.name,
+                        reason="Markdown content is empty — nothing to write.",
+                        document=document,
+                        size=document.size,
+                    )
+                    return False
+                if not filepath.exists():
+                    raise StrategyException(
+                        caller=self, error=f"File not found: {filepath.absolute()}"
+                    )
+                content = filepath.read_text(encoding=kwargs.pop("encoding", "utf-8"))
 
-            filepath: Path = Path(document.metadata.get("filename")) or Path(document.identifier)
-
-            if not filepath.exists():
-                raise StrategyException(caller=self, error=f"File not found: {filepath.absolute()}")
-
-            filename: str = Path(str(filepath)).with_suffix(DEFAULT_DOCX_SUFFIX).name
+            filename: str = filepath.with_suffix(DEFAULT_DOCX_SUFFIX).name
             document.update_metadata("stored_by", caller.name)
             document.update_metadata("stored_at", Now.utc())
             self.debug(
@@ -152,7 +157,6 @@ class WriteMarkdownToWordDocument(StrategyWrite):
                 size=document.size,
             )
 
-            content = filepath.read_text(encoding=kwargs.pop("encoding", "utf-8"))
             processor = kwargs.get("processor")
             converter = (
                 kwargs.get("converter")
@@ -186,9 +190,57 @@ class WriteMarkdownToWordDocument(StrategyWrite):
             raise StrategyException(self, error=error, exc=e) from e
 
 
+class ReadWordDocument(StrategyRead):
+    """Read a stored Word document through the repository's driver as Markdown."""
+
+    def execute(self, caller: IWattleflow, **kwargs) -> Optional[ITarget]:
+        try:
+            self.debug(msg=Event.Read.name, step=Event.Started.name)
+            assert isinstance(caller, IRepository), "Expected IRepository. Found %s" % type(caller)
+            Attribute.mandatory(self, "identifier", str, **kwargs)
+
+            driver = kwargs.get("driver") or getattr(caller, "driver", None)
+            assert driver is not None, (
+                "Driver not available — strategy requires RepositoryWithDriver"
+            )
+
+            uri: str = self.identifier  # type: ignore[attr-defined]
+            content = driver.read(uri=uri)
+            if not isinstance(content, str):
+                raise StrategyException(
+                    caller=self,
+                    error=f"Expected Markdown text from a Word document, got {type(content).__name__}",
+                )
+
+            document = FileDocument(filename=uri)
+            document.update_content(content)
+            document.update_metadata("source_uri", uri)
+            document.update_metadata("source_format", Path(uri).suffix.lstrip(".").lower())
+            document.update_metadata("read_by", self.name)
+            document.update_metadata("read_at", Now.utc())
+
+            self.debug(
+                msg=Event.Read.name,
+                step=Event.Completed.name,
+                document=document.identifier,
+                size=len(content),
+            )
+            return DocumentFacade(document)
+        except StrategyException:
+            raise
+        except AssertionError as e:
+            error = f"Assertion: {str(e)}"
+            self.debug(msg=Event.Read.name, step=Event.Failed.name, error=error)
+            raise StrategyException(self, error=error, exc=e) from e
+        except Exception as e:
+            error = f"{self.name} caught exception: {str(e)}"
+            self.debug(msg=Event.Read.name, step=Event.Failed.name, error=error)
+            raise StrategyException(self, error=error, exc=e) from e
+
+
 # --------------------------------------------------------------------------- #
 # endregion Strategies                                                        #
 # --------------------------------------------------------------------------- #
 
 
-__all__ = ["CreateMarkdownFileDocument", "WriteMarkdownToWordDocument"]
+__all__ = ["CreateMarkdownFileDocument", "ReadWordDocument", "WriteMarkdownToWordDocument"]

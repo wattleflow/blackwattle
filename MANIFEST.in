@@ -13,7 +13,7 @@
 # installs EMPTY (DR-WFL-006, DR-WFL-015 / SEC-03 K12). Keep the two in step.
 #
 # INVARIANT: one `recursive-include` here per entry in
-# `[tool.setuptools.packages.find] include` in pyproject.toml — fifteen, in the
+# `[tool.setuptools.packages.find] include` in pyproject.toml — sixteen, in the
 # same order. Both lists are whole-subtree, so adding a specialization under an
 # existing package needs no edit in either file; adding a new top-level package
 # needs an edit in BOTH.
@@ -52,6 +52,7 @@ recursive-include src/wattleflow/oscal *.py
 recursive-include src/wattleflow/pipelines *.py
 recursive-include src/wattleflow/processors *.py
 recursive-include src/wattleflow/repositories *.py
+recursive-include src/wattleflow/resources *.json
 recursive-include src/wattleflow/strategies *.py
 
 # --- Never ship layers that belong to another distribution ---

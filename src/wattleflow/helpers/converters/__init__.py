@@ -21,9 +21,8 @@ _EXPORTS: dict[str, str] = {
     "Source": "pdf",
     "RssConverter": "rss",
     "RssFeed": "rss",
-    "DEFAULT_CLASSIFICATION": "word",
     "WordConverter": "word",
-    "DefaultConfig": "word",
+    "OfficeConverter": "office",
     "XmlConverter": "xml",
 }
 
@@ -34,9 +33,8 @@ __all__ = [
     "Source",
     "RssConverter",
     "RssFeed",
-    "DEFAULT_CLASSIFICATION",
     "WordConverter",
-    "DefaultConfig",
+    "OfficeConverter",
     "XmlConverter",
 ]
 

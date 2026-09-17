@@ -1,0 +1,4 @@
+{
+  "binaries": ["libreoffice", "soffice"],
+  "timeout": 120
+}

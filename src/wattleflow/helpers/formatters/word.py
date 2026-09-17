@@ -18,13 +18,13 @@ Formatters return ``bytes`` only — no file paths or driver concerns.
 from __future__ import annotations
 from abc import abstractmethod
 import io
-import shutil
-import subprocess
 import tempfile
 from pathlib import Path
 from typing import Any
 
 from wattleflow.concrete.serialisation import GenericFormatter
+from wattleflow.enums.event import Event
+from wattleflow.helpers.resource_config import ResourceConfig
 # --------------------------------------------------------------------------- #
 # endregion Imports                                                           #
 # --------------------------------------------------------------------------- #
@@ -51,6 +51,15 @@ class _BaseFormatter(GenericFormatter):
 
         if isinstance(content, DocumentT):
             return content
+        # v0.0.4 (DR-PRC-005): report unknown settings instead of dropping them.
+        discarded = WordConverter.unknown(converter_kwargs)
+        if discarded:
+            self.warning(
+                msg=Event.Render.name,
+                step=Event.Check.name,
+                reason="converter keys are not Word converter settings and were discarded",
+                discarded=discarded,
+            )
         if isinstance(content, (bytes, bytearray)):
             return WordConverter(**converter_kwargs).markdown_to_docx(
                 bytes(content).decode("utf-8")
@@ -65,6 +74,7 @@ class _BaseFormatter(GenericFormatter):
 
 class WordFormatter(_BaseFormatter):
     SUFFIX: str = ".docx"
+    TEMPLATE = "word"
 
     def serialise(self, content: Any, **opts: Any) -> bytes:
         converter_kwargs = opts.get("converter", {}) or {}
@@ -78,40 +88,18 @@ class DocFormatter(_BaseFormatter):
     """Serialise content into a legacy .doc payload via headless LibreOffice."""
 
     SUFFIX: str = ".doc"
+    TEMPLATE = "doc"
 
     def serialise(self, content: Any, **opts: Any) -> bytes:
-        binary = shutil.which("libreoffice") or shutil.which("soffice")
-        if binary is None:
-            raise RuntimeError("LibreOffice not found. Install: sudo apt install libreoffice")
+        from wattleflow.helpers.converters.office import OfficeConverter
 
-        converter_kwargs = opts.get("converter", {}) or {}
-        timeout = opts.get("timeout", 120)
-        doc = self._build_docx(content, converter_kwargs)
-
+        OfficeConverter.binary()  # fail before the build when LibreOffice is absent
+        doc = self._build_docx(content, opts.get("converter", {}) or {})
         with tempfile.TemporaryDirectory() as tmpdir:
             docx_path = Path(tmpdir) / "document.docx"
             doc.save(str(docx_path))
-            result = subprocess.run(
-                [
-                    binary,
-                    "--headless",
-                    "--convert-to",
-                    "doc",
-                    "--outdir",
-                    tmpdir,
-                    str(docx_path),
-                ],
-                capture_output=True,
-                text=True,
-                timeout=timeout,
-                check=False,
-            )
-            if result.returncode != 0:
-                raise RuntimeError(
-                    "LibreOffice .doc conversion failed: "
-                    f"{result.stderr.strip() or result.stdout.strip()}"
-                )
-            produced = Path(tmpdir) / (docx_path.stem + ".doc")
+            timeout = ResourceConfig.formatter(self.TEMPLATE, opts).find("timeout")
+            produced = OfficeConverter.convert(docx_path, "doc", Path(tmpdir), timeout)
             return produced.read_bytes()
 
 

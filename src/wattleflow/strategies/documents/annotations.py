@@ -7,7 +7,6 @@
 # region Import                                                               #
 # ----------------------------------------------------------------------------#
 from __future__ import annotations
-import json
 from typing import Any, Dict, List, Optional
 from wattleflow.core import IBlackboard, IRepository, ITarget, IWattleflow
 from wattleflow.concrete import (
@@ -150,7 +149,8 @@ class WriteEntityAnnotations(StrategyWrite):
                 )
 
             formatter = FormatterFactory.create(FileType.JSON)
-            payload = formatter.serialise(json.dumps(record, ensure_ascii=False, indent=None))
+            # v0.0.4 (DR-PRC-006): render is the contract; JSON settings come from the template.
+            payload = formatter.render(content=record)
             output = driver.write(
                 payload,
                 filename=record["id"],

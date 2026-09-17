@@ -1,0 +1,16 @@
+{
+  "blackout": true,
+  "dark": "000000",
+  "font": "DejaVuSans.ttf",
+  "font_scale": 0.55,
+  "font_size_max": 16,
+  "font_size_min": 7,
+  "light": "FFFFFF",
+  "optimise": true,
+  "pad_bottom_min": 1,
+  "pad_bottom_ratio": 0.06,
+  "pad_top_min": 2,
+  "pad_top_ratio": 0.18,
+  "strip_metadata": true,
+  "text_offset": 2
+}

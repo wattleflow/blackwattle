@@ -1,0 +1,20 @@
+{
+  "author": "",
+  "classification": "UNCLASSIFIED",
+  "classification_colour": "FF0000",
+  "classification_size": 9,
+  "code_font": "Consolas",
+  "font": "Segoe UI",
+  "h1": 18,
+  "h2": 14,
+  "h3": 13,
+  "header_grey": "D9D9D9",
+  "lang": "en-AU",
+  "lang_bidi": "en-AU",
+  "page_number_format": "Page {page} of {total}",
+  "page_number_size": 9,
+  "quote_glyph": "▸",
+  "quote_indent": 0.25,
+  "size": 11,
+  "text_colour": "000000"
+}
