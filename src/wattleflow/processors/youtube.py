@@ -50,15 +50,15 @@ class YoutubeProcessor(GenericProcessor):
 
     def _extract_video_id(self, url: str) -> str:
         self.debug(
-            msg=Event.Processing.name,
-            step=Event.Started.name,
+            msg=Event.Processing,
+            step=Event.Started,
             name="_extract_video_id",
             url=url,
         )
         match = re.search(r"(?:v=|\/)([0-9A-Za-z_-]{11})", url)
         self.debug(
-            msg=Event.Processing.name,
-            step=Event.Completed.name,
+            msg=Event.Processing,
+            step=Event.Completed,
             name="_extract_video_id",
             url=url,
         )
@@ -67,8 +67,8 @@ class YoutubeProcessor(GenericProcessor):
 
     def _fetch_metadata(self, url: str) -> Dict:
         self.debug(
-            msg=Event.Processing.name,
-            step=Event.Started.name,
+            msg=Event.Processing,
+            step=Event.Started,
             name="_fetch_metadata",
             url=url,
         )
@@ -76,7 +76,7 @@ class YoutubeProcessor(GenericProcessor):
         try:
             import yt_dlp
         except ImportError as e:
-            self.debug(msg=Event.Read.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Read, step=Event.Failed, error=str(e))
             raise ModuleNotFoundError(
                 "`yt_dlp` library is missing. Install:\n\tpip install yt-dlp"
             ) from e
@@ -88,15 +88,15 @@ class YoutubeProcessor(GenericProcessor):
                 info = ydl.extract_info(url, download=False)
 
             self.debug(
-                msg=Event.Processing.name,
-                step=Event.Completed.name,
+                msg=Event.Processing,
+                step=Event.Completed,
                 name="_fetch_metadata",
                 reason=info,
             )
             return info
 
         except Exception as e:
-            self.debug(msg=Event.Error.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Error, step=Event.Failed, error=str(e))
             raise YoutubeError(caller=self, error="Failed to fetch metadata") from e
 
     def _fetch_transcript(self, video_id: str) -> object:
@@ -113,20 +113,20 @@ class YoutubeProcessor(GenericProcessor):
             transcript: FetchedTranscript = YouTubeTranscriptApi().fetch(video_id, languages=["en"])
             return transcript.to_raw_data()
         except Exception as e:
-            self.debug(msg=Event.Error.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Error, step=Event.Failed, error=str(e))
             raise YoutubeError(caller=self, error="Failed to fetch transcript") from e
 
     def create_generator(self) -> Generator[ITarget, None, None]:
-        self.debug(msg=Event.Generate.name, step=Event.Started.name)
+        self.debug(msg=Event.Generate, step=Event.Started)
 
         try:
             videos = list(self.videos or [])
 
-            self.debug(msg=Event.Generate.name, videos=len(videos))
+            self.debug(msg=Event.Generate, videos=len(videos))
 
             for itm in videos:
                 uri = itm.get("uri", None)
-                self.debug(msg=Event.Generate.name, scope="item", uri=uri)
+                self.debug(msg=Event.Generate, scope="item", uri=uri)
                 try:
                     if uri is None:
                         continue
@@ -134,8 +134,8 @@ class YoutubeProcessor(GenericProcessor):
                     video_id = self._extract_video_id(uri)
                     if not video_id:
                         self.warning(
-                            msg=Event.Generate.name,
-                            step=Event.Check.name,
+                            msg=Event.Generate,
+                            step=Event.Check,
                             reason="Video ID could not be extracted.",
                             url=uri,
                         )
@@ -145,7 +145,7 @@ class YoutubeProcessor(GenericProcessor):
                     content = self._fetch_transcript(video_id)
 
                     self.debug(
-                        msg=Event.Generate.name,
+                        msg=Event.Generate,
                         scope="item",
                         no=self.cycle + 1,
                         uri=uri,
@@ -163,16 +163,16 @@ class YoutubeProcessor(GenericProcessor):
                 except Exception as e:
                     error = f"Error: {str(e)}"
                     self.exception(
-                        msg=Event.Generate.name,
-                        step=Event.Failed.name,
+                        msg=Event.Generate,
+                        step=Event.Failed,
                         error=error,
                     )
                     continue
         except Exception as e:
             error = f"Error: {str(e)}"
             self.debug(
-                msg=Event.Generate.name,
-                step=Event.Failed.name,
+                msg=Event.Generate,
+                step=Event.Failed,
                 error=error,
                 trace=format_exc(),
             )
@@ -183,8 +183,8 @@ class YoutubeProcessor(GenericProcessor):
             ) from e
 
         self.debug(
-            msg=Event.Generate.name,
-            step=Event.Completed.name,
+            msg=Event.Generate,
+            step=Event.Completed,
             count=self.cycle,
         )
 

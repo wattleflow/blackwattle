@@ -104,7 +104,7 @@ class DriverGrafana(GenericDriver):
     # ---------------------------------------------------------------------- #
 
     def load(self) -> None:
-        self.debug(msg=Event.Load.name, step=Event.Started.name)
+        self.debug(msg=Event.Load, step=Event.Started)
 
         if not self.base_url:
             raise DriverGrafanaError(
@@ -125,15 +125,15 @@ class DriverGrafana(GenericDriver):
         self._session = session
 
         self.debug(
-            msg=Event.Load.name,
-            step=Event.Completed.name,
+            msg=Event.Load,
+            step=Event.Completed,
             base_url=self.base_url,
             org_id=self.org_id,
             auth=self._auth_kind(),
         )
 
     def close(self) -> None:
-        self.debug(msg=Event.Close.name, step=Event.Started.name)
+        self.debug(msg=Event.Close, step=Event.Started)
         if not self.can(DriverAction.UNLOAD):
             return
         if self._session is not None:
@@ -142,7 +142,7 @@ class DriverGrafana(GenericDriver):
             except Exception:
                 pass
             self._session = None
-        self.debug(msg=Event.Close.name, step=Event.Completed.name)
+        self.debug(msg=Event.Close, step=Event.Completed)
 
     def metadata(self) -> DriverMetadata:
         return DriverMetadata(
@@ -196,8 +196,8 @@ class DriverGrafana(GenericDriver):
         }
 
         self.debug(
-            msg=Event.Write.name,
-            step=Event.Started.name,
+            msg=Event.Write,
+            step=Event.Started,
             mode=mode,
             annotation_id=annotation_id,
         )
@@ -238,8 +238,8 @@ class DriverGrafana(GenericDriver):
             result = self._json(response) or {}
 
             self.debug(
-                msg=Event.Write.name,
-                step=Event.Completed.name,
+                msg=Event.Write,
+                step=Event.Completed,
                 mode=mode,
                 annotation_id=annotation_id or result.get("id"),
             )
@@ -248,13 +248,13 @@ class DriverGrafana(GenericDriver):
         except DriverGrafanaError:
             raise
         except requests.HTTPError as e:
-            self.debug(msg=Event.Write.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Write, step=Event.Failed, error=str(e))
             raise DriverGrafanaError(
                 caller=self,
                 error=f"write error (mode={mode}, id={annotation_id}): {e}",
             ) from e
         except Exception as e:
-            self.debug(msg=Event.Write.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Write, step=Event.Failed, error=str(e))
             raise DriverGrafanaError(
                 caller=self,
                 error=f"write error (mode={mode}, id={annotation_id}): {e}",

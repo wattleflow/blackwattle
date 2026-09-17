@@ -79,8 +79,8 @@ class PipelineFileExtractDigest(GenericPipeline):
         # is authoritative unless the caller asked for a recompute.
         if document.metadata.get(key) and not self.overwrite:
             self.debug(
-                msg=Event.Transform.name,
-                step=Event.Check.name,
+                msg=Event.Transform,
+                step=Event.Check,
                 reason="digest already stamped, skipped",
                 key=key,
                 filename=str(document.filename),
@@ -99,8 +99,8 @@ class PipelineFileExtractDigest(GenericPipeline):
         except OSError as e:
             error = f"digest failed for {source_path}: {e}"
             self.debug(
-                msg=Event.Transform.name,
-                step=Event.Failed.name,
+                msg=Event.Transform,
+                step=Event.Failed,
                 error=error,
                 algorithm=self.algorithm,
                 filename=str(source_path),
@@ -116,8 +116,8 @@ class PipelineFileExtractDigest(GenericPipeline):
         )
 
         self.debug(
-            msg=Event.Transform.name,
-            step=Event.Completed.name,
+            msg=Event.Transform,
+            step=Event.Completed,
             uid=uid,
             key=key,
             algorithm=self.algorithm,

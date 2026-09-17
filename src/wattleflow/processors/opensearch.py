@@ -64,15 +64,15 @@ class OpenSearchReadProcessor(GenericProcessor):
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.debug(
-            msg=Event.Constructor.name,
-            step=Event.Started.name,
+            msg=Event.Constructor,
+            step=Event.Started,
             driver=repr(getattr(self, "driver", None)),
             queries=len(getattr(self, "queries", []) or []),
             index=getattr(self, "index", None),
         )
 
     def create_generator(self) -> Generator[ITarget, None, None]:
-        self.debug(msg=Event.Generate.name, step=Event.Started.name)
+        self.debug(msg=Event.Generate, step=Event.Started)
 
         try:
             driver: Optional[DriverOpenSearch] = getattr(self, "driver", None)
@@ -85,17 +85,17 @@ class OpenSearchReadProcessor(GenericProcessor):
             if not queries:
                 if not index:
                     self.warning(
-                        msg=Event.Generate.name,
-                        step=Event.Check.name,
+                        msg=Event.Generate,
+                        step=Event.Check,
                         error="No queries and no default index — nothing to read.",
                     )
                     return
                 queries = [index]
 
-            self.debug(msg=Event.Generate.name, queries=len(queries), index=index)
+            self.debug(msg=Event.Generate, queries=len(queries), index=index)
 
             for query in queries:
-                self.debug(msg=Event.Generate.name, scope="item", query=str(query)[:120])
+                self.debug(msg=Event.Generate, scope="item", query=str(query)[:120])
                 try:
                     records = driver.read(uri=query, **read_options)
                     if records is None:
@@ -104,7 +104,7 @@ class OpenSearchReadProcessor(GenericProcessor):
                         records = [records] if isinstance(records, dict) else list(records)
 
                     self.debug(
-                        msg=Event.Generate.name,
+                        msg=Event.Generate,
                         scope="item",
                         no=self.cycle + 1,
                         query=str(query)[:120],
@@ -124,8 +124,8 @@ class OpenSearchReadProcessor(GenericProcessor):
                 except Exception as e:
                     error = f"Error: {str(e)} with {query!r}"
                     self.exception(
-                        msg=Event.Generate.name,
-                        step=Event.Failed.name,
+                        msg=Event.Generate,
+                        step=Event.Failed,
                         error=error,
                         query=str(query),
                     )
@@ -133,8 +133,8 @@ class OpenSearchReadProcessor(GenericProcessor):
         except Exception as e:
             error = f"Error: {str(e)}"
             self.debug(
-                msg=Event.Generate.name,
-                step=Event.Failed.name,
+                msg=Event.Generate,
+                step=Event.Failed,
                 error=error,
                 trace=format_exc(),
             )
@@ -145,8 +145,8 @@ class OpenSearchReadProcessor(GenericProcessor):
             ) from e
 
         self.debug(
-            msg=Event.Generate.name,
-            step=Event.Completed.name,
+            msg=Event.Generate,
+            step=Event.Completed,
             count=self.cycle,
         )
 
@@ -172,19 +172,19 @@ class OpenSearchWriteProcessor(GenericProcessor):
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.debug(
-            msg=Event.Constructor.name,
-            step=Event.Started.name,
+            msg=Event.Constructor,
+            step=Event.Started,
             batches=len(getattr(self, "batches", []) or []),
         )
 
     def create_generator(self) -> Generator[ITarget, None, None]:
-        self.debug(msg=Event.Generate.name, step=Event.Started.name)
+        self.debug(msg=Event.Generate, step=Event.Started)
 
         try:
             batches: List[Dict[str, Any]] = list(getattr(self, "batches", []) or [])
             Attribute.mandatory(self, "batches", list, batches=batches)
 
-            self.debug(msg=Event.Generate.name, batches=len(batches))
+            self.debug(msg=Event.Generate, batches=len(batches))
 
             for batch in batches:
                 try:
@@ -194,8 +194,8 @@ class OpenSearchWriteProcessor(GenericProcessor):
 
                     if not isinstance(records, list) or not records:
                         self.warning(
-                            msg=Event.Generate.name,
-                            step=Event.Check.name,
+                            msg=Event.Generate,
+                            step=Event.Check,
                             reason="empty/invalid batch; skipped",
                             index=index,
                         )
@@ -203,7 +203,7 @@ class OpenSearchWriteProcessor(GenericProcessor):
 
                     uri = f"opensearch://{index or 'index'}/{len(records)}"
                     self.debug(
-                        msg=Event.Generate.name,
+                        msg=Event.Generate,
                         scope="item",
                         no=self.cycle + 1,
                         uri=uri,
@@ -224,16 +224,16 @@ class OpenSearchWriteProcessor(GenericProcessor):
                 except Exception as e:
                     error = f"Error: {str(e)}"
                     self.exception(
-                        msg=Event.Generate.name,
-                        step=Event.Failed.name,
+                        msg=Event.Generate,
+                        step=Event.Failed,
                         error=error,
                     )
                     continue
         except Exception as e:
             error = f"Error: {str(e)}"
             self.debug(
-                msg=Event.Generate.name,
-                step=Event.Failed.name,
+                msg=Event.Generate,
+                step=Event.Failed,
                 error=error,
                 trace=format_exc(),
             )
@@ -244,8 +244,8 @@ class OpenSearchWriteProcessor(GenericProcessor):
             ) from e
 
         self.debug(
-            msg=Event.Generate.name,
-            step=Event.Completed.name,
+            msg=Event.Generate,
+            step=Event.Completed,
             count=self.cycle,
         )
 

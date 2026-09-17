@@ -206,7 +206,7 @@ _REMOTE_SCHEMES: frozenset = frozenset(
 class DriverFactory(Wattleflow, IFactory, ABC):
     def __init__(self, *args, **kwargs):
         super().__init__(**kwargs)
-        self.debug(msg=Event.Constructor.name, step=Event.Started.name)
+        self.debug(msg=Event.Constructor, step=Event.Started)
 
     @staticmethod
     def is_remote(uri: str) -> bool:

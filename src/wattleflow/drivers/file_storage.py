@@ -126,8 +126,8 @@ class FileStorage(Wattleflow):
     ):
         super().__init__(**kwargs)
         self.debug(
-            msg=Event.Constructor.name,
-            step=Event.Started.name,
+            msg=Event.Constructor,
+            step=Event.Started,
             local_path=local_path,
             uri=uri,
             create=create,
@@ -157,7 +157,7 @@ class FileStorage(Wattleflow):
         if not _candidate.resolve().is_relative_to(self._local_path):
             reason = f"Filename escapes local_path: {uri!r}"
             self.error(
-                msg=Event.Constructor.name, step=Event.Completed.name, reason=reason, uri=uri
+                msg=Event.Constructor, step=Event.Completed, reason=reason, uri=uri
             )
             raise PermissionError(reason)
 

@@ -36,7 +36,7 @@ from wattleflow.helpers.parsers.mail import MailKeys, MailParser
 class CreateAnnotationDocument(StrategyCreate):
     def execute(self, caller: IWattleflow, **kwargs) -> Optional[ITarget]:
         try:
-            self.debug(msg=Event.Create.name, step=Event.Started.name, kwargs=kwargs)
+            self.debug(msg=Event.Create, step=Event.Started, kwargs=kwargs)
             assert isinstance(caller, IBlackboard), "Expected IBlackboard. Found %s" % type(caller)
 
             Attribute.mandatory(self, "filename", str, **kwargs)
@@ -60,15 +60,15 @@ class CreateAnnotationDocument(StrategyCreate):
 
             if not document.size > 0:
                 self.warning(
-                    msg=Event.Create.name,
-                    step=Event.Check.name,
+                    msg=Event.Create,
+                    step=Event.Check,
                     reason="Anotation file's feeling a bit empty today!",
                     document=document,
                 )
 
             self.debug(
-                msg=Event.Create.name,
-                step=Event.Completed.name,
+                msg=Event.Create,
+                step=Event.Completed,
                 document=document.identifier,
                 size=document.size,
             )
@@ -76,11 +76,11 @@ class CreateAnnotationDocument(StrategyCreate):
             return DocumentFacade(document)
         except AssertionError as e:
             error = f"Assertion: {str(e)}"
-            self.debug(msg=Event.Create.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Create, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
         except Exception as e:
             error = f"{self.name} caught exception: {str(e)}"
-            self.debug(msg=Event.Create.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Create, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
 
 
@@ -117,7 +117,7 @@ class WriteEntityAnnotations(StrategyWrite):
         }
 
     def execute(self, caller: IWattleflow, facade: ITarget, **kwargs: Any) -> bool:
-        self.debug(msg=Event.Write.name, step=Event.Started.name, caller=caller, facade=facade)
+        self.debug(msg=Event.Write, step=Event.Started, caller=caller, facade=facade)
         output = None
         try:
             Attribute.evaluate(caller=self, target=caller, expected_type=IRepository)
@@ -137,7 +137,7 @@ class WriteEntityAnnotations(StrategyWrite):
             record = self.record(document)
             if not record["text"].strip():
                 self.warning(
-                    msg=Event.Write.name, step=Event.Check.name, reason="no text to annotate"
+                    msg=Event.Write, step=Event.Check, reason="no text to annotate"
                 )
                 return False
 
@@ -145,7 +145,7 @@ class WriteEntityAnnotations(StrategyWrite):
                 # Kept deliberately: a document with no entity is a negative
                 # example, and a corpus of positives only teaches over-tagging.
                 self.debug(
-                    msg=Event.Write.name, step=Event.Check.name, reason="no spans, negative example"
+                    msg=Event.Write, step=Event.Check, reason="no spans, negative example"
                 )
 
             formatter = FormatterFactory.create(FileType.JSON)
@@ -162,14 +162,14 @@ class WriteEntityAnnotations(StrategyWrite):
             return True
         except AssertionError as e:
             error = f"Assertion: {str(e)}"
-            self.debug(msg=Event.Write.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Write, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
         except Exception as e:
             error = f"{self.name} caught exception: {str(e)}"
-            self.debug(msg=Event.Write.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Write, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
         finally:
-            self.debug(msg=Event.Write.name, step=Event.Completed.name, output=str(output))
+            self.debug(msg=Event.Write, step=Event.Completed, output=str(output))
 
 
 # ----------------------------------------------------------------------------#

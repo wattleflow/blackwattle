@@ -41,6 +41,7 @@ import re
 import shutil
 import socket
 import subprocess
+import sys
 import tempfile
 from abc import ABC, abstractmethod
 from contextlib import contextmanager
@@ -428,6 +429,7 @@ class TikaConnection(GenericConnection, ABC):
                 caller=self,
                 error=(
                     f"Missing required package to run this code: [{__file__}].\n"
+                    f"Interpreter: {sys.executable} ({e}).\n"
                     "Please install it using:\n\tpip install tika"
                 ),
                 exc=e,
@@ -444,8 +446,8 @@ class TikaConnection(GenericConnection, ABC):
                 return 200 <= int(response.status) < 300
         except Exception as e:
             self.debug(
-                msg=Event.Probe.name,
-                step=Event.Failed.name,
+                msg=Event.Probe,
+                step=Event.Failed,
                 endpoint=self._redacted(endpoint),
                 error=str(e),
             )
@@ -477,8 +479,8 @@ class TikaConnection(GenericConnection, ABC):
 
     def create_connection(self) -> None:
         self.debug(
-            msg=Event.Create.name,
-            step=Event.Started.name,
+            msg=Event.Create,
+            step=Event.Started,
             name=self.connection_name,
             mode=self.MODE,
             state=self.state.value,
@@ -490,8 +492,8 @@ class TikaConnection(GenericConnection, ABC):
             ConnectionState.CONNECTING,
         ):
             self.debug(
-                msg=Event.Create.name,
-                step=Event.Check.name,
+                msg=Event.Create,
+                step=Event.Check,
                 reason="connection already created",
                 state=self.state.value,
             )
@@ -517,7 +519,7 @@ class TikaConnection(GenericConnection, ABC):
                 connection_name=self.connection_name,
                 state=self.state.value,
             )
-            self.debug(msg=Event.Create.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Create, step=Event.Failed, error=str(e))
             raise TikaConnectionError(
                 caller=self,
                 error=f"Tika connection cannot be created: {e}",
@@ -528,8 +530,8 @@ class TikaConnection(GenericConnection, ABC):
         # work, so a record of its own would scale with the input rather than
         # with the job (NFRQ-OBS-03 §1).
         self.debug(
-            msg=Event.Create.name,
-            step=Event.Completed.name,
+            msg=Event.Create,
+            step=Event.Completed,
             name=self.connection_name,
             mode=self.MODE,
             endpoint=self._redacted(self._endpoint),
@@ -559,7 +561,7 @@ class TikaConnection(GenericConnection, ABC):
             self._fsm.apply(ConnectionAction.CONNECT_OK)
         except Exception as e:
             self._fsm.apply(ConnectionAction.CONNECT_FAIL)
-            self.debug(msg=Event.Connect.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Connect, step=Event.Failed, error=str(e))
             raise TikaConnectionError(caller=self, error=str(e), exc=e) from e
 
         try:
@@ -573,7 +575,7 @@ class TikaConnection(GenericConnection, ABC):
         self._engine = None
         self._runtime = None
         self.debug(
-            msg=Event.Disconnected.name,
+            msg=Event.Disconnected,
             connection_name=self.connection_name,
             mode=self.MODE,
             state=self.state.value,
@@ -670,8 +672,8 @@ class TikaServerConnection(TikaConnection):
 
         if self.probe is False:
             self.warning(
-                msg=Event.Probe.name,
-                step=Event.Check.name,
+                msg=Event.Probe,
+                step=Event.Check,
                 reason="endpoint not probed; probe is disabled",
                 endpoint=self._redacted(endpoint),
             )
@@ -747,8 +749,8 @@ class TikaLocalConnection(TikaConnection):
         self._owns_server = not already
 
         self.debug(
-            msg=Event.Load.name,
-            step=Event.Completed.name,
+            msg=Event.Load,
+            step=Event.Completed,
             component="tika",
             scope="preflight",
             java=self._java_bin,
@@ -771,15 +773,15 @@ class TikaLocalConnection(TikaConnection):
                 try:
                     runtime.killServer()
                     self.debug(
-                        msg=Event.Close.name,
-                        step=Event.Completed.name,
+                        msg=Event.Close,
+                        step=Event.Completed,
                         component="tika",
                         scope="server",
                     )
                 except Exception as e:
                     self.warning(
-                        msg=Event.Close.name,
-                        step=Event.Failed.name,
+                        msg=Event.Close,
+                        step=Event.Failed,
                         reason="local Tika server not stopped",
                         error=str(e),
                     )

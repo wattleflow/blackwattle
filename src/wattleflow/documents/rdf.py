@@ -96,8 +96,8 @@ class RDFGraphBuilder(Wattleflow, IBuilder):
         self._graph_identifier: Optional[str] = None
 
         self.debug(
-            msg=Event.Constructor.name,
-            step=Event.Completed.name,
+            msg=Event.Constructor,
+            step=Event.Completed,
             uri=uri,
         )
 
@@ -107,7 +107,7 @@ class RDFGraphBuilder(Wattleflow, IBuilder):
 
     # region IBuilder contract
     def build(self) -> Graph:
-        self.debug(msg=Event.Constructor.name, step=Event.Started.name)
+        self.debug(msg=Event.Constructor, step=Event.Started)
 
         identifier = uuid4()
         self._graph_identifier = f"urn:wattleflow:graph:{identifier}"
@@ -129,7 +129,7 @@ class RDFGraphBuilder(Wattleflow, IBuilder):
         self._add_steps(graph, caller_seg)
         self._add_provenance(graph, caller_seg, mime_name_seg, mime_value_seg)
 
-        self.debug(msg=Event.Constructor.name, step=Event.Completed.name)
+        self.debug(msg=Event.Constructor, step=Event.Completed)
         return graph
 
     # --- Protected helpers ---------------------------------------------------
@@ -215,8 +215,8 @@ class RDFDocument(Document[Graph], ABC):
         self._identifier = builder.graph_identifier
 
         self.debug(
-            msg=Event.Constructor.name,
-            step=Event.Started.name,
+            msg=Event.Constructor,
+            step=Event.Started,
             identifier=self.identifier,
             level=self.levelname,
             uri=uri,
@@ -232,8 +232,8 @@ class RDFDocument(Document[Graph], ABC):
         self.update_metadata("NFO", RDFGraphBuilder.NFO)
 
         self.debug(
-            msg=Event.Constructor.name,
-            step=Event.Completed.name,
+            msg=Event.Constructor,
+            step=Event.Completed,
         )
 
     # ----------------------------------------------------------
@@ -314,7 +314,7 @@ class RDFDocument(Document[Graph], ABC):
             )
             return result
         except Exception as e:
-            self.error(msg=Event.Getting.name, error=str(e))
+            self.error(msg=Event.Getting, error=str(e))
             return default
 
     def update_graph(self, new_graph: Graph) -> None:

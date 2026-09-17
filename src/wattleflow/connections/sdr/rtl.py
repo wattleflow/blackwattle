@@ -71,7 +71,7 @@ class RTLSDRBackend(SDRBackend):
         try:
             import rtlsdr
         except Exception as e:
-            self.debug(msg=Event.Load.name, step=Event.Failed.name, error=type(e).__name__)
+            self.debug(msg=Event.Load, step=Event.Failed, error=type(e).__name__)
             raise SDRBackendUnavailable(
                 caller=self._owner,
                 error=f"pyrtlsdr cannot be loaded ({type(e).__name__}: {e}); "
@@ -90,7 +90,7 @@ class RTLSDRBackend(SDRBackend):
             return library.RtlSdr(device_index=index)
         except OSError as e:
             code = getattr(e, "errno", None)
-            self.debug(msg=Event.Connect.name, step=Event.Failed.name, error=str(e), code=code)
+            self.debug(msg=Event.Connect, step=Event.Failed, error=str(e), code=code)
             if code == self.BUSY:
                 failure = SDRDeviceBusy
             elif code == self.ACCESS:

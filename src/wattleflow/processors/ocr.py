@@ -100,17 +100,17 @@ class OCRPreflightMixin:
         """
         jar = self._resolve_server_jar()
         self.debug(
-            msg=Event.Check.name,
+            msg=Event.Check,
             component="tika",
             scope="preflight",
-            step=Event.Started.name,
+            step=Event.Started,
             tika_server_jar=str(jar),
         )
 
         java_bin = self._resolve_java()
         java_major = self._check_java_version(java_bin)
         self.debug(
-            msg=Event.Check.name,
+            msg=Event.Check,
             component="tika",
             scope="preflight",
             java=java_bin,
@@ -119,10 +119,10 @@ class OCRPreflightMixin:
 
         staged = self._stage_server_jar(jar)
         self.debug(
-            msg=Event.Check.name,
+            msg=Event.Check,
             component="tika",
             scope="preflight",
-            step=Event.Completed.name,
+            step=Event.Completed,
             loaded=True,
             tika_server_jar=str(jar),
             staged_jar=str(staged),
@@ -184,7 +184,7 @@ class OCRPreflightMixin:
                 timeout=15,
             )
         except (OSError, subprocess.SubprocessError) as e:
-            self.debug(msg=Event.Check.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Check, step=Event.Failed, error=str(e))
             raise TikaJavaError(self, f"Failed to run {java_bin!r}: {e}") from e
 
         # `java -version` writes to stderr on virtually every JDK.
@@ -220,7 +220,7 @@ class OCRPreflightMixin:
         try:
             runtime_dir.mkdir(parents=True, exist_ok=True)
         except OSError as e:
-            self.debug(msg=Event.Check.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Check, step=Event.Failed, error=str(e))
             raise TikaServerJarError(
                 self, f"Cannot create Tika runtime directory {runtime_dir}: {e}"
             ) from e
@@ -239,7 +239,7 @@ class OCRPreflightMixin:
                     # Symlinks may be unavailable (some Windows/WSL mounts); fall back.
                     shutil.copy2(jar, target)
             except OSError as e:
-                self.debug(msg=Event.Check.name, step=Event.Failed.name, error=str(e))
+                self.debug(msg=Event.Check, step=Event.Failed, error=str(e))
                 raise TikaServerJarError(self, f"Cannot stage Tika JAR into {target}: {e}") from e
             staged = True
 
@@ -247,7 +247,7 @@ class OCRPreflightMixin:
             try:
                 md5_path.write_text(self._md5_hex(jar))
             except OSError as e:
-                self.debug(msg=Event.Check.name, step=Event.Failed.name, error=str(e))
+                self.debug(msg=Event.Check, step=Event.Failed, error=str(e))
                 raise TikaServerJarError(self, f"Cannot write checksum {md5_path}: {e}") from e
 
         os.environ["TIKA_PATH"] = str(runtime_dir)
@@ -306,10 +306,10 @@ class OCRTextProcessor(OCRPreflightMixin, GenericProcessor):
 
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
-        self.debug(msg=Event.Constructor.name, step=Event.Started.name)
+        self.debug(msg=Event.Constructor, step=Event.Started)
 
     def create_generator(self) -> Generator[ITarget, None, None]:
-        self.debug(msg=Event.Generate.name, step=Event.Started.name)
+        self.debug(msg=Event.Generate, step=Event.Started)
 
         try:
             # Validate the configured JAR + Java and stage the JAR BEFORE importing
@@ -331,7 +331,7 @@ class OCRTextProcessor(OCRPreflightMixin, GenericProcessor):
             timeout = self._request_timeout()
 
             for filepath in file_iter:
-                self.debug(msg=Event.Generate.name, scope="item", filename=str(filepath))
+                self.debug(msg=Event.Generate, scope="item", filename=str(filepath))
                 try:
                     if filtered and filtered.findall(filepath.stem):
                         continue
@@ -343,7 +343,7 @@ class OCRTextProcessor(OCRPreflightMixin, GenericProcessor):
                     content: str = (parsed.get("content") or "").strip()
 
                     self.debug(
-                        msg=Event.Generate.name,
+                        msg=Event.Generate,
                         scope="item",
                         filename=str(filepath),
                         size=len(content),
@@ -359,8 +359,8 @@ class OCRTextProcessor(OCRPreflightMixin, GenericProcessor):
                     filename = str(filepath)
                     error = f"Error: {str(e)} with {filename!r}"
                     self.exception(
-                        msg=Event.Generate.name,
-                        step=Event.Failed.name,
+                        msg=Event.Generate,
+                        step=Event.Failed,
                         error=error,
                         filename=str(filename),
                     )
@@ -371,8 +371,8 @@ class OCRTextProcessor(OCRPreflightMixin, GenericProcessor):
         except Exception as e:
             error = f"Error: {str(e)}"
             self.debug(
-                msg=Event.Generate.name,
-                step=Event.Failed.name,
+                msg=Event.Generate,
+                step=Event.Failed,
                 error=error,
             )
             raise ProcessorException(
@@ -381,7 +381,7 @@ class OCRTextProcessor(OCRPreflightMixin, GenericProcessor):
                 exc=format_exc(),
             ) from e
 
-        self.debug(msg=Event.Generate.name, step=Event.Completed.name)
+        self.debug(msg=Event.Generate, step=Event.Completed)
 
 
 # --------------------------------------------------------------------------- #

@@ -48,7 +48,7 @@ class SmallBlackboard(GenericBlackboard[ITarget]):
             BlackboardState.IDLE,
             name="SmallBlackboard",
         )
-        self.debug(msg=Event.Constructor.name, step=Event.Completed.name)
+        self.debug(msg=Event.Constructor, step=Event.Completed)
 
     def __repr__(self) -> str:
         state = self._fsm.state.name or "UNKNOWN"
@@ -68,8 +68,8 @@ class SmallBlackboard(GenericBlackboard[ITarget]):
 
     def clean(self):
         self.debug(
-            msg=Event.Clean.name,
-            step=Event.Started.name,
+            msg=Event.Clean,
+            step=Event.Started,
             state=self._fsm.state.name,
         )
 
@@ -78,7 +78,7 @@ class SmallBlackboard(GenericBlackboard[ITarget]):
             # (DIRTY state), broadcastaj prije CLEAN-a. Log warning s razlogom.
             if self._canvas is not None and self._fsm.can(BlackboardAction.FLUSH):
                 self.warning(
-                    msg=Event.Clean.name,
+                    msg=Event.Clean,
                     reason="canvas has unflushed facade at lifecycle end",
                     cause="defer_flush=%s" % self.defer_flush,
                     state=self._fsm.state.name,
@@ -94,8 +94,8 @@ class SmallBlackboard(GenericBlackboard[ITarget]):
                 self._fsm.apply(BlackboardAction.CLEAN)
         except Exception as e:
             self.debug(
-                msg=Event.Clean.name,
-                step=Event.Failed.name,
+                msg=Event.Clean,
+                step=Event.Failed,
                 error=str(e),
             )
             if self._fsm.can(BlackboardAction.FAIL):
@@ -103,24 +103,24 @@ class SmallBlackboard(GenericBlackboard[ITarget]):
             raise
 
         self.debug(
-            msg=Event.Clean.name,
-            step=Event.Completed.name,
+            msg=Event.Clean,
+            step=Event.Completed,
             state=self._fsm.state.name,
             repositories=len(self._repositories),
         )
 
     def create(self, caller: IProcessor, **kwargs) -> Optional[ITarget]:
-        self.debug(msg=Event.Create.name, step=Event.Started.name, kwargs=kwargs)
+        self.debug(msg=Event.Create, step=Event.Started, kwargs=kwargs)
         assert isinstance(caller, IProcessor), "Expected IProcessor. Found %s" % type(caller)
 
         if not self._strategy_create:
             self.warning(
-                msg=Event.Create.name,
+                msg=Event.Create,
                 error=f"{self.name}._strategy_create is missing!",
             )
             return None
 
-        self.debug(msg=Event.Create.name, step=Event.Completed.name)
+        self.debug(msg=Event.Create, step=Event.Completed)
 
         # Blackboard proslijeđuje SEBE kao caller-a prema strategiji
         # (strategija asertira IBlackboard). Processor putuje kao kwarg.
@@ -129,16 +129,16 @@ class SmallBlackboard(GenericBlackboard[ITarget]):
         )
 
     def delete(self, identifier: str, **kwargs) -> None:
-        self.debug(msg=Event.Delete.name, step=Event.Started.name, id=identifier)
+        self.debug(msg=Event.Delete, step=Event.Started, id=identifier)
         if isinstance(self._canvas, ITarget):
             self.clean()
-        self.debug(msg=Event.Delete.name, step=Event.Completed.name)
+        self.debug(msg=Event.Delete, step=Event.Completed)
 
     def flush(self, caller: IWattleflow, **kwargs) -> None:
         pending = self.count
         self.debug(
-            msg=Event.Flush.name,
-            step=Event.Started.name,
+            msg=Event.Flush,
+            step=Event.Started,
             caller=caller,
             kwargs=kwargs,
         )
@@ -151,9 +151,9 @@ class SmallBlackboard(GenericBlackboard[ITarget]):
 
         facade = self._canvas
         if facade is not None and self._fsm.can(BlackboardAction.FLUSH):
+            # v0.0.4 (DR-WFL-031 v3): a progress record, not a second opening.
             self.debug(
-                msg=Event.Flush.name,
-                step=Event.Started.name,
+                msg=Event.Flush,
                 documents=pending,
                 repositories=len(self._repositories),
             )
@@ -165,8 +165,8 @@ class SmallBlackboard(GenericBlackboard[ITarget]):
                     self._fsm.apply(BlackboardAction.FAIL)
 
                 self.debug(
-                    msg=Event.Flush.name,
-                    step=Event.Failed.name,
+                    msg=Event.Flush,
+                    step=Event.Failed,
                     error=f"Writing repository: {str(e)}",
                 )
                 raise BlackboardException(
@@ -180,17 +180,17 @@ class SmallBlackboard(GenericBlackboard[ITarget]):
 
             self._canvas = None
 
-        self.debug(msg=Event.Flush.name, step=Event.Completed.name)
+        self.debug(msg=Event.Flush, step=Event.Completed)
 
     def register(self, repository: IRepository) -> None:
-        self.debug(msg=Event.Register.name, step=Event.Started.name, repository=repository)
+        self.debug(msg=Event.Register, step=Event.Started, repository=repository)
         assert isinstance(repository, IRepository), "Expected IRepository. Found %s" % type(
             repository
         )
 
         if repository in self._repositories:
             self.warning(
-                msg=Event.Register.name,
+                msg=Event.Register,
                 repository=repository,
                 error="Repository already registered!",
             )
@@ -202,14 +202,14 @@ class SmallBlackboard(GenericBlackboard[ITarget]):
             self._fsm.apply(BlackboardAction.REGISTER)
 
         self.debug(
-            msg=Event.Register.name,
-            step=Event.Completed.name,
+            msg=Event.Register,
+            step=Event.Completed,
             state=self._fsm.state.name,
             added=repository,
         )
 
     def read(self, identifier: str, **kwargs) -> ITarget:
-        self.debug(msg=Event.Read.name, step=Event.Started.name, kwargs=kwargs)
+        self.debug(msg=Event.Read, step=Event.Started, kwargs=kwargs)
 
         if self._canvas is None:
             raise BlackboardException(self, f"Document {identifier} not found!")
@@ -220,13 +220,13 @@ class SmallBlackboard(GenericBlackboard[ITarget]):
         if self._fsm.can(BlackboardAction.READ):
             self._fsm.apply(BlackboardAction.READ)
 
-        self.debug(msg=Event.Read.name, step=Event.Completed.name, identifier=identifier)
+        self.debug(msg=Event.Read, step=Event.Completed, identifier=identifier)
         return self._canvas
 
     def write(self, pipeline: IPipeline, facade: ITarget, **kwargs) -> str:
         self.debug(
-            msg=Event.Write.name,
-            step=Event.Started.name,
+            msg=Event.Write,
+            step=Event.Started,
             pipeline=pipeline,
             kwargs=kwargs,
         )
@@ -237,7 +237,8 @@ class SmallBlackboard(GenericBlackboard[ITarget]):
         if not self._repositories:
             error = "No repositories have been registered."
             self.exception(
-                msg=Event.Write.name,
+                msg=Event.Write,
+                step=Event.Failed,
                 error=error,
             )
             raise BlackboardException(self, error=error)
@@ -249,10 +250,10 @@ class SmallBlackboard(GenericBlackboard[ITarget]):
 
         # Reported on ENTRY, before the facade is handed down, so the audit stream
         # follows the call order the activity diagram draws. Closing the unit is
-        # the processor's and the workflow's job, not this layer's.
+        # the processor's and the workflow's job, not this layer's; the OPERATION
+        # closes below (v0.0.4, DR-WFL-031 v3).
         self.debug(
-            msg=Event.Write.name,
-            step=Event.Started.name,
+            msg=Event.Write,
             document=facade.identifier,
             repositories=len(self._repositories),
             deferred=bool(self.defer_flush),
@@ -269,7 +270,8 @@ class SmallBlackboard(GenericBlackboard[ITarget]):
             self._canvas = None
 
         self.debug(
-            msg=Event.Write.name,
+            msg=Event.Write,
+            step=Event.Completed,
             action=Event.Stored.value,
             facade=facade,
         )

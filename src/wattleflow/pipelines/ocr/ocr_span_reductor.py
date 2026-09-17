@@ -91,8 +91,8 @@ class PipelineOCRRedactSpans(GenericPipeline):
 
         if not ImageFormat.accepts(suffix):
             self.warning(
-                msg=Event.Transform.name,
-                step=Event.Check.name,
+                msg=Event.Transform,
+                step=Event.Check,
                 reason="unsupported source suffix",
                 suffix=suffix,
             )
@@ -112,14 +112,14 @@ class PipelineOCRRedactSpans(GenericPipeline):
 
         if not targets:
             self.warning(
-                msg=Event.Transform.name, step=Event.Check.name, reason="no PII targets collected"
+                msg=Event.Transform, step=Event.Check, reason="no PII targets collected"
             )
             return
 
         try:
             tokens = OcrParser().parse(path=source_path, expected=tuple(ImageFormat))
         except Exception as e:
-            self.error(msg=Event.Transform.name, step=Event.Failed.name, error=f"OCR failed: {e}")
+            self.error(msg=Event.Transform, step=Event.Failed, error=f"OCR failed: {e}")
             return
 
         # Emit the STANDARD redaction-span schema (shared with PDF reduct + all
@@ -140,8 +140,8 @@ class PipelineOCRRedactSpans(GenericPipeline):
         )
 
         self.debug(
-            msg=Event.Transform.name,
-            step=Event.Completed.name,
+            msg=Event.Transform,
+            step=Event.Completed,
             uid=uid,
             targets=len(targets),
             spans=len(spans),

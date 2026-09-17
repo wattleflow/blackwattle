@@ -164,7 +164,7 @@ class DriverSDR(GenericDriver):
         )
 
     def load(self) -> None:
-        self.debug(msg=Event.Load.name, step=Event.Started.name)
+        self.debug(msg=Event.Load, step=Event.Started)
         manager, name = self.connection_manager, self.connection_name
         if manager is None or not name:
             raise DriverSDRError(
@@ -201,12 +201,12 @@ class DriverSDR(GenericDriver):
         self._full_scale = profile.formats[fmt]
         self._block_bytes = block_bytes
         self._lost_total = 0 if connection.backend.MEASURES_LOSS else None
-        self.debug(msg=Event.Load.name, step=Event.Completed.name, format=fmt.value)
+        self.debug(msg=Event.Load, step=Event.Completed, format=fmt.value)
 
     def close(self) -> None:
         # The unit belongs to the connection; the driver only lets go of it.
         self._connection = None
-        self.debug(msg=Event.Close.name, step=Event.Completed.name)
+        self.debug(msg=Event.Close, step=Event.Completed)
 
     def read(self, uri: str = "", **kwargs) -> Generator[SDRSampleBlock, None, None]:
         """Raw blocks as a generator; nothing accumulates beyond one block (k.1)."""
@@ -234,7 +234,7 @@ class DriverSDR(GenericDriver):
         try:
             return self._connection.backend.read(session, self._block_bytes)
         except Exception as e:
-            self.debug(msg=Event.Read.name, step=Event.Failed.name, error=f"{type(e).__name__}: {e}")
+            self.debug(msg=Event.Read, step=Event.Failed, error=f"{type(e).__name__}: {e}")
             raise SDRDeviceLost(
                 caller=self, error=f"read failed: {type(e).__name__}: {e}"
             ) from e

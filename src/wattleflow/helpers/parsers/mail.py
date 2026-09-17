@@ -1333,8 +1333,8 @@ class MailTemplateParser(GenericParser):
             if unknown:
                 # Reported, not refused: the file exists for labels this module lacks.
                 self.warning(
-                    msg=Event.Read.name,
-                    step=Event.Check.name,
+                    msg=Event.Read,
+                    step=Event.Check,
                     reason="labels outside MailHeader and PRINT_LABELS",
                     template=entry.get("name"),
                     labels=unknown,

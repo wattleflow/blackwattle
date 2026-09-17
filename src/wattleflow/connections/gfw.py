@@ -125,7 +125,7 @@ class GFWConnection(GenericConnection):
         try:
             resp = session.get(url, timeout=timeout)
         except requests.RequestException as e:
-            self.debug(msg=Event.Validate.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Validate, step=Event.Failed, error=str(e))
             raise GFWConnectionError(
                 caller=self,
                 error=f"GFW auth probe network error: {e}",
@@ -151,8 +151,8 @@ class GFWConnection(GenericConnection):
 
     def create_connection(self) -> None:
         self.debug(
-            msg=Event.Create.name,
-            step=Event.Started.name,
+            msg=Event.Create,
+            step=Event.Started,
             name=self.connection_name,
             state=self.state.value,
         )
@@ -163,8 +163,8 @@ class GFWConnection(GenericConnection):
             ConnectionState.CONNECTING,
         ):
             self.debug(
-                msg=Event.Create.name,
-                step=Event.Check.name,
+                msg=Event.Create,
+                step=Event.Check,
                 reason="connection already created",
                 state=self.state.value,
             )
@@ -196,15 +196,15 @@ class GFWConnection(GenericConnection):
                 connection_name=self.connection_name,
                 state=self.state.value,
             )
-            self.debug(msg=Event.Create.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Create, step=Event.Failed, error=str(e))
             raise GFWConnectionError(
                 caller=self,
                 error=f"GFW session cannot be created: {e}",
             ) from e
 
         self.debug(
-            msg=Event.Create.name,
-            step=Event.Completed.name,
+            msg=Event.Create,
+            step=Event.Completed,
             name=self.connection_name,
             state=self.state.value,
             base_url=self._resolve_base_url(),
@@ -215,7 +215,7 @@ class GFWConnection(GenericConnection):
         self._ensure_created()
 
         self.debug(
-            msg=Event.Connect.name,
+            msg=Event.Connect,
             connection_name=self.connection_name,
             state=self.state.value,
         )
@@ -251,11 +251,11 @@ class GFWConnection(GenericConnection):
             self._fsm.apply(ConnectionAction.CONNECT_OK)
         except Exception as e:
             self._fsm.apply(ConnectionAction.CONNECT_FAIL)
-            self.debug(msg=Event.Connect.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Connect, step=Event.Failed, error=str(e))
             raise GFWConnectionError(caller=self, error=str(e)) from e
 
         self.debug(
-            msg=Event.Connected.name,
+            msg=Event.Connected,
             connection_name=self.connection_name,
             state=self.state.value,
         )
@@ -269,20 +269,20 @@ class GFWConnection(GenericConnection):
                 connection_name=self.connection_name,
                 state=self.state.value,
             )
-            self.debug(msg=Event.Connect.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Connect, step=Event.Failed, error=str(e))
             raise
         finally:
             self._connection = None
             self._fsm.apply(ConnectionAction.DISCONNECT)
             self.debug(
-                msg=Event.Disconnected.name,
+                msg=Event.Disconnected,
                 connection_name=self.connection_name,
                 note="session still alive; call ensure_closed() to release",
             )
 
     def disconnect(self) -> None:
         self.debug(
-            msg=Event.Disconnect.name,
+            msg=Event.Disconnect,
             connection_name=self.connection_name,
             state=self.state.value,
         )
@@ -305,7 +305,7 @@ class GFWConnection(GenericConnection):
         finally:
             self._version = ""
             self.debug(
-                msg=Event.Disconnected.name,
+                msg=Event.Disconnected,
                 connection_name=self.connection_name,
                 state=self.state.value,
             )

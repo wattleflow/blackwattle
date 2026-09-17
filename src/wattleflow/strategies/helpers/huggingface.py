@@ -63,7 +63,7 @@ class StrategyCopyHuggingfaceModels(Wattleflow, IStrategy):
     def execute(self, caller: IWattleflow | None = None, **kwargs) -> bool:
         # kwargs go in as one value, never splatted: a caller key such as
         # `msg` or `exc_info` would collide with the audit call's own.
-        self.debug(msg=Event.Execute.name, step=Event.Started.name, kwargs=kwargs)
+        self.debug(msg=Event.Execute, step=Event.Started, kwargs=kwargs)
 
         try:
             Attribute.mandatory(self, "source_dir", (str, Path), **kwargs)
@@ -73,8 +73,8 @@ class StrategyCopyHuggingfaceModels(Wattleflow, IStrategy):
             destination = Path(self.destination_dir).expanduser()
 
             self.debug(
-                msg=Event.Copy.name,
-                step=Event.Started.name,
+                msg=Event.Copy,
+                step=Event.Started,
                 source=str(source),
                 destination=str(destination),
             )
@@ -82,8 +82,8 @@ class StrategyCopyHuggingfaceModels(Wattleflow, IStrategy):
             if not source.exists() or not source.is_dir():
                 error = f"Source directory not found or not a directory: {source}"
                 self.debug(
-                    msg=Event.Copy.name,
-                    step=Event.Failed.name,
+                    msg=Event.Copy,
+                    step=Event.Failed,
                     reason=error,
                     source=str(source),
                 )
@@ -97,8 +97,8 @@ class StrategyCopyHuggingfaceModels(Wattleflow, IStrategy):
             if destination == source or source in destination.parents:
                 error = f"Destination is inside the source tree: {destination}"
                 self.debug(
-                    msg=Event.Copy.name,
-                    step=Event.Failed.name,
+                    msg=Event.Copy,
+                    step=Event.Failed,
                     reason=error,
                     source=str(source),
                     destination=str(destination),
@@ -118,7 +118,7 @@ class StrategyCopyHuggingfaceModels(Wattleflow, IStrategy):
                 target.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(path, target, follow_symlinks=True)
                 self.debug(
-                    msg=Event.Copied.name,
+                    msg=Event.Copied,
                     scope="file",
                     source=str(path),
                     target=str(target),
@@ -126,7 +126,7 @@ class StrategyCopyHuggingfaceModels(Wattleflow, IStrategy):
                 count += 1
 
             self.info(
-                msg=Event.TaskCompleted.name,
+                msg=Event.TaskCompleted,
                 destination=str(destination),
                 files=count,
             )
@@ -135,7 +135,7 @@ class StrategyCopyHuggingfaceModels(Wattleflow, IStrategy):
             raise
         except Exception as e:
             error = f"{self.name} caught exception: {str(e)}"
-            self.debug(msg=Event.Execute.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Execute, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
 
 

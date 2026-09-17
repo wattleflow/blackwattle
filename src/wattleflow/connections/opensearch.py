@@ -152,8 +152,8 @@ class OpenSearchConnection(GenericConnection):
 
     def create_connection(self) -> None:
         self.debug(
-            msg=Event.Create.name,
-            step=Event.Started.name,
+            msg=Event.Create,
+            step=Event.Started,
             name=self.connection_name,
             state=self.state.value,
         )
@@ -164,8 +164,8 @@ class OpenSearchConnection(GenericConnection):
             ConnectionState.CONNECTING,
         ):
             self.debug(
-                msg=Event.Create.name,
-                step=Event.Check.name,
+                msg=Event.Create,
+                step=Event.Check,
                 reason="connection already created",
                 state=self.state.value,
             )
@@ -199,15 +199,15 @@ class OpenSearchConnection(GenericConnection):
                 connection_name=self.connection_name,
                 state=self.state.value,
             )
-            self.debug(msg=Event.Create.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Create, step=Event.Failed, error=str(e))
             raise OpenSearchConnectionError(
                 caller=self,
                 error=f"OpenSearch client cannot be created: {e}",
             ) from e
 
         self.debug(
-            msg=Event.Create.name,
-            step=Event.Completed.name,
+            msg=Event.Create,
+            step=Event.Completed,
             name=self.connection_name,
             state=self.state.value,
             os_version=self._version,
@@ -218,7 +218,7 @@ class OpenSearchConnection(GenericConnection):
         self._ensure_created()
 
         self.debug(
-            msg=Event.Connect.name,
+            msg=Event.Connect,
             connection_name=self.connection_name,
             state=self.state.value,
         )
@@ -254,11 +254,11 @@ class OpenSearchConnection(GenericConnection):
             self._fsm.apply(ConnectionAction.CONNECT_OK)
         except Exception as e:
             self._fsm.apply(ConnectionAction.CONNECT_FAIL)
-            self.debug(msg=Event.Connect.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Connect, step=Event.Failed, error=str(e))
             raise OpenSearchConnectionError(caller=self, error=str(e)) from e
 
         self.debug(
-            msg=Event.Connected.name,
+            msg=Event.Connected,
             connection_name=self.connection_name,
             state=self.state.value,
         )
@@ -272,20 +272,20 @@ class OpenSearchConnection(GenericConnection):
                 connection_name=self.connection_name,
                 state=self.state.value,
             )
-            self.debug(msg=Event.Connect.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Connect, step=Event.Failed, error=str(e))
             raise
         finally:
             self._connection = None
             self._fsm.apply(ConnectionAction.DISCONNECT)
             self.debug(
-                msg=Event.Disconnected.name,
+                msg=Event.Disconnected,
                 connection_name=self.connection_name,
                 note="client still alive; call ensure_closed() to close",
             )
 
     def disconnect(self) -> None:
         self.debug(
-            msg=Event.Disconnect.name,
+            msg=Event.Disconnect,
             connection_name=self.connection_name,
             state=self.state.value,
         )
@@ -313,7 +313,7 @@ class OpenSearchConnection(GenericConnection):
         finally:
             self._version = ""
             self.debug(
-                msg=Event.Disconnected.name,
+                msg=Event.Disconnected,
                 connection_name=self.connection_name,
                 state=self.state.value,
             )
@@ -326,8 +326,8 @@ class OpenSearchConnection(GenericConnection):
             return bool(self._engine.ping())
         except Exception as e:
             self.warning(
-                msg=Event.Probe.name,
-                step=Event.Failed.name,
+                msg=Event.Probe,
+                step=Event.Failed,
                 error=str(e),
                 connection_name=self.connection_name,
             )

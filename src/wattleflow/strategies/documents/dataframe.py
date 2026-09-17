@@ -32,7 +32,7 @@ from wattleflow.helpers.formatters.factory import FormatterFactory
 class CreateDataframeDocument(StrategyCreate):
     def execute(self, caller: IWattleflow, **kwargs) -> Optional[ITarget]:
         try:
-            self.debug(msg=Event.Create.name, step=Event.Started.name, kwargs=kwargs)
+            self.debug(msg=Event.Create, step=Event.Started, kwargs=kwargs)
             assert isinstance(caller, IBlackboard), "Expected IBlackboard. Found %s" % type(caller)
 
             Attribute.mandatory(self, "content", pd.DataFrame, **kwargs)
@@ -59,15 +59,15 @@ class CreateDataframeDocument(StrategyCreate):
 
             if not document.size > 0:
                 self.warning(
-                    msg=Event.Create.name,
-                    step=Event.Check.name,
+                    msg=Event.Create,
+                    step=Event.Check,
                     reason="Dataframe's feeling a bit empty today!",
                     document=document,
                 )
 
             self.debug(
-                msg=Event.Create.name,
-                step=Event.Completed.name,
+                msg=Event.Create,
+                step=Event.Completed,
                 document=document.identifier,
                 size=document.size,
             )
@@ -75,11 +75,11 @@ class CreateDataframeDocument(StrategyCreate):
             return DocumentFacade(document)
         except AssertionError as e:
             error = f"Assertion: {str(e)}"
-            self.debug(msg=Event.Create.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Create, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
         except Exception as e:
             error = f"{self.name} caught exception: {str(e)}"
-            self.debug(msg=Event.Create.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Create, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
 
 
@@ -89,18 +89,18 @@ class ReadDataframeDocument(StrategyRead):
             raise NotImplementedError(f"{self}")
         except AssertionError as e:
             error = f"Assertion: {str(e)}"
-            self.debug(msg=Event.Read.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Read, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
         except Exception as e:
             error = f"{self.name} caught exception: {str(e)}"
-            self.debug(msg=Event.Read.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Read, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
 
 
 class WriteDataframeDocument(StrategyWrite):
     def execute(self, caller: IWattleflow, facade: ITarget, **kwargs) -> bool:
         try:
-            self.debug(msg=Event.Write.name, step=Event.Started.name, facade=facade, kwargs=kwargs)
+            self.debug(msg=Event.Write, step=Event.Started, facade=facade, kwargs=kwargs)
             assert isinstance(caller, IRepository), "Expected IRepository. Found %s" % type(caller)
             assert isinstance(facade, ITarget), "Expected ITarget. Found %s" % type(facade)
             driver = kwargs.get("driver")
@@ -111,8 +111,8 @@ class WriteDataframeDocument(StrategyWrite):
             document: DataFrameDocument = facade.request()
             if document.content.empty:
                 self.warning(
-                    msg=Event.Write.name,
-                    step=Event.Check.name,
+                    msg=Event.Write,
+                    step=Event.Check,
                     reason="Dataframe's feeling a bit empty today!",
                     document=document,
                     size=document.size,
@@ -127,8 +127,8 @@ class WriteDataframeDocument(StrategyWrite):
                 if filename in cfg_write:
                     write_kwargs = cfg_write.get(filename, {})
             self.debug(
-                msg=Event.Write.name,
-                step=Event.Configuring.name,
+                msg=Event.Write,
+                step=Event.Configuring,
                 filename=filename,
                 write_kwargs=write_kwargs,
             )
@@ -144,8 +144,8 @@ class WriteDataframeDocument(StrategyWrite):
             )
             document.update_metadata("storage_filename", output)
             self.debug(
-                msg=Event.Write.name,
-                step=Event.Completed.name,
+                msg=Event.Write,
+                step=Event.Completed,
                 document=document,
                 output=output,
                 size=document.size,
@@ -154,11 +154,11 @@ class WriteDataframeDocument(StrategyWrite):
             return True
         except AssertionError as e:
             error = f"Assertion: {str(e)}"
-            self.debug(msg=Event.Write.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Write, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
         except Exception as e:
             error = f"{self.name} caught exception: {str(e)}"
-            self.debug(msg=Event.Write.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Write, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
 
 

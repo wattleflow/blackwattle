@@ -76,7 +76,7 @@ class Serialise(IWattleflow):
 class CreateJsonDocument(StrategyCreate, Serialise):
     def execute(self, caller: IWattleflow, **kwargs) -> Optional[ITarget]:
         try:
-            self.debug(msg=Event.Create.name, step=Event.Started.name, kwargs=kwargs)
+            self.debug(msg=Event.Create, step=Event.Started, kwargs=kwargs)
             assert isinstance(caller, IBlackboard), "Expected IBlackboard. Found %s" % (
                 type(caller).__name__
             )
@@ -103,8 +103,8 @@ class CreateJsonDocument(StrategyCreate, Serialise):
 
             if not document.size > 0:
                 self.warning(
-                    msg=Event.Create.name,
-                    step=Event.Check.name,
+                    msg=Event.Create,
+                    step=Event.Check,
                     reason="JSON document file's feeling a bit empty today!",
                     document=document,
                 )
@@ -126,8 +126,8 @@ class CreateJsonDocument(StrategyCreate, Serialise):
             document.update_content(text)
 
             self.debug(
-                msg=Event.Create.name,
-                step=Event.Completed.name,
+                msg=Event.Create,
+                step=Event.Completed,
                 document=document.identifier,
                 filename=self.filename,
                 size=document.size,
@@ -136,15 +136,15 @@ class CreateJsonDocument(StrategyCreate, Serialise):
             return DocumentFacade(document)
         except AssertionError as e:
             error = f"Assertion: {str(e)}"
-            self.debug(msg=Event.Create.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Create, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
         except json.JSONDecodeError as e:
             error = f"Invalid JSON content: {str(e)}"
-            self.debug(msg=Event.Create.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Create, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
         except Exception as e:
             error = f"{self.name} caught exception: {str(e)}"
-            self.debug(msg=Event.Create.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Create, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
 
 
@@ -158,7 +158,7 @@ class ReadJsonDocument(StrategyRead, Serialise):
 
     def execute(self, caller: IWattleflow, **kwargs) -> Optional[ITarget]:
         try:
-            self.debug(msg=Event.Read.name, step=Event.Started.name, kwargs=kwargs)
+            self.debug(msg=Event.Read, step=Event.Started, kwargs=kwargs)
             assert isinstance(caller, IRepository), "Expected IRepository. Found %s" % (
                 type(caller).__name__
             )
@@ -188,30 +188,30 @@ class ReadJsonDocument(StrategyRead, Serialise):
             document.update_metadata("json_parsed", parsed)
 
             self.debug(
-                msg=Event.Read.name,
-                step=Event.Completed.name,
+                msg=Event.Read,
+                step=Event.Completed,
                 document=document.identifier,
                 size=document.size,
             )
             return DocumentFacade(document)
         except AssertionError as e:
             error = f"Assertion: {str(e)}"
-            self.debug(msg=Event.Read.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Read, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
         except json.JSONDecodeError as e:
             error = f"Invalid JSON at {kwargs.get('identifier')!r}: {str(e)}"
-            self.debug(msg=Event.Read.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Read, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
         except Exception as e:
             error = f"{self.name} caught exception: {str(e)}"
-            self.debug(msg=Event.Read.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Read, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
 
 
 class WriteJsonDocument(StrategyWrite, Serialise):
     def execute(self, caller: IWattleflow, facade: ITarget, **kwargs) -> bool:
         try:
-            self.debug(msg=Event.Write.name, step=Event.Started.name, kwargs=kwargs)
+            self.debug(msg=Event.Write, step=Event.Started, kwargs=kwargs)
             assert isinstance(caller, IRepository), "Expected IRepository. Found %s" % (
                 type(caller).__name__
             )
@@ -235,8 +235,8 @@ class WriteJsonDocument(StrategyWrite, Serialise):
                 content = document.content or ""
                 if not isinstance(content, str) or not content.strip():
                     self.warning(
-                        msg=Event.Write.name,
-                        step=Event.Check.name,
+                        msg=Event.Write,
+                        step=Event.Check,
                         reason="JSON content is empty.",
                         document=document,
                     )
@@ -261,8 +261,8 @@ class WriteJsonDocument(StrategyWrite, Serialise):
             document.update_metadata("source_format", formatter.SUFFIX)
 
             self.debug(
-                msg=Event.Write.name,
-                step=Event.Completed.name,
+                msg=Event.Write,
+                step=Event.Completed,
                 document=document.identifier,
                 output=str(output),
                 size=len(text),
@@ -270,15 +270,15 @@ class WriteJsonDocument(StrategyWrite, Serialise):
             return True
         except AssertionError as e:
             error = f"Assertion: {str(e)}"
-            self.debug(msg=Event.Write.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Write, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
         except json.JSONDecodeError as e:
             error = f"Invalid JSON on document: {str(e)}"
-            self.debug(msg=Event.Write.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Write, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
         except Exception as e:
             error = f"{self.name} caught exception: {str(e)}"
-            self.debug(msg=Event.Write.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Write, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
 
 

@@ -113,7 +113,7 @@ class ConnectionHuggingFace(ProxyConnection):
         """
 
         self.debug(
-            msg=Event.Configuring.name,
+            msg=Event.Configuring,
             session=session,
         )
 
@@ -121,7 +121,7 @@ class ConnectionHuggingFace(ProxyConnection):
         try:
             cache.mkdir(parents=True, exist_ok=True)
         except OSError as e:
-            self.debug(msg=Event.Configuring.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Configuring, step=Event.Failed, error=str(e))
             raise HuggingFaceConnectionError(
                 caller=self,
                 error=f"Cache directory is not usable: {cache} ({e})",
@@ -133,7 +133,7 @@ class ConnectionHuggingFace(ProxyConnection):
             )
 
         self.debug(
-            msg=Event.Configuring.name,
+            msg=Event.Configuring,
             connection_name=self._connection_name,
             cache_dir=str(cache),
             endpoint=self.endpoint,

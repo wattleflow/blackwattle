@@ -50,8 +50,8 @@ class PipelineDataFrameClean(GenericPipeline):
 
         if content.empty:
             self.warning(
-                msg=Event.Transform.name,
-                step=Event.Check.name,
+                msg=Event.Transform,
+                step=Event.Check,
                 reason="Nothing to process here!",
                 document=document,
                 size=content.size,
@@ -67,8 +67,8 @@ class PipelineDataFrameClean(GenericPipeline):
         )
 
         self.debug(
-            msg=Event.Transform.name,
-            step=Event.Completed.name,
+            msg=Event.Transform,
+            step=Event.Completed,
             uid=uid,
             size=content.size,
         )

@@ -104,7 +104,7 @@ class DriverKibana(GenericDriver):
     # ---------------------------------------------------------------------- #
 
     def load(self) -> None:
-        self.debug(msg=Event.Load.name, step=Event.Started.name)
+        self.debug(msg=Event.Load, step=Event.Started)
 
         if not self.base_url:
             raise DriverKibanaError(
@@ -132,8 +132,8 @@ class DriverKibana(GenericDriver):
         self._session = session
 
         self.debug(
-            msg=Event.Load.name,
-            step=Event.Completed.name,
+            msg=Event.Load,
+            step=Event.Completed,
             base_url=self.base_url,
             space=self.space,
             default_type=self.default_type,
@@ -141,7 +141,7 @@ class DriverKibana(GenericDriver):
         )
 
     def close(self) -> None:
-        self.debug(msg=Event.Close.name, step=Event.Started.name)
+        self.debug(msg=Event.Close, step=Event.Started)
         if not self.can(DriverAction.UNLOAD):
             return
         if self._session is not None:
@@ -150,7 +150,7 @@ class DriverKibana(GenericDriver):
             except Exception:
                 pass
             self._session = None
-        self.debug(msg=Event.Close.name, step=Event.Completed.name)
+        self.debug(msg=Event.Close, step=Event.Completed)
 
     def metadata(self) -> DriverMetadata:
         return DriverMetadata(
@@ -167,7 +167,7 @@ class DriverKibana(GenericDriver):
     # ---------------------------------------------------------------------- #
 
     def read(self, uri: str, **kwargs) -> Any:
-        self.debug(msg=Event.Read.name, step=Event.Started.name, uri=uri)
+        self.debug(msg=Event.Read, step=Event.Started, uri=uri)
 
         if not uri:
             raise DriverKibanaError(caller=self, error="read: uri is required.")
@@ -182,8 +182,8 @@ class DriverKibana(GenericDriver):
 
         if self.log_queries:
             self.debug(
-                msg=Event.Read.name,
-                step=Event.Completed.name,
+                msg=Event.Read,
+                step=Event.Completed,
                 type=so_type,
                 id=so_id,
                 find=bool(find_params),
@@ -210,14 +210,14 @@ class DriverKibana(GenericDriver):
             raise
         except requests.HTTPError as e:
             if e.response is not None and e.response.status_code == 404:
-                self.debug(msg=Event.Read.name, step=Event.Failed.name, type=so_type, id=so_id)
+                self.debug(msg=Event.Read, step=Event.Failed, type=so_type, id=so_id)
                 return None
             raise DriverKibanaError(
                 caller=self,
                 error=f"read error for type={so_type!r}: {e}",
             ) from e
         except Exception as e:
-            self.debug(msg=Event.Read.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Read, step=Event.Failed, error=str(e))
             raise DriverKibanaError(
                 caller=self,
                 error=f"read error for type={so_type!r}: {e}",
@@ -243,8 +243,8 @@ class DriverKibana(GenericDriver):
         self._validate_type(so_type)
 
         self.debug(
-            msg=Event.Write.name,
-            step=Event.Started.name,
+            msg=Event.Write,
+            step=Event.Started,
             type=so_type,
             id=so_id,
             mode=mode,
@@ -255,24 +255,24 @@ class DriverKibana(GenericDriver):
         except DriverKibanaError:
             raise
         except requests.HTTPError as e:
-            self.debug(msg=Event.Write.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Write, step=Event.Failed, error=str(e))
             raise DriverKibanaError(
                 caller=self,
                 error=f"write error for type={so_type!r}: {e}",
             ) from e
         except Exception as e:
-            self.debug(msg=Event.Write.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Write, step=Event.Failed, error=str(e))
             raise DriverKibanaError(
                 caller=self,
                 error=f"write error for type={so_type!r}: {e}",
             ) from e
 
-        self.debug(msg=Event.Write.name, step=Event.Completed.name, type=so_type)
+        self.debug(msg=Event.Write, step=Event.Completed, type=so_type)
         return result
 
     def search(self, pattern: str, **kwargs) -> Generator[Dict[str, Any], None, None]:
         """Yield saved objects whose `id` or `attributes.title` matches pattern."""
-        self.debug(msg=Event.Search.name, step=Event.Started.name, pattern=pattern)
+        self.debug(msg=Event.Search, step=Event.Started, pattern=pattern)
 
         so_type: Optional[str] = kwargs.pop("type", None) or self.default_type
         per_page = int(kwargs.pop("per_page", self.max_rows or self.DEFAULT_PER_PAGE))
@@ -303,7 +303,7 @@ class DriverKibana(GenericDriver):
                 break
             page += 1
 
-        self.debug(msg=Event.Search.name, step=Event.Completed.name)
+        self.debug(msg=Event.Search, step=Event.Completed)
 
     # endregion Read / Write
 
@@ -375,7 +375,7 @@ class DriverKibana(GenericDriver):
             try:
                 data = json.loads(data)
             except (TypeError, ValueError) as e:
-                self.debug(msg=Event.Validate.name, step=Event.Failed.name, error=str(e))
+                self.debug(msg=Event.Validate, step=Event.Failed, error=str(e))
                 raise DriverKibanaError(
                     caller=self,
                     error=f"_coerce_documents: payload is not valid JSON: {e}",

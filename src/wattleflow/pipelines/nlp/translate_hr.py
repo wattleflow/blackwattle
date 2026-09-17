@@ -188,8 +188,8 @@ class PipelineTranslateEnHr(GenericPipeline):
         cache_dir = self.cache_dir or None
 
         self.debug(
-            msg=Event.Load.name,
-            step=Event.Started.name,
+            msg=Event.Load,
+            step=Event.Started,
             backend=self.backend,
             model=self.model_name,
             device=device,
@@ -202,7 +202,7 @@ class PipelineTranslateEnHr(GenericPipeline):
             if device == "cuda":
                 model = model.to("cuda")
         except Exception as e:
-            self.debug(msg=Event.Load.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Load, step=Event.Failed, error=str(e))
             raise PipelineException(
                 caller=self,
                 error=f"Failed to load model {self.model_name!r}: {e}",
@@ -219,7 +219,7 @@ class PipelineTranslateEnHr(GenericPipeline):
         self._model = model
 
         self.debug(
-            msg=Event.Load.name,
+            msg=Event.Load,
             backend=self.backend,
             device=device,
         )
@@ -316,14 +316,14 @@ class PipelineTranslateEnHr(GenericPipeline):
 
         content: str = document.content or ""
         if not content.strip():
-            self.warning(msg=Event.Transform.name, step=Event.Check.name, error="Content is empty!")
+            self.warning(msg=Event.Transform, step=Event.Check, error="Content is empty!")
             return
 
         self._load()
 
         self.debug(
-            msg=Event.Transform.name,
-            step=Event.Started.name,
+            msg=Event.Transform,
+            step=Event.Started,
             backend=self.backend,
             model=self.model_name,
             chars=len(content),
@@ -334,7 +334,7 @@ class PipelineTranslateEnHr(GenericPipeline):
         except PipelineException:
             raise
         except Exception as e:
-            self.debug(msg=Event.Transform.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Transform, step=Event.Failed, error=str(e))
             raise PipelineException(
                 caller=self,
                 error=f"Translation failed: {e}",
@@ -358,7 +358,7 @@ class PipelineTranslateEnHr(GenericPipeline):
         )
 
         self.debug(
-            msg=Event.Transform.name,
+            msg=Event.Transform,
             backend=self.backend,
             uid=uid,
             chunks=n_chunks,

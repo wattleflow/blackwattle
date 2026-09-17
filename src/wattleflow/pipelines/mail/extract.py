@@ -69,8 +69,8 @@ class PipelineMailExtract(GenericPipeline):
             return MailParser().parse(path=source_path)
         except Exception as e:
             self.error(
-                msg=Event.Transform.name,
-                step=Event.Failed.name,
+                msg=Event.Transform,
+                step=Event.Failed,
                 error=f"mail parse failed: {e}",
                 filename=str(source_path),
             )
@@ -85,8 +85,8 @@ class PipelineMailExtract(GenericPipeline):
 
         if not self.owns(source_path):
             self.debug(
-                msg=Event.Transform.name,
-                step=Event.Check.name,
+                msg=Event.Transform,
+                step=Event.Check,
                 reason="source not owned by this reader, skipped",
                 suffixes=", ".join(self.SUFFIXES),
                 filename=str(source_path),
@@ -99,8 +99,8 @@ class PipelineMailExtract(GenericPipeline):
         if document.metadata.get(MailKeys.CONTENT_DIGEST):
             uid = processor.blackboard.write(facade=facade, processor=processor, pipeline=self)
             self.debug(
-                msg=Event.Transform.name,
-                step=Event.Completed.name,
+                msg=Event.Transform,
+                step=Event.Completed,
                 reason="message already read at genesis, published unchanged",
                 uid=uid,
                 filename=str(source_path),
@@ -110,8 +110,8 @@ class PipelineMailExtract(GenericPipeline):
         message: MailMessage | None = self.read(source_path)
         if message is None:
             self.warning(
-                msg=Event.Transform.name,
-                step=Event.Check.name,
+                msg=Event.Transform,
+                step=Event.Check,
                 reason="empty message",
                 filename=str(source_path),
             )
@@ -120,8 +120,8 @@ class PipelineMailExtract(GenericPipeline):
         content = message.render()
         if not content.strip():
             self.warning(
-                msg=Event.Transform.name,
-                step=Event.Check.name,
+                msg=Event.Transform,
+                step=Event.Check,
                 reason="empty mail payload",
                 filename=str(source_path),
             )
@@ -136,8 +136,8 @@ class PipelineMailExtract(GenericPipeline):
         )
 
         self.debug(
-            msg=Event.Transform.name,
-            step=Event.Completed.name,
+            msg=Event.Transform,
+            step=Event.Completed,
             uid=uid,
             subject=message.text(MailHeader.SUBJECT),
             attachments=len(message.attachments),

@@ -120,10 +120,10 @@ class DriverPostgres(GenericDriver):
     # region public methods
     # ---------------------------------------------------------------------- #
     def load(self) -> None:
-        self.debug(msg=Event.Load.name, step=Event.Started.name)
+        self.debug(msg=Event.Load, step=Event.Started)
 
         if self._loaded:
-            self.warning(msg=Event.Load.name, step=Event.Check.name, error="Already loaded!")
+            self.warning(msg=Event.Load, step=Event.Check, error="Already loaded!")
 
         self.chunksize = self.chunksize if self.chunksize is not None else 1000
         self.write_method = self.write_method if self.write_method is not None else "multi"
@@ -155,8 +155,8 @@ class DriverPostgres(GenericDriver):
         self._loaded = True
 
         self.debug(
-            msg=Event.Load.name,
-            step=Event.Completed.name,
+            msg=Event.Load,
+            step=Event.Completed,
             connection_name=conn_name,
             lazy_loading=self._lazy_loading,
             chunksize=self.chunksize,
@@ -173,11 +173,11 @@ class DriverPostgres(GenericDriver):
         # The PostgresConnection belongs to the ConnectionManager and may be
         # shared with other drivers, so close() drops only this driver's own
         # loaded state — it must never disconnect a connection it does not own.
-        self.debug(msg=Event.Close.name, step=Event.Started.name)
+        self.debug(msg=Event.Close, step=Event.Started)
         self._loaded = False
         self.debug(
-            msg=Event.Close.name,
-            step=Event.Completed.name,
+            msg=Event.Close,
+            step=Event.Completed,
             connection_name=self.connection_name,
         )
 
@@ -190,7 +190,7 @@ class DriverPostgres(GenericDriver):
         )
 
     def read(self, uri: str, **kwargs) -> pd.DataFrame:
-        self.debug(msg=Event.Read.name, step=Event.Started.name, uri=uri)
+        self.debug(msg=Event.Read, step=Event.Started, uri=uri)
 
         if not uri:
             raise DriverPostgresError(caller=self, error="read: uri is required.")
@@ -215,8 +215,8 @@ class DriverPostgres(GenericDriver):
                         error="Raw SQL is globally disabled (allow_raw_sql=False).",
                     )
                 self.warning(
-                    msg=Event.Read.name,
-                    step=Event.Check.name,
+                    msg=Event.Read,
+                    step=Event.Check,
                     reason="User override: allow_raw_sql=True bypasses "
                     "global policy for this query.",
                     uri=uri[:120],
@@ -230,8 +230,8 @@ class DriverPostgres(GenericDriver):
                         error="Raw SQL requires unsafe=True when safe_mode=True.",
                     )
                 self.warning(
-                    msg=Event.Read.name,
-                    step=Event.Check.name,
+                    msg=Event.Read,
+                    step=Event.Check,
                     reason="User override: safe_mode bypassed (unsafe not set).",
                     uri=uri[:120],
                 )
@@ -244,8 +244,8 @@ class DriverPostgres(GenericDriver):
                         error="Raw SQL requires params in safe_mode.",
                     )
                 self.warning(
-                    msg=Event.Read.name,
-                    step=Event.Check.name,
+                    msg=Event.Read,
+                    step=Event.Check,
                     reason="User override: no bind params — query may be "
                     "vulnerable to SQL injection.",
                     uri=uri[:120],
@@ -260,7 +260,7 @@ class DriverPostgres(GenericDriver):
 
         if self.log_queries:
             self.debug(
-                msg=Event.Read.name,
+                msg=Event.Read,
                 uri=query[:120],
                 params=bool(params),
             )
@@ -273,8 +273,8 @@ class DriverPostgres(GenericDriver):
             if not self._try_reconnect():
                 raise
             self.debug(
-                msg=Event.Read.name,
-                step=Event.Failed.name,
+                msg=Event.Read,
+                step=Event.Failed,
                 error=str(e),
                 uri=uri[:80],
             )
@@ -282,15 +282,15 @@ class DriverPostgres(GenericDriver):
         except DriverPostgresError:
             raise
         except Exception as e:
-            self.debug(msg=Event.Read.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Read, step=Event.Failed, error=str(e))
             raise DriverPostgresError(
                 caller=self,
                 error=f"read error: {e}",
             ) from e
 
         self.debug(
-            msg=Event.Read.name,
-            step=Event.Completed.name,
+            msg=Event.Read,
+            step=Event.Completed,
             rows=len(df),
             columns=list(df.columns),
         )
@@ -319,15 +319,15 @@ class DriverPostgres(GenericDriver):
 
         if df.empty:
             self.warning(
-                msg=Event.Write.name,
-                step=Event.Check.name,
+                msg=Event.Write,
+                step=Event.Check,
                 error="Empty DataFrame — nothing to write.",
             )
             return uri
 
         self.debug(
-            msg=Event.Write.name,
-            step=Event.Started.name,
+            msg=Event.Write,
+            step=Event.Started,
             uri=uri,
             schema=schema,
             rows=len(df),
@@ -350,7 +350,7 @@ class DriverPostgres(GenericDriver):
 
         if self.log_queries:
             self.debug(
-                msg=Event.Write.name,
+                msg=Event.Write,
                 write_kwargs=write_kwargs,
             )
 
@@ -360,8 +360,8 @@ class DriverPostgres(GenericDriver):
             if not self._try_reconnect():
                 raise
             self.debug(
-                msg=Event.Write.name,
-                step=Event.Failed.name,
+                msg=Event.Write,
+                step=Event.Failed,
                 error=str(e),
                 uri=uri,
             )
@@ -369,13 +369,13 @@ class DriverPostgres(GenericDriver):
         except DriverPostgresError:
             raise
         except Exception as e:
-            self.debug(msg=Event.Write.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Write, step=Event.Failed, error=str(e))
             raise DriverPostgresError(
                 caller=self,
                 error=f"write error for table='{uri}': {e}",
             ) from e
 
-        self.debug(msg=Event.Write.name, step=Event.Completed.name, uri=uri)
+        self.debug(msg=Event.Write, step=Event.Completed, uri=uri)
 
         return uri
 
@@ -383,8 +383,8 @@ class DriverPostgres(GenericDriver):
         schema_filter: Optional[str] = kwargs.get("schema")
 
         self.debug(
-            msg=Event.Search.name,
-            step=Event.Started.name,
+            msg=Event.Search,
+            step=Event.Started,
             pattern=pattern,
             schema=schema_filter or "(all)",
         )
@@ -415,13 +415,13 @@ class DriverPostgres(GenericDriver):
                     if self._matches(qualified, pattern) or self._matches(row.table_name, pattern):
                         yield qualified
         except Exception as e:
-            self.debug(msg=Event.Search.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Search, step=Event.Failed, error=str(e))
             raise DriverPostgresError(
                 caller=self,
                 error=f"search: error while listing tables: {e}",
             ) from e
 
-        self.debug(msg=Event.Search.name, step=Event.Completed.name)
+        self.debug(msg=Event.Search, step=Event.Completed)
 
     # ---------------------------------------------------------------------- #
     # endregion public methods
@@ -437,8 +437,8 @@ class DriverPostgres(GenericDriver):
         conn = self._get_connection()
         if conn.state == ConnectionState.FAILED:
             self.error(
-                msg=Event.Connect.name,
-                step=Event.Started.name,
+                msg=Event.Connect,
+                step=Event.Started,
                 error="Connection has FAILED — reconnect not possible.",
                 connection_name=self.connection_name,
             )
@@ -448,16 +448,16 @@ class DriverPostgres(GenericDriver):
             conn.disconnect()
             conn.create_connection()
             self.debug(
-                msg=Event.Connect.name,
-                step=Event.Completed.name,
+                msg=Event.Connect,
+                step=Event.Completed,
                 connection_name=self.connection_name,
                 state=conn.state.name,
             )
             return True
         except Exception as e:
             self.error(
-                msg=Event.Connect.name,
-                step=Event.Failed.name,
+                msg=Event.Connect,
+                step=Event.Failed,
                 error=str(e),
                 connection_name=self.connection_name,
             )

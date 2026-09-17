@@ -106,7 +106,7 @@ class YoutubeGraph(Document[Graph], ABC):  # type: ignore
             )
             return result
         except Exception as e:
-            self.error(msg=Event.Getting.name, error=str(e))
+            self.error(msg=Event.Getting, error=str(e))
             return default
 
     def update_graph(self, new_graph: Graph):
@@ -139,7 +139,7 @@ class YoutubeGraph(Document[Graph], ABC):  # type: ignore
 class CreateYoutubeDocument(StrategyCreate):
     def execute(self, caller: IWattleflow, *args, **kwargs) -> Optional[ITarget]:
         try:
-            self.debug(msg=Event.Create.name, step=Event.Started.name, kwargs=kwargs)
+            self.debug(msg=Event.Create, step=Event.Started, kwargs=kwargs)
             assert isinstance(caller, IBlackboard), "Expected IBlackboard. Found %s" % type(caller)
 
             Attribute.mandatory(self, "id", str, **kwargs)
@@ -149,8 +149,8 @@ class CreateYoutubeDocument(StrategyCreate):
 
             if not len(self.content) > 0:  # type: ignore
                 self.warning(
-                    msg=Event.Create.name,
-                    step=Event.Check.name,
+                    msg=Event.Create,
+                    step=Event.Check,
                     reason="Transcript's feeling a bit empty today!",
                 )
                 return
@@ -306,26 +306,26 @@ class CreateYoutubeDocument(StrategyCreate):
                 value=self.metadata,  # type: ignore
             )
             self.debug(
-                msg=Event.Create.name,
-                step=Event.Completed.name,
+                msg=Event.Create,
+                step=Event.Completed,
                 size=document.size,
                 document=document,
             )
             return facade
         except AssertionError as e:
             error = f"Assertion: {str(e)}"
-            self.debug(msg=Event.Create.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Create, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
         except Exception as e:
             error = f"{self.name} caught exception: {str(e)}"
-            self.debug(msg=Event.Create.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Create, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
 
 
 class WriteYoutubeDocument(StrategyWrite):
     def execute(self, caller: IWattleflow, facade: ITarget, *args, **kwargs) -> bool:
         try:
-            self.debug(msg=Event.Write.name, step=Event.Started.name, kwargs=kwargs)
+            self.debug(msg=Event.Write, step=Event.Started, kwargs=kwargs)
             assert isinstance(caller, IRepository), "Expected IRepository. Found %s" % type(caller)
             assert isinstance(facade, ITarget), "Expected ITarget. Found %s" % type(facade)
 
@@ -339,8 +339,8 @@ class WriteYoutubeDocument(StrategyWrite):
             filename = Path(filename).with_suffix(".json")  # type: ignore
             if not document.size > 0:  # type: ignore
                 self.warning(
-                    msg=Event.Write.name,
-                    step=Event.Check.name,
+                    msg=Event.Write,
+                    step=Event.Check,
                     reason="Graph’s feeling a bit empty today!",
                     document=document,
                     size=document.size,
@@ -358,8 +358,8 @@ class WriteYoutubeDocument(StrategyWrite):
                 suffix=formatter.SUFFIX,
             )
             self.debug(
-                msg=Event.Write.name,
-                step=Event.Completed.name,
+                msg=Event.Write,
+                step=Event.Completed,
                 document=document,
                 output=output,
                 size=document.size,
@@ -367,11 +367,11 @@ class WriteYoutubeDocument(StrategyWrite):
             return True
         except AssertionError as e:
             error = f"Assertion: {str(e)}"
-            self.debug(msg=Event.Write.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Write, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
         except Exception as e:
             error = f"{self.name} caught exception: {str(e)}"
-            self.debug(msg=Event.Write.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Write, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
 
 

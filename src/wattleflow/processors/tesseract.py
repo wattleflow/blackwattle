@@ -59,21 +59,21 @@ class TesseractProcessor(GenericProcessor):
         try:
             self._dates: CreatedWithin = CreatedWithin(self.created_from, self.created_to)
         except ValueError as e:
-            self.debug(msg=Event.Constructor.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Constructor, step=Event.Failed, error=str(e))
             raise ProcessorException(caller=self, error=str(e)) from e
 
         if self._dates.active:
             self.debug(
-                msg=Event.Constructor.name,
-                step=Event.Started.name,
+                msg=Event.Constructor,
+                step=Event.Started,
                 created_from=self._dates.start.isoformat() if self._dates.start else None,
                 created_to=self._dates.end.isoformat() if self._dates.end else None,
             )
 
-        self.debug(msg=Event.Constructor.name, step=Event.Completed.name)
+        self.debug(msg=Event.Constructor, step=Event.Completed)
 
     def create_generator(self) -> Generator[ITarget, None, None]:
-        self.debug(msg=Event.Generate.name, step=Event.Started.name)
+        self.debug(msg=Event.Generate, step=Event.Started)
 
         try:
             if not Path(self.source_path).exists():
@@ -90,10 +90,10 @@ class TesseractProcessor(GenericProcessor):
 
             file_iter, file_iter_copy = tee(file_iter)
             count = sum(1 for _ in file_iter_copy)
-            self.info(msg=Event.Generate.name, files=count, path=search_path)
+            self.info(msg=Event.Generate, files=count, path=search_path)
 
             for filepath in file_iter:
-                self.debug(msg=Event.Generate.name, scope="item", filename=str(filepath))
+                self.debug(msg=Event.Generate, scope="item", filename=str(filepath))
                 try:
                     if filtered and filtered.findall(filepath.stem):
                         continue
@@ -103,15 +103,15 @@ class TesseractProcessor(GenericProcessor):
                         if not verdict.ok:
                             if verdict.reason == "stat-failed":
                                 self.warning(
-                                    msg=Event.Generate.name,
-                                    step=Event.Check.name,
+                                    msg=Event.Generate,
+                                    step=Event.Check,
                                     reason="stat failed; skipping",
                                     filename=str(filepath),
                                     error=verdict.error,
                                 )
                             else:
                                 self.debug(
-                                    msg=Event.Generate.name,
+                                    msg=Event.Generate,
                                     scope="item",
                                     reason=(
                                         "created before window; skipped"
@@ -125,8 +125,8 @@ class TesseractProcessor(GenericProcessor):
 
                     if not (os.access(filepath, os.R_OK) and filepath.stat().st_size > 0):
                         self.warning(
-                            msg=Event.Generate.name,
-                            step=Event.Check.name,
+                            msg=Event.Generate,
+                            step=Event.Check,
                             reason="File not accessible",
                             filename=str(filepath.absolute()),
                         )
@@ -137,8 +137,8 @@ class TesseractProcessor(GenericProcessor):
                     size = filepath.stat().st_size
                     if size > SAFE_MAX_BYTES:
                         self.warning(
-                            msg=Event.Generate.name,
-                            step=Event.Check.name,
+                            msg=Event.Generate,
+                            step=Event.Check,
                             reason="file exceeds safe size cap",
                             filename=str(filepath),
                             size=size,
@@ -153,7 +153,7 @@ class TesseractProcessor(GenericProcessor):
                     )
 
                     self.debug(
-                        msg=Event.Generate.name,
+                        msg=Event.Generate,
                         scope="item",
                         no=self.cycle + 1,
                         filename=str(filepath),
@@ -170,14 +170,14 @@ class TesseractProcessor(GenericProcessor):
                     filename = str(filepath)
                     error = f"Error: {str(e)} with {filename!r}"
                     self.exception(
-                        msg=Event.Generate.name,
-                        step=Event.Failed.name,
+                        msg=Event.Generate,
+                        step=Event.Failed,
                         error=error,
                         filename=filename,
                     )
                     continue
         except Exception as e:
-            self.debug(msg=Event.Generate.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Generate, step=Event.Failed, error=str(e))
             raise ProcessorException(
                 caller=self,
                 error=e,
@@ -185,8 +185,8 @@ class TesseractProcessor(GenericProcessor):
             ) from e
 
         self.debug(
-            msg=Event.Generate.name,
-            step=Event.Completed.name,
+            msg=Event.Generate,
+            step=Event.Completed,
             count=self.cycle,
         )
 

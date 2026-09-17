@@ -120,7 +120,7 @@ class DriverPrometheus(GenericDriver):
     # ---------------------------------------------------------------------- #
 
     def load(self) -> None:
-        self.debug(msg=Event.Load.name, step=Event.Started.name)
+        self.debug(msg=Event.Load, step=Event.Started)
 
         if not self.base_url and not self.pushgateway_url:
             raise DriverPrometheusError(
@@ -142,15 +142,15 @@ class DriverPrometheus(GenericDriver):
         self._session = session
 
         self.debug(
-            msg=Event.Load.name,
-            step=Event.Completed.name,
+            msg=Event.Load,
+            step=Event.Completed,
             base_url=self.base_url,
             pushgateway_url=self.pushgateway_url,
             job=self.job,
         )
 
     def close(self) -> None:
-        self.debug(msg=Event.Close.name, step=Event.Started.name)
+        self.debug(msg=Event.Close, step=Event.Started)
         if not self.can(DriverAction.UNLOAD):
             return
         if self._session is not None:
@@ -159,7 +159,7 @@ class DriverPrometheus(GenericDriver):
             except Exception:
                 pass
             self._session = None
-        self.debug(msg=Event.Close.name, step=Event.Completed.name)
+        self.debug(msg=Event.Close, step=Event.Completed)
 
     def metadata(self) -> DriverMetadata:
         return DriverMetadata(
@@ -187,7 +187,7 @@ class DriverPrometheus(GenericDriver):
           * ``label_values:<name>``            - list values for a label
           * ``targets`` / ``alerts`` / ``rules``
         """
-        self.debug(msg=Event.Read.name, step=Event.Started.name, uri=uri)
+        self.debug(msg=Event.Read, step=Event.Started, uri=uri)
 
         if not uri:
             raise DriverPrometheusError(caller=self, error="read: uri is required.")
@@ -204,7 +204,7 @@ class DriverPrometheus(GenericDriver):
 
         if self.log_queries:
             self.debug(
-                msg=Event.Read.name,
+                msg=Event.Read,
                 route=route,
                 params=self._safe_params(params),
             )
@@ -213,13 +213,13 @@ class DriverPrometheus(GenericDriver):
             response = self._request("GET", path, params=params, base=self.base_url)
             payload = self._json(response) or {}
         except requests.HTTPError as e:
-            self.debug(msg=Event.Read.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Read, step=Event.Failed, error=str(e))
             raise DriverPrometheusError(
                 caller=self,
                 error=f"read error for route={route!r}: {e}",
             ) from e
         except Exception as e:
-            self.debug(msg=Event.Read.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Read, step=Event.Failed, error=str(e))
             raise DriverPrometheusError(
                 caller=self,
                 error=f"read error for route={route!r}: {e}",
@@ -230,8 +230,8 @@ class DriverPrometheus(GenericDriver):
             result = result[: int(self.max_rows)]
 
         self.debug(
-            msg=Event.Read.name,
-            step=Event.Completed.name,
+            msg=Event.Read,
+            step=Event.Completed,
             route=route,
             count=len(result) if isinstance(result, list) else 1,
         )
@@ -273,8 +273,8 @@ class DriverPrometheus(GenericDriver):
         path = self._pushgateway_path(job, grouping)
 
         self.debug(
-            msg=Event.Write.name,
-            step=Event.Started.name,
+            msg=Event.Write,
+            step=Event.Started,
             job=job,
             grouping=grouping,
             mode=mode,
@@ -302,13 +302,13 @@ class DriverPrometheus(GenericDriver):
         except DriverPrometheusError:
             raise
         except requests.HTTPError as e:
-            self.debug(msg=Event.Write.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Write, step=Event.Failed, error=str(e))
             raise DriverPrometheusError(
                 caller=self,
                 error=f"write error for job={job!r}: {e}",
             ) from e
         except Exception as e:
-            self.debug(msg=Event.Write.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Write, step=Event.Failed, error=str(e))
             raise DriverPrometheusError(
                 caller=self,
                 error=f"write error for job={job!r}: {e}",
@@ -322,14 +322,14 @@ class DriverPrometheus(GenericDriver):
         if not self.base_url:
             raise DriverPrometheusError(caller=self, error="search: 'base_url' is not configured.")
 
-        self.debug(msg=Event.Search.name, step=Event.Started.name, pattern=pattern)
+        self.debug(msg=Event.Search, step=Event.Started, pattern=pattern)
 
         path = "/api/v1/label/__name__/values"
         try:
             response = self._request("GET", path, base=self.base_url)
             payload = self._json(response) or {}
         except Exception as e:
-            self.debug(msg=Event.Search.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Search, step=Event.Failed, error=str(e))
             raise DriverPrometheusError(caller=self, error=f"search error: {e}") from e
 
         names: List[str] = payload.get("data") or []
@@ -337,7 +337,7 @@ class DriverPrometheus(GenericDriver):
             if self._matches(name, pattern):
                 yield name
 
-        self.debug(msg=Event.Search.name, step=Event.Completed.name)
+        self.debug(msg=Event.Search, step=Event.Completed)
 
     # endregion Read / Write
 

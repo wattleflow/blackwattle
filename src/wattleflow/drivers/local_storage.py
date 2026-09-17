@@ -18,6 +18,7 @@ from typing import Any, BinaryIO, Callable, Generator, Iterator, Optional, Union
 from wattleflow.concrete import GenericDriver
 from wattleflow.concrete.driver import DriverAction, DriverMetadata
 from wattleflow.concrete.exception import AuditException, DriverException
+# from wattleflow.decorators.measure import measured  # retired, DR-WFL-031 v3
 from wattleflow.enums.event import Event
 from wattleflow.enums.filetype import FileType
 from wattleflow.drivers import FileStorage
@@ -44,6 +45,8 @@ class DriverLocalStorageException(DriverException):
 # --------------------------------------------------------------------------- #
 
 
+# v0.0.1.14 (DR-WFL-031 v3): retired — measurement now observes audit records; kept for the record.
+# @measured("copy")
 class DriverLocalStorage(GenericDriver):
     ALLOWED = [
         "atomic",
@@ -80,6 +83,7 @@ class DriverLocalStorage(GenericDriver):
 
     def _record(self, operation: str, size: int = 0) -> None:
         self._activity[operation] = self._activity.get(operation, 0) + 1
+        # self.measure_units(files=1, bytes=int(size))  # the closing record carries `size` (DR-WFL-031 v3)
         if size:
             self._activity["bytes"] += int(size)
             return
@@ -90,17 +94,17 @@ class DriverLocalStorage(GenericDriver):
         if operation in ("written", "copied"):
             self._activity["empty"] += 1
             self.warning(
-                msg=Event.Write.name,
-                step=Event.Check.name,
+                msg=Event.Write,
+                step=Event.Check,
                 reason="wrote an empty file",
                 operation=operation,
             )
 
     def close(self) -> None:
-        self.debug(msg=Event.Close.name, step=Event.Started.name)
+        self.debug(msg=Event.Close, step=Event.Started)
         if not self.can(DriverAction.UNLOAD):
             return
-        self.debug(msg=Event.Close.name, step=Event.Completed.name)
+        self.debug(msg=Event.Close, step=Event.Completed)
 
     def report(self) -> None:
         """State what this driver did, at INFO"""
@@ -108,7 +112,7 @@ class DriverLocalStorage(GenericDriver):
         # can silently become a control argument (NFRQ-OBS-02 §5).
         activity = self.activity
         self.info(
-            msg=Event.Completed.name,
+            msg=Event.Completed,
             write_path=str(self.write_path),
             read=activity.get("read", 0),
             written=activity.get("written", 0),
@@ -127,8 +131,8 @@ class DriverLocalStorage(GenericDriver):
 
     def load(self) -> None:
         self.debug(
-            msg=Event.Load.name,
-            step=Event.Started.name,
+            msg=Event.Load,
+            step=Event.Started,
             read_path=self.read_path,
             write_path=self.write_path,
             normalised=self.normalised,
@@ -144,8 +148,8 @@ class DriverLocalStorage(GenericDriver):
         except Exception as e:
             reason = f"Invalid configuration: {str(e)}"
             self.debug(
-                msg=Event.Load.name,
-                step=Event.Failed.name,
+                msg=Event.Load,
+                step=Event.Failed,
                 reason=reason,
                 read_path=str(self.read_path),
                 write_path=str(self.write_path),
@@ -161,7 +165,7 @@ class DriverLocalStorage(GenericDriver):
                     "(pass create=True to have the driver make it)"
                 )
                 self.error(
-                    msg=Event.Load.name,
+                    msg=Event.Load,
                     reason=reason,
                     local_path=str(self.write_path),
                 )
@@ -169,8 +173,8 @@ class DriverLocalStorage(GenericDriver):
             self.write_path.mkdir(parents=True, exist_ok=True)
 
         self.info(
-            msg=Event.Load.name,
-            step=Event.Completed.name,
+            msg=Event.Load,
+            step=Event.Completed,
             read_path=str(self.read_path),
             write_path=str(self.write_path),
             create=self.create,
@@ -190,19 +194,19 @@ class DriverLocalStorage(GenericDriver):
 
         if not _uri.is_relative_to(_base):
             reason = f"Access denied: path outside base directory: {str(uri)!r}"
-            self.error(msg=Event.Read.name, uri=uri, reason=reason)
+            self.error(msg=Event.Read, uri=uri, reason=reason)
             raise PermissionError(reason)
         return _uri
 
     def read(self, uri: str, **kwargs) -> Any:
-        self.debug(msg=Event.Read.name, step=Event.Started.name, uri=uri, kwargs=kwargs)
+        self.debug(msg=Event.Read, step=Event.Started, uri=uri, kwargs=kwargs)
         _uri = self._confined(uri)
 
         try:
             filetype = FileType.detect(str(_uri))
             self.debug(
-                msg=Event.Read.name,
-                step=Event.Completed.name,
+                msg=Event.Read,
+                step=Event.Completed,
                 filetype=filetype.name,
                 uri=_uri.as_uri(),
                 kwargs=kwargs,
@@ -213,8 +217,8 @@ class DriverLocalStorage(GenericDriver):
             return parsed
         except AuditException as e:
             self.debug(
-                msg=Event.Read.name,
-                step=Event.Failed.name,
+                msg=Event.Read,
+                step=Event.Failed,
                 uri=uri,
                 error=e.reason,
             )
@@ -225,8 +229,8 @@ class DriverLocalStorage(GenericDriver):
             ) from e
         except Exception as e:
             self.debug(
-                msg=Event.Read.name,
-                step=Event.Failed.name,
+                msg=Event.Read,
+                step=Event.Failed,
                 uri=uri,
                 error=str(e),
             )
@@ -236,8 +240,8 @@ class DriverLocalStorage(GenericDriver):
         self, pattern: str, case_sensitive: bool = False, recursive: bool = False
     ) -> Generator[Path, None, None]:
         self.debug(
-            msg=Event.Search.name,
-            step=Event.Started.name,
+            msg=Event.Search,
+            step=Event.Started,
             pattern=pattern,
             case_sensitive=case_sensitive,
             recursive=recursive,
@@ -248,8 +252,8 @@ class DriverLocalStorage(GenericDriver):
         search_path = Path(self.read_path).resolve()
 
         self.debug(
-            msg=Event.Search.name,
-            step=Event.Started.name,
+            msg=Event.Search,
+            step=Event.Started,
             pattern=pattern,
             case_sensitive=case_sensitive,
             recursive=recursive,
@@ -276,8 +280,8 @@ class DriverLocalStorage(GenericDriver):
                         yield path
 
         self.debug(
-            msg=Event.Search.name,
-            step=Event.Completed.name,
+            msg=Event.Search,
+            step=Event.Completed,
         )
 
     # region private methods
@@ -317,8 +321,8 @@ class DriverLocalStorage(GenericDriver):
             # The target is untouched; the part-file is a debris.(NFRQ-OBS-01 §2).
             staged.unlink(missing_ok=True)
             self.debug(
-                msg=Event.Write.name,
-                step=Event.Failed.name,
+                msg=Event.Write,
+                step=Event.Failed,
                 output=str(target),
                 staged=str(staged),
                 mode="atomic",
@@ -368,8 +372,8 @@ class DriverLocalStorage(GenericDriver):
         mkdir: bool = False,
     ) -> str:
         self.debug(
-            msg=Event.Write.name,
-            step=Event.Started.name,
+            msg=Event.Write,
+            step=Event.Started,
             filename=filename,
             subdir=subdir,
             mkdir=mkdir,
@@ -379,8 +383,8 @@ class DriverLocalStorage(GenericDriver):
         self._write_via(target, lambda path: path.write_text(text, encoding=encoding))
         self._record("written", len(text.encode(encoding)))
         self.debug(
-            msg=Event.Write.name,
-            step=Event.Completed.name,
+            msg=Event.Write,
+            step=Event.Completed,
             output=str(target),
             size=len(text),
             mode="text",
@@ -397,8 +401,8 @@ class DriverLocalStorage(GenericDriver):
         mkdir: bool = False,
     ) -> str:
         self.debug(
-            msg=Event.Write.name,
-            step=Event.Started.name,
+            msg=Event.Write,
+            step=Event.Started,
             filename=filename,
             mkdir=mkdir,
             subdir=subdir,
@@ -409,8 +413,8 @@ class DriverLocalStorage(GenericDriver):
         self._write_via(target, lambda path: path.write_bytes(payload))
         self._record("written", len(payload))
         self.debug(
-            msg=Event.Write.name,
-            step=Event.Completed.name,
+            msg=Event.Write,
+            step=Event.Completed,
             output=str(target),
             size=len(payload),
             mode="bytes",
@@ -429,8 +433,8 @@ class DriverLocalStorage(GenericDriver):
         mkdir: bool = False,
     ) -> str:
         self.debug(
-            msg=Event.Write.name,
-            step=Event.Started.name,
+            msg=Event.Write,
+            step=Event.Started,
             filename=filename,
             mode="stream",
         )
@@ -460,16 +464,16 @@ class DriverLocalStorage(GenericDriver):
             self._write_via(target, stream_into)
         except Exception as e:
             self.debug(
-                msg=Event.Write.name,
-                step=Event.Failed.name,
+                msg=Event.Write,
+                step=Event.Failed,
                 output=str(target),
                 error=str(e),
             )
             raise DriverLocalStorageException(caller=self, error=str(e)) from e
         self._record("written", written)
         self.debug(
-            msg=Event.Write.name,
-            step=Event.Completed.name,
+            msg=Event.Write,
+            step=Event.Completed,
             output=str(target),
             size=written,
             mode="stream",
@@ -498,8 +502,8 @@ class DriverLocalStorage(GenericDriver):
         ``filename``/``suffix`` default to the source's own stem/suffix.
         """
         self.debug(
-            msg=Event.Copy.name,
-            step=Event.Started.name,
+            msg=Event.Copy,
+            step=Event.Started,
             filename=filename,
             mode="copy",
         )
@@ -514,8 +518,8 @@ class DriverLocalStorage(GenericDriver):
 
         if target.exists() and src.samefile(target):
             self.debug(
-                msg=Event.Copy.name,
-                step=Event.Started.name,
+                msg=Event.Copy,
+                step=Event.Started,
                 output=str(src),
                 mode="copy",
                 reason="target resolves to source",
@@ -526,16 +530,16 @@ class DriverLocalStorage(GenericDriver):
             self._write_via(target, lambda path: shutil.copy2(src, path))
         except OSError as e:
             self.debug(
-                msg=Event.Copy.name,
-                step=Event.Failed.name,
+                msg=Event.Copy,
+                step=Event.Failed,
                 output=str(target),
                 error=str(e),
             )
             raise DriverLocalStorageException(caller=self, error=str(e)) from e
         self._record("copied", target.stat().st_size)
         self.debug(
-            msg=Event.Copy.name,
-            step=Event.Completed.name,
+            msg=Event.Copy,
+            step=Event.Completed,
             output=str(target),
             size=target.stat().st_size,
             mode="copy",
@@ -553,8 +557,8 @@ class DriverLocalStorage(GenericDriver):
         mkdir: bool = False,
     ) -> Iterator[BinaryIO]:
         self.debug(
-            msg=Event.Write.name,
-            step=Event.Started.name,
+            msg=Event.Write,
+            step=Event.Started,
             filename=filename,
             mode=f"open:{mode}",
         )
@@ -565,8 +569,8 @@ class DriverLocalStorage(GenericDriver):
         finally:
             fh.close()
             self.debug(
-                msg=Event.Write.name,
-                step=Event.Completed.name,
+                msg=Event.Write,
+                step=Event.Completed,
                 output=str(target),
             )
 
@@ -656,8 +660,8 @@ class DriverLocalStorage(GenericDriver):
         if not _resolved.is_relative_to(_base):
             reason = f"Path traversal detected: {name!r}"
             self.error(
-                msg=Event.Configure.name,
-                step=Event.Started.name,
+                msg=Event.Configure,
+                step=Event.Started,
                 name=name,
                 reason=reason,
             )
@@ -667,8 +671,8 @@ class DriverLocalStorage(GenericDriver):
             _resolved.mkdir(parents=True)
 
         self.debug(
-            msg=Event.Configure.name,
-            step=Event.Completed.name,
+            msg=Event.Configure,
+            step=Event.Completed,
             name=name,
             mkdir=mkdir,
             resolved=str(_resolved),

@@ -33,6 +33,7 @@ from wattleflow.enums.filetype import FileType
 from wattleflow.drivers.local_storage import DriverLocalStorage
 from wattleflow.helpers.parsers.binary import PdfParser, PdfText
 from wattleflow.helpers.parsers.tika import TikaParser
+# from wattleflow.decorators.measure import measured  # retired, DR-WFL-031 v3
 from wattleflow.decorators.oscal import oscal_driver
 # --------------------------------------------------------------------------- #
 # endregion Imports                                                           #
@@ -91,6 +92,7 @@ class PdfRead:
 
 
 @oscal_driver(strict=False)
+# @measured("extract")  # retired, DR-WFL-031 v3
 class DriverPdf(DriverLocalStorage):
     """Reads and writes PDF: local libraries first, Apache Tika for scans."""
 
@@ -140,8 +142,8 @@ class DriverPdf(DriverLocalStorage):
             self._tika = manager.get_connection(name)
 
         self.debug(
-            msg=Event.Load.name,
-            step=Event.Completed.name,
+            msg=Event.Load,
+            step=Event.Completed,
             component="pdf",
             backend=self.backend or PdfParser.DEFAULT_BACKEND,
             scan_backend=name or None,
@@ -195,7 +197,7 @@ class DriverPdf(DriverLocalStorage):
 
     def extract(self, uri: str, **kwargs: Any) -> PdfRead:
         """Text plus which backend produced it and whether the file was a scan."""
-        self.debug(msg=Event.Read.name, step=Event.Started.name, uri=uri, kwargs=kwargs)
+        self.debug(msg=Event.Read, step=Event.Started, uri=uri, kwargs=kwargs)
 
         path = self._confined(uri)
         if not FileType.accepts(path.suffix, FileType.PDF):
@@ -215,9 +217,10 @@ class DriverPdf(DriverLocalStorage):
                 result = self._scanned(path, result)
 
         self._record("read", path.stat().st_size)
+        # The closing record below carries `pages` and `chars`; the monitor reads them (DR-WFL-031 v3).
         self.debug(
-            msg=Event.Read.name,
-            step=Event.Completed.name,
+            msg=Event.Read,
+            step=Event.Completed,
             uri=str(path),
             backend=result.backend,
             pages=result.pages,
@@ -232,7 +235,7 @@ class DriverPdf(DriverLocalStorage):
             with open(path, "rb") as stream:
                 parsed: PdfText = self._parser(**kwargs).parse(stream=stream, extract_text=True)
         except Exception as e:
-            self.debug(msg=Event.Read.name, step=Event.Failed.name, uri=str(path), error=str(e))
+            self.debug(msg=Event.Read, step=Event.Failed, uri=str(path), error=str(e))
             raise DriverPdfError(caller=self, error=str(e), uri=str(path)) from e
 
         kept = [page for page in parsed.pages if len(page.strip()) >= self._min_chars()]
@@ -248,8 +251,8 @@ class DriverPdf(DriverLocalStorage):
         """
         if self._tika is None:
             self.warning(
-                msg=Event.Read.name,
-                step=Event.Check.name,
+                msg=Event.Read,
+                step=Event.Check,
                 reason="no text layer and no Tika connection configured",
                 uri=str(path),
                 chars=len(local.text),
@@ -265,12 +268,12 @@ class DriverPdf(DriverLocalStorage):
                         handler=self._handler,
                     ).parse(stream=stream)
         except Exception as e:
-            self.debug(msg=Event.Read.name, step=Event.Failed.name, uri=str(path), error=str(e))
+            self.debug(msg=Event.Read, step=Event.Failed, uri=str(path), error=str(e))
             raise DriverPdfError(caller=self, error=str(e), uri=str(path)) from e
 
         self.debug(
-            msg=Event.Read.name,
-            step=Event.Check.name,
+            msg=Event.Read,
+            step=Event.Check,
             reason="no text layer; read through Tika",
             uri=str(path),
             local_backend=local.backend,

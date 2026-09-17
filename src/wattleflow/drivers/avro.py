@@ -81,8 +81,8 @@ class DriverAvro(GenericDriver):
 
     def load(self) -> None:
         self.debug(
-            msg=Event.Load.name,
-            step=Event.Started.name,
+            msg=Event.Load,
+            step=Event.Started,
             read_path=getattr(self, "read_path", None),
             write_path=getattr(self, "write_path", None),
             codec=getattr(self, "codec", None),
@@ -100,24 +100,24 @@ class DriverAvro(GenericDriver):
         if self.write_path is not None and not self.write_path.is_dir():
             if not self.create:
                 reason = f"write_path is not a directory: {str(self.write_path)!r}"
-                self.error(msg=Event.Load.name, reason=reason)
+                self.error(msg=Event.Load, reason=reason)
                 raise DriverAvroError(caller=self, error=reason)
             self.write_path.mkdir(parents=True, exist_ok=True)
 
-        self.debug(msg=Event.Load.name, step=Event.Completed.name)
+        self.debug(msg=Event.Load, step=Event.Completed)
 
     def close(self) -> None:
-        self.debug(msg=Event.Close.name, step=Event.Started.name)
+        self.debug(msg=Event.Close, step=Event.Started)
         if not self.can(DriverAction.UNLOAD):
             return
-        self.debug(msg=Event.Close.name, step=Event.Completed.name)
+        self.debug(msg=Event.Close, step=Event.Completed)
 
     # ---------------------------------------------------------------------- #
     # region Read / Write                                                    #
     # ---------------------------------------------------------------------- #
 
     def read(self, uri: str, **kwargs) -> AvroContent:
-        self.debug(msg=Event.Read.name, step=Event.Started.name, uri=uri)
+        self.debug(msg=Event.Read, step=Event.Started, uri=uri)
 
         if not uri:
             raise DriverAvroError(caller=self, error="read: uri is required.")
@@ -135,22 +135,22 @@ class DriverAvro(GenericDriver):
             with open(resolved, "rb") as fh:
                 records: AvroContent = list(_avro_reader(fh))
         except FileNotFoundError as e:
-            self.debug(msg=Event.Read.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Read, step=Event.Failed, error=str(e))
             raise DriverAvroError(caller=self, error=f"read: file not found: {resolved}") from e
         except Exception as e:
-            self.debug(msg=Event.Read.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Read, step=Event.Failed, error=str(e))
             raise DriverAvroError(caller=self, error=f"read error: {e}") from e
 
         self.debug(
-            msg=Event.Read.name,
-            step=Event.Completed.name,
+            msg=Event.Read,
+            step=Event.Completed,
             uri=str(resolved),
             records=len(records),
         )
         return records
 
     def write(self, uri: str, data: AvroRecord, **kwargs) -> str:
-        self.debug(msg=Event.Write.name, step=Event.Started.name, uri=uri)
+        self.debug(msg=Event.Write, step=Event.Started, uri=uri)
 
         if not uri:
             raise DriverAvroError(caller=self, error="write: uri is required.")
@@ -176,12 +176,12 @@ class DriverAvro(GenericDriver):
             with open(output, "wb") as fh:
                 _avro_writer(fh, parsed, data, codec=codec)
         except Exception as e:
-            self.debug(msg=Event.Write.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Write, step=Event.Failed, error=str(e))
             raise DriverAvroError(caller=self, error=f"write error: {e}") from e
 
         self.debug(
-            msg=Event.Write.name,
-            step=Event.Completed.name,
+            msg=Event.Write,
+            step=Event.Completed,
             uri=str(output),
             records=len(data),
             codec=codec,
@@ -195,8 +195,8 @@ class DriverAvro(GenericDriver):
         recursive: bool = False,
     ) -> Generator[Path, None, None]:
         self.debug(
-            msg=Event.Search.name,
-            step=Event.Started.name,
+            msg=Event.Search,
+            step=Event.Started,
             pattern=pattern,
             recursive=recursive,
         )
@@ -218,7 +218,7 @@ class DriverAvro(GenericDriver):
                 if needle in target:
                     yield path
 
-        self.debug(msg=Event.Search.name, step=Event.Completed.name)
+        self.debug(msg=Event.Search, step=Event.Completed)
 
     # ---------------------------------------------------------------------- #
     # endregion Read / Write                                                 #
@@ -241,7 +241,7 @@ class DriverAvro(GenericDriver):
             base = Path(self.read_path).resolve()
             if not target.is_relative_to(base):
                 reason = f"Access denied: path outside read_path: {uri!r}"
-                self.error(msg=Event.Configure.name, step=Event.Started.name, reason=reason)
+                self.error(msg=Event.Configure, step=Event.Started, reason=reason)
                 raise PermissionError(reason)
 
         return target
@@ -262,7 +262,7 @@ class DriverAvro(GenericDriver):
             base = Path(self.write_path).resolve()
             if not target.is_relative_to(base):
                 reason = f"Access denied: path outside write_path: {uri!r}"
-                self.error(msg=Event.Configure.name, step=Event.Started.name, reason=reason)
+                self.error(msg=Event.Configure, step=Event.Started, reason=reason)
                 raise PermissionError(reason)
 
         target.parent.mkdir(parents=True, exist_ok=True)

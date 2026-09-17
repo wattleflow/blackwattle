@@ -107,13 +107,13 @@ class PdfParser(GenericParser):
             return PdfText(pages=pages, backend=name)
         if tika is None:
             if failure is not None:
-                self.debug(msg=Event.Read.name, step=Event.Failed.name, backend=name, error=str(failure))
+                self.debug(msg=Event.Read, step=Event.Failed, backend=name, error=str(failure))
                 raise failure
             return PdfText(pages=pages, backend=name)
 
         self.debug(
-            msg=Event.Read.name,
-            step=Event.Check.name,
+            msg=Event.Read,
+            step=Event.Check,
             reason="unreadable or a page without text; read through Tika",
             backend=name,
             pages=len(pages),

@@ -82,8 +82,8 @@ class DriverOrc(GenericDriver):
 
     def load(self) -> None:
         self.debug(
-            msg=Event.Load.name,
-            step=Event.Started.name,
+            msg=Event.Load,
+            step=Event.Started,
             read_path=getattr(self, "read_path", None),
             write_path=getattr(self, "write_path", None),
             compression=getattr(self, "compression", None),
@@ -101,24 +101,24 @@ class DriverOrc(GenericDriver):
         if self.write_path is not None and not self.write_path.is_dir():
             if not self.create:
                 reason = f"write_path is not a directory: {str(self.write_path)!r}"
-                self.error(msg=Event.Load.name, reason=reason)
+                self.error(msg=Event.Load, reason=reason)
                 raise DriverOrcError(caller=self, error=reason)
             self.write_path.mkdir(parents=True, exist_ok=True)
 
-        self.debug(msg=Event.Load.name, step=Event.Completed.name)
+        self.debug(msg=Event.Load, step=Event.Completed)
 
     def close(self) -> None:
-        self.debug(msg=Event.Close.name, step=Event.Started.name)
+        self.debug(msg=Event.Close, step=Event.Started)
         if not self.can(DriverAction.UNLOAD):
             return
-        self.debug(msg=Event.Close.name, step=Event.Completed.name)
+        self.debug(msg=Event.Close, step=Event.Completed)
 
     # ---------------------------------------------------------------------- #
     # region Read / Write                                                    #
     # ---------------------------------------------------------------------- #
 
     def read(self, uri: str, **kwargs) -> OrcContent:
-        self.debug(msg=Event.Read.name, step=Event.Started.name, uri=uri)
+        self.debug(msg=Event.Read, step=Event.Started, uri=uri)
 
         if not uri:
             raise DriverOrcError(caller=self, error="read: uri is required.")
@@ -137,22 +137,22 @@ class DriverOrc(GenericDriver):
             table = _orc.read_table(str(resolved), columns=columns)
             records: OrcContent = table.to_pylist()
         except FileNotFoundError as e:
-            self.debug(msg=Event.Read.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Read, step=Event.Failed, error=str(e))
             raise DriverOrcError(caller=self, error=f"read: file not found: {resolved}") from e
         except Exception as e:
-            self.debug(msg=Event.Read.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Read, step=Event.Failed, error=str(e))
             raise DriverOrcError(caller=self, error=f"read error: {e}") from e
 
         self.debug(
-            msg=Event.Read.name,
-            step=Event.Completed.name,
+            msg=Event.Read,
+            step=Event.Completed,
             uri=str(resolved),
             rows=len(records),
         )
         return records
 
     def write(self, uri: str, data: OrcRecord, **kwargs) -> str:
-        self.debug(msg=Event.Write.name, step=Event.Started.name, uri=uri)
+        self.debug(msg=Event.Write, step=Event.Started, uri=uri)
 
         if not uri:
             raise DriverOrcError(caller=self, error="write: uri is required.")
@@ -191,12 +191,12 @@ class DriverOrc(GenericDriver):
         except DriverOrcError:
             raise
         except Exception as e:
-            self.debug(msg=Event.Write.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Write, step=Event.Failed, error=str(e))
             raise DriverOrcError(caller=self, error=f"write error: {e}") from e
 
         self.debug(
-            msg=Event.Write.name,
-            step=Event.Completed.name,
+            msg=Event.Write,
+            step=Event.Completed,
             uri=str(output),
             rows=table.num_rows,
             compression=compression,
@@ -210,8 +210,8 @@ class DriverOrc(GenericDriver):
         recursive: bool = False,
     ) -> Generator[Path, None, None]:
         self.debug(
-            msg=Event.Search.name,
-            step=Event.Started.name,
+            msg=Event.Search,
+            step=Event.Started,
             pattern=pattern,
             recursive=recursive,
         )
@@ -233,7 +233,7 @@ class DriverOrc(GenericDriver):
                 if needle in target:
                     yield path
 
-        self.debug(msg=Event.Search.name, step=Event.Completed.name)
+        self.debug(msg=Event.Search, step=Event.Completed)
 
     # ---------------------------------------------------------------------- #
     # endregion Read / Write                                                 #
@@ -256,7 +256,7 @@ class DriverOrc(GenericDriver):
             base = Path(self.read_path).resolve()
             if not target.is_relative_to(base):
                 reason = f"Access denied: path outside read_path: {uri!r}"
-                self.error(msg=Event.Configure.name, step=Event.Started.name, reason=reason)
+                self.error(msg=Event.Configure, step=Event.Started, reason=reason)
                 raise PermissionError(reason)
 
         return target
@@ -277,7 +277,7 @@ class DriverOrc(GenericDriver):
             base = Path(self.write_path).resolve()
             if not target.is_relative_to(base):
                 reason = f"Access denied: path outside write_path: {uri!r}"
-                self.error(msg=Event.Configure.name, step=Event.Started.name, reason=reason)
+                self.error(msg=Event.Configure, step=Event.Started, reason=reason)
                 raise PermissionError(reason)
 
         target.parent.mkdir(parents=True, exist_ok=True)

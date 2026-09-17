@@ -52,8 +52,8 @@ class PipelineXMLExtract(GenericPipeline):
             content = self.read(Path(document.filename))
         except Exception as e:
             self.error(
-                msg=Event.Transform.name,
-                step=Event.Failed.name,
+                msg=Event.Transform,
+                step=Event.Failed,
                 error=f"read failed: {e}",
                 filename=document.filename,
             )
@@ -61,8 +61,8 @@ class PipelineXMLExtract(GenericPipeline):
 
         if not content:
             self.warning(
-                msg=Event.Transform.name,
-                step=Event.Check.name,
+                msg=Event.Transform,
+                step=Event.Check,
                 reason="no records",
                 filename=document.filename,
             )
@@ -72,8 +72,8 @@ class PipelineXMLExtract(GenericPipeline):
         uid = processor.blackboard.write(facade=facade, processor=processor, pipeline=self)
 
         self.debug(
-            msg=Event.Transform.name,
-            step=Event.Completed.name,
+            msg=Event.Transform,
+            step=Event.Completed,
             uid=uid,
             records=len(content),
             format=self.file_type.name,

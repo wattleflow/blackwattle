@@ -94,8 +94,8 @@ class AISStreamConnection(GenericConnection):
 
     def create_connection(self) -> None:
         self.debug(
-            msg=Event.Create.name,
-            step=Event.Started.name,
+            msg=Event.Create,
+            step=Event.Started,
             state=self.state.value,
         )
 
@@ -105,8 +105,8 @@ class AISStreamConnection(GenericConnection):
             ConnectionState.CONNECTING,
         ):
             self.warning(
-                msg=Event.Create.name,
-                step=Event.Check.name,
+                msg=Event.Create,
+                step=Event.Check,
                 reason="connection already created",
                 state=self.state.value,
             )
@@ -134,8 +134,8 @@ class AISStreamConnection(GenericConnection):
         }
 
         self.debug(
-            msg=Event.Create.name,
-            step=Event.Completed.name,
+            msg=Event.Create,
+            step=Event.Completed,
             state=self.state.value,
         )
 
@@ -144,7 +144,7 @@ class AISStreamConnection(GenericConnection):
         self._ensure_created()
 
         self.debug(
-            msg=Event.Connect.name,
+            msg=Event.Connect,
             connection_name=self.connection_name,
             state=self.state.value,
         )
@@ -173,14 +173,14 @@ class AISStreamConnection(GenericConnection):
             self._fsm.apply(ConnectionAction.CONNECT_OK)
         except Exception as e:
             self._fsm.apply(ConnectionAction.CONNECT_FAIL)
-            self.debug(msg=Event.Connect.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Connect, step=Event.Failed, error=str(e))
             raise AISStreamError(
                 caller=self,
                 error=f"connect error: {e}",
             ) from e
 
         self.debug(
-            msg=Event.Connected.name,
+            msg=Event.Connected,
             connection_name=self.connection_name,
             state=self.state.value,
         )
@@ -190,19 +190,19 @@ class AISStreamConnection(GenericConnection):
         finally:
             self._fsm.apply(ConnectionAction.DISCONNECT)
             self.debug(
-                msg=Event.Disconnected.name,
+                msg=Event.Disconnected,
                 connection_name=self.connection_name,
             )
 
     def disconnect(self) -> None:
         self.debug(
-            msg=Event.Disconnect.name,
+            msg=Event.Disconnect,
             connection_name=self.connection_name,
             state=self.state.value,
         )
         self._connection = None
         self.debug(
-            msg=Event.Disconnected.name,
+            msg=Event.Disconnected,
             connection_name=self.connection_name,
             state=self.state.value,
         )

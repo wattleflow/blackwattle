@@ -46,7 +46,7 @@ class FileDocument(Document[str | Path], ABC):
             self.update_file_metadata()
         else:
             self.error(
-                msg=Event.Update.name,
+                msg=Event.Update,
                 reason="Cannot refresh metadata.",
                 error="File does not exist.",
                 filename=self.filename,
@@ -59,7 +59,7 @@ class FileDocument(Document[str | Path], ABC):
         if not path.exists(self.filename):
             reason = "File does not exist yet: metadata will be empty!"
             self.warning(
-                msg=Event.Updating.name,
+                msg=Event.Updating,
                 filename=self.filename,
                 reason=reason,
             )
@@ -80,21 +80,21 @@ class FileDocument(Document[str | Path], ABC):
                 str(e),
             )
             self.error(
-                msg=Event.Update.name,
-                step=Event.Failed.name,
+                msg=Event.Update,
+                step=Event.Failed,
                 filename=self.filename,
                 reason=reason,
             )
         except PermissionError as e:
             self.error(
-                msg=Event.Update.name,
+                msg=Event.Update,
                 reason="Permission denied for file.",
                 filename=self.filename,
                 error=str(e),
             )
         except Exception as e:
             self.error(
-                msg=Event.Update.name,
+                msg=Event.Update,
                 reason="Unexpected error while accessing file.",
                 file=self.filename,
                 error=str(e),

@@ -41,7 +41,7 @@ class ReadDocumentRecords(StrategyRead):
 
     def execute(self, caller: IWattleflow, **kwargs: Any) -> ITarget | None:
         try:
-            self.debug(msg=Event.Read.name, step=Event.Started.name, kwargs=kwargs)
+            self.debug(msg=Event.Read, step=Event.Started, kwargs=kwargs)
             Attribute.evaluate(caller=self, target=caller, expected_type=IRepository)
             identifier = kwargs.get("identifier")
             Attribute.evaluate(caller=self, target=identifier, expected_type=str)
@@ -53,11 +53,11 @@ class ReadDocumentRecords(StrategyRead):
             document = FileDocument(filename=identifier)
             DocumentRecords.stamp(document, content, self.FILE_TYPE)
 
-            self.debug(msg=Event.Read.name, step=Event.Completed.name, records=len(content))
+            self.debug(msg=Event.Read, step=Event.Completed, records=len(content))
             return DocumentFacade(document)
         except Exception as e:
             error = f"{self.name} caught exception: {e}"
-            self.debug(msg=Event.Read.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Read, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
 
 
@@ -68,7 +68,7 @@ class WriteDocumentRecords(StrategyWrite):
 
     def execute(self, caller: IWattleflow, facade: ITarget, **kwargs: Any) -> bool:
         try:
-            self.debug(msg=Event.Write.name, step=Event.Started.name, caller=caller)
+            self.debug(msg=Event.Write, step=Event.Started, caller=caller)
             Attribute.evaluate(caller=self, target=caller, expected_type=IRepository)
             Attribute.evaluate(caller=self, target=facade, expected_type=ITarget)
 
@@ -77,8 +77,8 @@ class WriteDocumentRecords(StrategyWrite):
             content, file_type = DocumentRecords.content(document, self.SLOT)
             if not content:
                 self.warning(
-                    msg=Event.Write.name,
-                    step=Event.Check.name,
+                    msg=Event.Write,
+                    step=Event.Check,
                     reason="no records to write",
                     document=facade.identifier,
                 )
@@ -98,15 +98,15 @@ class WriteDocumentRecords(StrategyWrite):
             document.update_metadata("stored_at", Now.utc())
 
             self.debug(
-                msg=Event.Write.name,
-                step=Event.Completed.name,
+                msg=Event.Write,
+                step=Event.Completed,
                 output=str(output),
                 format=file_type.name,
             )
             return True
         except Exception as e:
             error = f"{self.name} caught exception: {e}"
-            self.debug(msg=Event.Write.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Write, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
 
 

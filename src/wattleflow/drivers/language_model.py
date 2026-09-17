@@ -113,24 +113,24 @@ class DriverLanguageModel(GenericDriver):
     # region lifecycle
     def load(self) -> None:
         """EV01/EV02 — everything here happens before the first document."""
-        self.debug(msg=Event.Load.name, step=Event.Started.name)
+        self.debug(msg=Event.Load, step=Event.Started)
 
         self._install_http_backend()
         self._local_path = self.ensure_local()
 
         self.debug(
-            msg=Event.Load.name,
-            step=Event.Completed.name,
+            msg=Event.Load,
+            step=Event.Completed,
             model=self.model,
             local_path=str(self._local_path),
         )
 
     def close(self) -> None:
-        self.debug(msg=Event.Close.name, step=Event.Started.name)
+        self.debug(msg=Event.Close, step=Event.Started)
         if not self.can(DriverAction.UNLOAD):
             return
         self._local_path = None
-        self.debug(msg=Event.Close.name, step=Event.Completed.name)
+        self.debug(msg=Event.Close, step=Event.Completed)
 
     # endregion lifecycle
 
@@ -167,8 +167,8 @@ class DriverLanguageModel(GenericDriver):
         state = self.status(repo_id)
 
         self.debug(
-            msg=Event.Load.name,
-            step=Event.Started.name,
+            msg=Event.Load,
+            step=Event.Started,
             model=repo_id,
             cache_dir=str(self._connection().cache_dir),
         )
@@ -198,8 +198,8 @@ class DriverLanguageModel(GenericDriver):
         started = time.monotonic()
 
         self.debug(
-            msg=Event.Download.name,
-            step=Event.Started.name,
+            msg=Event.Download,
+            step=Event.Started,
             model=repo_id,
             revision=getattr(self, "revision", None),
             endpoint=connection.endpoint,
@@ -214,12 +214,12 @@ class DriverLanguageModel(GenericDriver):
                 **kwargs,
             )
         except Exception as e:
-            self.debug(msg=Event.Download.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Download, step=Event.Failed, error=str(e))
             raise self._as_driver_error(e, repo_id) from e
 
         self.debug(
-            msg=Event.Download.name,
-            step=Event.Completed.name,
+            msg=Event.Download,
+            step=Event.Completed,
             model=repo_id,
             local_path=path,
             seconds=round(time.monotonic() - started, 1),
@@ -283,8 +283,8 @@ class DriverLanguageModel(GenericDriver):
 
         configure_http_backend(backend_factory)
         self.debug(
-            msg=Event.Configure.name,
-            step=Event.Started.name,
+            msg=Event.Configure,
+            step=Event.Started,
             connection=getattr(connection, "connection_name", None),
             scope="process-global",
         )
@@ -328,7 +328,7 @@ class DriverLanguageModel(GenericDriver):
                 total = self._size or getattr(self, "total", None) or 0
                 done = self._done
                 driver.info(
-                    msg=Event.Downloading.name,
+                    msg=Event.Downloading,
                     step="progress",
                     model=repo_id,
                     transferred=done,

@@ -51,8 +51,8 @@ class PipelineQualityMeasure(GenericPipeline):
         records = DocumentRecords.records(document)
         if not records:
             self.warning(
-                msg=Event.Transform.name,
-                step=Event.Check.name,
+                msg=Event.Transform,
+                step=Event.Check,
                 reason="no records to measure",
                 document=facade.identifier,
             )
@@ -69,8 +69,8 @@ class PipelineQualityMeasure(GenericPipeline):
         uid = processor.blackboard.write(facade=facade, processor=processor, pipeline=self)
 
         self.debug(
-            msg=Event.Transform.name,
-            step=Event.Completed.name,
+            msg=Event.Transform,
+            step=Event.Completed,
             uid=uid,
             checkpoint=self.checkpoint,
             records=len(measured),

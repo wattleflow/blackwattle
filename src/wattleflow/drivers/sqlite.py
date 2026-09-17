@@ -83,7 +83,7 @@ class DriverSqlite(GenericDriver):
     # region private
 
     def _create_schema(self) -> None:
-        self.debug(msg=Event.Create.name, step=Event.Started.name)
+        self.debug(msg=Event.Create, step=Event.Started)
         with self._conn:
             for table, spec in self.schema.items():
                 cols = ", ".join(f'"{n}" {t}' for n, t in spec["columns"].items())
@@ -91,7 +91,7 @@ class DriverSqlite(GenericDriver):
                 parts = [cols] + list(constraints)
                 ddl = f'CREATE TABLE IF NOT EXISTS "{table}" ({", ".join(parts)})'
                 self._conn.execute(ddl)
-        self.debug(msg=Event.Create.name, step=Event.Completed.name)
+        self.debug(msg=Event.Create, step=Event.Completed)
 
     def _validate_schema(self, schema: Dict[str, Dict[str, Any]]) -> None:
         if not isinstance(schema, dict) or not schema:
@@ -126,8 +126,8 @@ class DriverSqlite(GenericDriver):
 
     def _insert_records(self) -> None:
         self.debug(
-            msg=Event.Write.name,
-            step=Event.Started.name,
+            msg=Event.Write,
+            step=Event.Started,
             scope="%s._insert_records" % self.name,
             delete=self.delete,
             count=len(self.records),
@@ -179,21 +179,21 @@ class DriverSqlite(GenericDriver):
             with self._conn:
                 if self.delete:
                     self._conn.execute(f'DELETE FROM "{target_table}"')
-                    self.debug(msg=Event.Write.name, scope="insert", action="Deleting records")
+                    self.debug(msg=Event.Write, scope="insert", action="Deleting records")
                 self._conn.executemany(
                     sql,
                     [[row[c] for c in cols] for row in self.records],
                 )
         except sqlite3.Error as e:
             self.debug(
-                msg=Event.Write.name, step=Event.Failed.name, table=target_table, error=str(e)
+                msg=Event.Write, step=Event.Failed, table=target_table, error=str(e)
             )
             raise DriverSqliteError(caller=self, error=str(e), table=target_table) from e
 
         self.debug(
-            msg=Event.Write.name,
+            msg=Event.Write,
             scope="insert",
-            step=Event.Completed.name,
+            step=Event.Completed,
             table=target_table,
         )
 
@@ -211,7 +211,7 @@ class DriverSqlite(GenericDriver):
 
     # region lifecycle
     def load(self) -> None:
-        self.debug(msg=Event.Load.name, step=Event.Started.name)
+        self.debug(msg=Event.Load, step=Event.Started)
 
         self.delete = bool(self.delete) if self.delete is not None else True
         self._validate_schema(self.schema)
@@ -231,18 +231,18 @@ class DriverSqlite(GenericDriver):
             self._insert_records()
 
         self.debug(
-            msg=Event.Load.name,
-            step=Event.Completed.name,
+            msg=Event.Load,
+            step=Event.Completed,
             path=str(self._get_connection().path),
             tables=list(self.schema.keys()),
         )
 
     def close(self) -> None:
-        self.debug(msg=Event.Close.name, step=Event.Started.name)
+        self.debug(msg=Event.Close, step=Event.Started)
         if not self.can(DriverAction.UNLOAD):
             return
         # The connection owns the handle and closes it; the driver must not.
-        self.debug(msg=Event.Close.name, step=Event.Completed.name)
+        self.debug(msg=Event.Close, step=Event.Completed)
 
     # endregion lifecycle
 
@@ -257,13 +257,13 @@ class DriverSqlite(GenericDriver):
         )
 
     def read(self, **kwargs) -> List[Dict[str, Any]]:
-        self.debug(msg=Event.Read.name, step=Event.Started.name, kwargs=kwargs)
+        self.debug(msg=Event.Read, step=Event.Started, kwargs=kwargs)
 
         table_name = kwargs.pop("table", None)
         if table_name is None:
             cls_name = f"{self.name}.read(**kwargs)" or f"{self.__class__.__name__}.read(**kwargs)"
             self.exception(
-                msg=Event.Read.name,
+                msg=Event.Read,
                 error=f"{cls_name}: table must be supplied when calling method!",
             )
             raise DriverSqliteError(self, error=f"{cls_name}: Missing `table` name in **kwargs!")
@@ -286,14 +286,14 @@ class DriverSqlite(GenericDriver):
             cursor = self._conn.execute(sql, params)
             rows = [dict(r) for r in cursor.fetchall()]
         except sqlite3.Error as e:
-            self.debug(msg=Event.Read.name, step=Event.Failed.name, table=table_name, error=str(e))
+            self.debug(msg=Event.Read, step=Event.Failed, table=table_name, error=str(e))
             raise DriverSqliteError(caller=self, error=str(e), table=table_name) from e
 
         if joins:
             for row in rows:
                 row["patterns"] = self.read("patterns", where={"entitet_id": row["id"]})
 
-        self.debug(msg=Event.Read.name, step=Event.Completed.name, rows=len(rows))
+        self.debug(msg=Event.Read, step=Event.Completed, rows=len(rows))
         return rows
 
     def write(self, uri: str, row: Dict[str, Any], **kwargs) -> int:
@@ -302,7 +302,7 @@ class DriverSqlite(GenericDriver):
         Returns the lastrowid. WriteStrategy must call validate() prior or
         rely on internal validation done here.
         """
-        self.debug(msg=Event.Write.name, step=Event.Started.name, uri=uri)
+        self.debug(msg=Event.Write, step=Event.Started, uri=uri)
 
         self.validate(uri, row)
 
@@ -316,13 +316,13 @@ class DriverSqlite(GenericDriver):
                 cursor = self._conn.execute(sql, [row[c] for c in cols])
                 rowid = cursor.lastrowid
         except sqlite3.IntegrityError as e:
-            self.debug(msg=Event.Write.name, step=Event.Failed.name, uri=uri, error=str(e))
+            self.debug(msg=Event.Write, step=Event.Failed, uri=uri, error=str(e))
             raise DriverSqliteError(caller=self, error=str(e), uri=uri) from e
         except sqlite3.Error as e:
-            self.debug(msg=Event.Write.name, step=Event.Failed.name, uri=uri, error=str(e))
+            self.debug(msg=Event.Write, step=Event.Failed, uri=uri, error=str(e))
             raise DriverSqliteError(caller=self, error=str(e), uri=uri) from e
 
-        self.debug(msg=Event.Write.name, step=Event.Completed.name, uri=uri, rowid=rowid)
+        self.debug(msg=Event.Write, step=Event.Completed, uri=uri, rowid=rowid)
         return rowid
 
     def validate(self, table: str, row: Dict[str, Any]) -> None:

@@ -47,7 +47,7 @@ class WriteRedactedImage(StrategyWrite):
     ``bbox`` is in pixels; each span is blacked out."""
 
     def execute(self, caller: IWattleflow, facade: ITarget, **kwargs: Any) -> bool:
-        self.debug(msg=Event.Write.name, step=Event.Started.name, caller=caller, facade=facade)
+        self.debug(msg=Event.Write, step=Event.Started, caller=caller, facade=facade)
         try:
             Attribute.evaluate(caller=self, target=caller, expected_type=IRepository)
             Attribute.evaluate(caller=self, target=facade, expected_type=ITarget)
@@ -62,15 +62,15 @@ class WriteRedactedImage(StrategyWrite):
 
             if not ImageFormat.accepts(source_path.suffix):
                 self.debug(
-                    msg=Event.Write.name, step=Event.Check.name, reason="non-image source, skipped"
+                    msg=Event.Write, step=Event.Check, reason="non-image source, skipped"
                 )
                 return False
 
             spans: SpanList = list(document.metadata.get("redact_spans") or [])
             if not spans:
                 self.debug(
-                    msg=Event.Write.name,
-                    step=Event.Check.name,
+                    msg=Event.Write,
+                    step=Event.Check,
                     reason="no redact_spans yet, skipped",
                 )
                 return False
@@ -86,19 +86,19 @@ class WriteRedactedImage(StrategyWrite):
             document.update_metadata("storage_filename", output)
 
             self.debug(
-                msg=Event.Write.name,
-                step=Event.Completed.name,
+                msg=Event.Write,
+                step=Event.Completed,
                 output=str(output),
                 spans=len(spans),
             )
             return True
         except AssertionError as e:
             error = f"Assertion: {str(e)}"
-            self.debug(msg=Event.Write.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Write, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
         except Exception as e:
             error = f"{self.name} caught exception: {str(e)}"
-            self.debug(msg=Event.Write.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Write, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
 
     @staticmethod

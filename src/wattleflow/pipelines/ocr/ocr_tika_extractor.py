@@ -67,8 +67,8 @@ class PipelineOCRExtractTika(OCRPreflightMixin, GenericPipeline):
         filename: str = document.filename
         if not filename:
             self.warning(
-                msg=Event.Transform.name,
-                step=Event.Check.name,
+                msg=Event.Transform,
+                step=Event.Check,
                 error="FileDocument has no filename!",
             )
             return
@@ -76,8 +76,8 @@ class PipelineOCRExtractTika(OCRPreflightMixin, GenericPipeline):
         path = Path(filename)
         if not path.exists():
             self.warning(
-                msg=Event.Transform.name,
-                step=Event.Check.name,
+                msg=Event.Transform,
+                step=Event.Check,
                 error="File does not exist",
                 filename=filename,
             )
@@ -86,7 +86,7 @@ class PipelineOCRExtractTika(OCRPreflightMixin, GenericPipeline):
         existing: Optional[str] = document.content or ""
         if existing.strip():
             self.debug(
-                msg=Event.Transform.name,
+                msg=Event.Transform,
                 reason="document already has content",
                 filename=filename,
                 chars=len(existing),
@@ -94,8 +94,8 @@ class PipelineOCRExtractTika(OCRPreflightMixin, GenericPipeline):
             return
 
         self.debug(
-            msg=Event.Transform.name,
-            step=Event.Started.name,
+            msg=Event.Transform,
+            step=Event.Started,
             backend=self.backend,
             filename=filename,
         )
@@ -105,7 +105,7 @@ class PipelineOCRExtractTika(OCRPreflightMixin, GenericPipeline):
         except PipelineException:
             raise
         except Exception as e:
-            self.debug(msg=Event.Transform.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Transform, step=Event.Failed, error=str(e))
             raise PipelineException(
                 caller=self,
                 error=f"OCR extraction failed for {filename}: {e}",
@@ -122,8 +122,8 @@ class PipelineOCRExtractTika(OCRPreflightMixin, GenericPipeline):
         )
 
         self.debug(
-            msg=Event.Transform.name,
-            step=Event.Completed.name,
+            msg=Event.Transform,
+            step=Event.Completed,
             backend=self.backend,
             uid=uid,
             chars=len(text),

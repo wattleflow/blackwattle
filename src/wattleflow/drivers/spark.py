@@ -84,10 +84,10 @@ class DriverSpark(GenericDriver):
         return self.connection_manager.get_connection(self.connection_name)
 
     def load(self) -> None:
-        self.debug(msg=Event.Load.name, step=Event.Started.name)
+        self.debug(msg=Event.Load, step=Event.Started)
 
         if self._loaded:
-            self.warning(msg=Event.Load.name, step=Event.Check.name, error="Already loaded!")
+            self.warning(msg=Event.Load, step=Event.Check, error="Already loaded!")
 
         self.safe_mode = self.safe_mode if self.safe_mode is not None else True
         self.allow_raw_sql = self.allow_raw_sql if self.allow_raw_sql is not None else False
@@ -112,8 +112,8 @@ class DriverSpark(GenericDriver):
         self._loaded = True
 
         self.debug(
-            msg=Event.Load.name,
-            step=Event.Completed.name,
+            msg=Event.Load,
+            step=Event.Completed,
             connection_name=conn_name,
             lazy_loading=self._lazy_loading,
             format=self.format,
@@ -129,7 +129,7 @@ class DriverSpark(GenericDriver):
         )
 
     def close(self) -> None:
-        self.debug(msg=Event.Close.name, step=Event.Started.name)
+        self.debug(msg=Event.Close, step=Event.Started)
 
     def metadata(self) -> DriverMetadata:
         return DriverMetadata(
@@ -144,7 +144,7 @@ class DriverSpark(GenericDriver):
     # ---------------------------------------------------------------------- #
 
     def read(self, uri: str, **kwargs) -> DataFrame:
-        self.debug(msg=Event.Read.name, step=Event.Started.name, uri=uri)
+        self.debug(msg=Event.Read, step=Event.Started, uri=uri)
 
         if not uri:
             raise DriverSparkError(caller=self, error="read: uri is required.")
@@ -165,8 +165,8 @@ class DriverSpark(GenericDriver):
                         error="Raw SQL is globally disabled (allow_raw_sql=False).",
                     )
                 self.warning(
-                    msg=Event.Read.name,
-                    step=Event.Check.name,
+                    msg=Event.Read,
+                    step=Event.Check,
                     reason="User override: allow_raw_sql=True bypasses "
                     "global policy for this query.",
                     uri=str(uri)[:120],
@@ -180,15 +180,15 @@ class DriverSpark(GenericDriver):
                         error="Raw SQL requires allow_raw_sql=True when safe_mode=True.",
                     )
                 self.warning(
-                    msg=Event.Read.name,
-                    step=Event.Check.name,
+                    msg=Event.Read,
+                    step=Event.Check,
                     reason="User override: safe_mode bypassed.",
                     uri=str(uri)[:120],
                 )
 
         if self.log_queries:
             self.debug(
-                msg=Event.Read.name,
+                msg=Event.Read,
                 uri=str(uri)[:120],
                 is_sql=is_sql,
             )
@@ -201,8 +201,8 @@ class DriverSpark(GenericDriver):
             if not self._try_reconnect():
                 raise
             self.debug(
-                msg=Event.Read.name,
-                step=Event.Failed.name,
+                msg=Event.Read,
+                step=Event.Failed,
                 error=str(e),
                 uri=str(uri)[:80],
             )
@@ -210,7 +210,7 @@ class DriverSpark(GenericDriver):
         except DriverSparkError:
             raise
         except Exception as e:
-            self.debug(msg=Event.Read.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Read, step=Event.Failed, error=str(e))
             raise DriverSparkError(
                 caller=self,
                 error=f"read error: {e}",
@@ -220,8 +220,8 @@ class DriverSpark(GenericDriver):
             df = df.limit(int(max_rows))
 
         self.debug(
-            msg=Event.Read.name,
-            step=Event.Completed.name,
+            msg=Event.Read,
+            step=Event.Completed,
             uri=uri,
             columns=df.columns,
         )
@@ -244,8 +244,8 @@ class DriverSpark(GenericDriver):
             self._validate_table_name(uri)
 
         self.debug(
-            msg=Event.Write.name,
-            step=Event.Started.name,
+            msg=Event.Write,
+            step=Event.Started,
             uri=uri,
             format=fmt,
             mode=mode,
@@ -270,8 +270,8 @@ class DriverSpark(GenericDriver):
             if not self._try_reconnect():
                 raise
             self.debug(
-                msg=Event.Write.name,
-                step=Event.Failed.name,
+                msg=Event.Write,
+                step=Event.Failed,
                 error=str(e),
                 uri=uri,
             )
@@ -279,13 +279,13 @@ class DriverSpark(GenericDriver):
         except DriverSparkError:
             raise
         except Exception as e:
-            self.debug(msg=Event.Write.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Write, step=Event.Failed, error=str(e))
             raise DriverSparkError(
                 caller=self,
                 error=f"write error for uri={uri!r}: {e}",
             ) from e
 
-        self.debug(msg=Event.Write.name, step=Event.Completed.name, uri=uri)
+        self.debug(msg=Event.Write, step=Event.Completed, uri=uri)
         return uri
 
     def search(self, pattern: str, **kwargs) -> Generator[str, None, None]:
@@ -293,8 +293,8 @@ class DriverSpark(GenericDriver):
         list_dbs: bool = bool(kwargs.get("list_dbs", False))
 
         self.debug(
-            msg=Event.Search.name,
-            step=Event.Started.name,
+            msg=Event.Search,
+            step=Event.Started,
             pattern=pattern,
             database=database or "(default)",
         )
@@ -312,7 +312,7 @@ class DriverSpark(GenericDriver):
                     else session.catalog.listTables()
                 )
             except Exception as e:
-                self.debug(msg=Event.Search.name, step=Event.Failed.name, error=str(e))
+                self.debug(msg=Event.Search, step=Event.Failed, error=str(e))
                 raise DriverSparkError(
                     caller=self,
                     error=f"search: error while searching for table: {e}",
@@ -323,7 +323,7 @@ class DriverSpark(GenericDriver):
                 if self._matches(qualified, pattern) or self._matches(table.name, pattern):
                     yield qualified
 
-        self.debug(msg=Event.Search.name, step=Event.Completed.name)
+        self.debug(msg=Event.Search, step=Event.Completed)
 
     # ---------------------------------------------------------------------- #
     # endregion Read / Write                                                 #
@@ -337,8 +337,8 @@ class DriverSpark(GenericDriver):
         conn = self._get_connection()
         if conn.state == ConnectionState.FAILED:
             self.error(
-                msg=Event.Connect.name,
-                step=Event.Started.name,
+                msg=Event.Connect,
+                step=Event.Started,
                 error="Connection has FAILED — reconnect not possible.",
                 connection_name=self.connection_name,
             )
@@ -348,16 +348,16 @@ class DriverSpark(GenericDriver):
             conn.disconnect()
             conn.create_connection()
             self.debug(
-                msg=Event.Connect.name,
-                step=Event.Completed.name,
+                msg=Event.Connect,
+                step=Event.Completed,
                 connection_name=self.connection_name,
                 state=conn.state.name,
             )
             return True
         except Exception as e:
             self.error(
-                msg=Event.Connect.name,
-                step=Event.Failed.name,
+                msg=Event.Connect,
+                step=Event.Failed,
                 error=str(e),
                 connection_name=self.connection_name,
             )
@@ -379,7 +379,7 @@ class DriverSpark(GenericDriver):
 
     def _read_sql(self, session: SparkSession, uri: str) -> DataFrame:
         query = self._resolve_query(uri)
-        self.debug(msg=Event.Read.name, step=Event.Started.name, query=query[:120])
+        self.debug(msg=Event.Read, step=Event.Started, query=query[:120])
         return session.sql(query)
 
     def _read_source(self, session: SparkSession, uri: str, **kwargs) -> DataFrame:
@@ -391,8 +391,8 @@ class DriverSpark(GenericDriver):
         schema = kwargs.pop("schema", None)
 
         self.debug(
-            msg=Event.Read.name,
-            step=Event.Started.name,
+            msg=Event.Read,
+            step=Event.Started,
             uri=uri,
             format=fmt,
             options=read_options,
@@ -459,7 +459,7 @@ class DriverSpark(GenericDriver):
             try:
                 data = json.loads(data)
             except (ValueError, TypeError) as e:
-                self.debug(msg=Event.Transform.name, step=Event.Failed.name, error=str(e))
+                self.debug(msg=Event.Transform, step=Event.Failed, error=str(e))
                 raise DriverSparkError(
                     caller=self,
                     error=f"_to_dataframe: can't parse as JSON: {e}",

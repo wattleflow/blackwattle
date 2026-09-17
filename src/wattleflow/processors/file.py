@@ -53,13 +53,13 @@ class FileDocumentProcessor(GenericProcessor):
         try:
             self._dates: CreatedWithin = CreatedWithin(self.created_from, self.created_to)
         except ValueError as e:
-            self.debug(msg=Event.Constructor.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Constructor, step=Event.Failed, error=str(e))
             raise ProcessorException(caller=self, error=str(e)) from e
 
         if self._dates.active:
             self.debug(
-                msg=Event.Constructor.name,
-                step=Event.Started.name,
+                msg=Event.Constructor,
+                step=Event.Started,
                 created_from=self._dates.start.isoformat() if self._dates.start else None,
                 created_to=self._dates.end.isoformat() if self._dates.end else None,
             )
@@ -73,10 +73,10 @@ class FileDocumentProcessor(GenericProcessor):
                 ", ".join(sorted(self.SORT_KEYS)),
                 self.sort_by,
             )
-            self.debug(msg=Event.Constructor.name, step=Event.Failed.name, error=reason)
+            self.debug(msg=Event.Constructor, step=Event.Failed, error=reason)
             raise ProcessorException(caller=self, error=reason)
 
-        self.debug(msg=Event.Constructor.name, step=Event.Completed.name)
+        self.debug(msg=Event.Constructor, step=Event.Completed)
 
     def _ordered(self, paths: list[Path]) -> list[Path]:
         """`paths` in the configured order, or as scanned when none is set."""
@@ -86,8 +86,8 @@ class FileDocumentProcessor(GenericProcessor):
             return sorted(paths, key=self.SORT_KEYS[self._sort], reverse=bool(self.sort_desc))
         except OSError as e:
             self.warning(
-                msg=Event.Generate.name,
-                step=Event.Check.name,
+                msg=Event.Generate,
+                step=Event.Check,
                 reason="sort failed; scan order kept",
                 sort_by=self._sort,
                 error=str(e),
@@ -95,7 +95,7 @@ class FileDocumentProcessor(GenericProcessor):
             return paths
 
     def create_generator(self) -> Generator[ITarget, None, None]:
-        self.debug(msg=Event.Generate.name, step=Event.Started.name)
+        self.debug(msg=Event.Generate, step=Event.Started)
 
         try:
             if not Path(self.source_path).exists():
@@ -114,7 +114,7 @@ class FileDocumentProcessor(GenericProcessor):
             count = len(files)
 
             self.info(
-                msg=Event.Generate.name,
+                msg=Event.Generate,
                 files=count,
                 path=str(search_path),
                 pattern=self.pattern,
@@ -123,7 +123,7 @@ class FileDocumentProcessor(GenericProcessor):
             )
 
             for filepath in files:
-                self.debug(msg=Event.Generate.name, scope="item", filename=str(filepath))
+                self.debug(msg=Event.Generate, scope="item", filename=str(filepath))
                 try:
                     if filtered and filtered.findall(filepath.stem):
                         continue
@@ -133,15 +133,15 @@ class FileDocumentProcessor(GenericProcessor):
                         if not verdict.ok:
                             if verdict.reason == "stat-failed":
                                 self.warning(
-                                    msg=Event.Generate.name,
-                                    step=Event.Check.name,
+                                    msg=Event.Generate,
+                                    step=Event.Check,
                                     reason="stat failed; skipping",
                                     filename=str(filepath),
                                     error=verdict.error,
                                 )
                             else:
                                 self.debug(
-                                    msg=Event.Generate.name,
+                                    msg=Event.Generate,
                                     scope="item",
                                     reason=(
                                         "created before window; skipped"
@@ -154,7 +154,7 @@ class FileDocumentProcessor(GenericProcessor):
                             continue
 
                     self.debug(
-                        msg=Event.Generate.name,
+                        msg=Event.Generate,
                         scope="item",
                         no=self.cycle + 1,
                         filename=str(filepath),
@@ -174,16 +174,16 @@ class FileDocumentProcessor(GenericProcessor):
                     filename = str(filepath)
                     error = f"Error: {str(e)} with {filename!r}"
                     self.exception(
-                        msg=Event.Generate.name,
-                        step=Event.Failed.name,
+                        msg=Event.Generate,
+                        step=Event.Failed,
                         error=error,
                         filename=filename,
                     )
                     continue
         except Exception as e:
             self.debug(
-                msg=Event.Generate.name,
-                step=Event.Failed.name,
+                msg=Event.Generate,
+                step=Event.Failed,
                 error=str(e),
             )
             raise ProcessorException(
@@ -193,8 +193,8 @@ class FileDocumentProcessor(GenericProcessor):
             ) from e
 
         self.debug(
-            msg=Event.Generate.name,
-            step=Event.Completed.name,
+            msg=Event.Generate,
+            step=Event.Completed,
             count=self.cycle,
         )
 

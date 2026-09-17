@@ -168,7 +168,7 @@ class _KafkaMixin:
         blocked = {k for k in extra if k in _PROTECTED_CONFIG_KEYS}
         if blocked:
             self.warning(
-                msg=Event.Configure.name,
+                msg=Event.Configure,
                 reason="kafka_config contains protected keys that were ignored",
                 blocked_keys=sorted(blocked),
                 connection_name=self.connection_name,
@@ -360,8 +360,8 @@ class KafkaProducerConnection(_KafkaMixin, GenericConnection):
 
     def create_connection(self) -> None:
         self.debug(
-            msg=Event.Create.name,
-            step=Event.Started.name,
+            msg=Event.Create,
+            step=Event.Started,
             connection_name=self.connection_name,
             state=self.state.value,
         )
@@ -369,8 +369,8 @@ class KafkaProducerConnection(_KafkaMixin, GenericConnection):
         try:
             config = self._build_producer_config()
             self.debug(
-                msg=Event.Create.name,
-                step=Event.Configuring.name,
+                msg=Event.Create,
+                step=Event.Configuring,
                 config=self._safe_config_repr(config),
             )
             self._engine = KafkaProducer(**config)
@@ -383,7 +383,7 @@ class KafkaProducerConnection(_KafkaMixin, GenericConnection):
                 connection_name=self.connection_name,
                 state=self.state.value,
             )
-            self.debug(msg=Event.Create.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Create, step=Event.Failed, error=str(e))
             raise KafkaConnectionError(
                 caller=self,
                 error=f"No brokers available at '{getattr(self, 'bootstrap_servers', '?')}': {e}",
@@ -395,7 +395,7 @@ class KafkaProducerConnection(_KafkaMixin, GenericConnection):
                 connection_name=self.connection_name,
                 state=self.state.value,
             )
-            self.debug(msg=Event.Create.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Create, step=Event.Failed, error=str(e))
             raise KafkaConnectionError(
                 caller=self,
                 error=f"Kafka node not ready: {e}",
@@ -407,7 +407,7 @@ class KafkaProducerConnection(_KafkaMixin, GenericConnection):
                 connection_name=self.connection_name,
                 state=self.state.value,
             )
-            self.debug(msg=Event.Create.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Create, step=Event.Failed, error=str(e))
             raise KafkaConnectionError(
                 caller=self,
                 error=f"Kafka error during KafkaProducer creation: {e}",
@@ -419,7 +419,7 @@ class KafkaProducerConnection(_KafkaMixin, GenericConnection):
                 connection_name=self.connection_name,
                 state=self.state.value,
             )
-            self.debug(msg=Event.Create.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Create, step=Event.Failed, error=str(e))
             raise KafkaConnectionError(
                 caller=self,
                 error=f"Unexpected error during KafkaProducer creation: {e}",
@@ -427,8 +427,8 @@ class KafkaProducerConnection(_KafkaMixin, GenericConnection):
 
         self._connection = None
         self.debug(
-            msg=Event.Create.name,
-            step=Event.Completed.name,
+            msg=Event.Create,
+            step=Event.Completed,
             connection_name=self.connection_name,
             state=self.state.value,
         )
@@ -440,7 +440,7 @@ class KafkaProducerConnection(_KafkaMixin, GenericConnection):
         flush_timeout = int(getattr(self, "flush_timeout", _DEFAULT_FLUSH_TIMEOUT))
 
         self.debug(
-            msg=Event.Connect.name,
+            msg=Event.Connect,
             connection_name=self.connection_name,
             state=self.state.value,
         )
@@ -458,11 +458,11 @@ class KafkaProducerConnection(_KafkaMixin, GenericConnection):
             self._fsm.apply(ConnectionAction.CONNECT_OK)
         except Exception as e:
             self._fsm.apply(ConnectionAction.CONNECT_FAIL)
-            self.debug(msg=Event.Connect.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Connect, step=Event.Failed, error=str(e))
             raise KafkaConnectionError(caller=self, error=str(e)) from e
 
         self.debug(
-            msg=Event.Connected.name,
+            msg=Event.Connected,
             connection_name=self.connection_name,
             state=self.state.value,
         )
@@ -476,14 +476,14 @@ class KafkaProducerConnection(_KafkaMixin, GenericConnection):
                 connection_name=self.connection_name,
                 state=self.state.value,
             )
-            self.debug(msg=Event.Connect.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Connect, step=Event.Failed, error=str(e))
             raise
         finally:
             try:
                 remaining = self._engine.flush(timeout=flush_timeout)
                 if remaining > 0:
                     self.warning(
-                        msg=Event.Flush.name,
+                        msg=Event.Flush,
                         reason="incomplete",
                         remaining=remaining,
                         connection_name=self.connection_name,
@@ -496,21 +496,21 @@ class KafkaProducerConnection(_KafkaMixin, GenericConnection):
                     )
             except Exception as e:
                 self.warning(
-                    msg=Event.Flush.name,
+                    msg=Event.Flush,
                     reason="error",
                     error=str(e),
                     connection_name=self.connection_name,
                 )
             self._fsm.apply(ConnectionAction.DISCONNECT)
             self.debug(
-                msg=Event.Disconnected.name,
+                msg=Event.Disconnected,
                 connection_name=self.connection_name,
                 note="producer engine still alive; call ensure_closed() to close",
             )
 
     def disconnect(self) -> None:
         self.debug(
-            msg=Event.Disconnect.name,
+            msg=Event.Disconnect,
             connection_name=self.connection_name,
             state=self.state.value,
         )
@@ -533,7 +533,7 @@ class KafkaProducerConnection(_KafkaMixin, GenericConnection):
         finally:
             self._connection = None
             self.debug(
-                msg=Event.Disconnected.name,
+                msg=Event.Disconnected,
                 connection_name=self.connection_name,
                 state=self.state.value,
             )
@@ -714,8 +714,8 @@ class KafkaConsumerConnection(_KafkaMixin, GenericConnection):
 
     def create_connection(self) -> None:
         self.debug(
-            msg=Event.Create.name,
-            step=Event.Started.name,
+            msg=Event.Create,
+            step=Event.Started,
             connection_name=self.connection_name,
             state=self.state.value,
         )
@@ -723,8 +723,8 @@ class KafkaConsumerConnection(_KafkaMixin, GenericConnection):
         try:
             config = self._build_consumer_config()
             self.debug(
-                msg=Event.Create.name,
-                step=Event.Configuring.name,
+                msg=Event.Create,
+                step=Event.Configuring,
                 config=self._safe_config_repr(config),
             )
             self._engine = KafkaConsumer(**config)
@@ -737,7 +737,7 @@ class KafkaConsumerConnection(_KafkaMixin, GenericConnection):
                 connection_name=self.connection_name,
                 state=self.state.value,
             )
-            self.debug(msg=Event.Create.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Create, step=Event.Failed, error=str(e))
             raise KafkaConnectionError(
                 caller=self,
                 error=f"No brokers available at '{getattr(self, 'bootstrap_servers', '?')}': {e}",
@@ -749,7 +749,7 @@ class KafkaConsumerConnection(_KafkaMixin, GenericConnection):
                 connection_name=self.connection_name,
                 state=self.state.value,
             )
-            self.debug(msg=Event.Create.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Create, step=Event.Failed, error=str(e))
             raise KafkaConnectionError(
                 caller=self,
                 error=f"Kafka node not ready: {e}",
@@ -761,7 +761,7 @@ class KafkaConsumerConnection(_KafkaMixin, GenericConnection):
                 connection_name=self.connection_name,
                 state=self.state.value,
             )
-            self.debug(msg=Event.Create.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Create, step=Event.Failed, error=str(e))
             raise KafkaConnectionError(
                 caller=self,
                 error=f"Kafka error during KafkaConsumer creation: {e}",
@@ -773,7 +773,7 @@ class KafkaConsumerConnection(_KafkaMixin, GenericConnection):
                 connection_name=self.connection_name,
                 state=self.state.value,
             )
-            self.debug(msg=Event.Create.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Create, step=Event.Failed, error=str(e))
             raise KafkaConnectionError(
                 caller=self,
                 error=f"Unexpected error during KafkaConsumer creation: {e}",
@@ -781,8 +781,8 @@ class KafkaConsumerConnection(_KafkaMixin, GenericConnection):
 
         self._connection = None
         self.debug(
-            msg=Event.Create.name,
-            step=Event.Completed.name,
+            msg=Event.Create,
+            step=Event.Completed,
             connection_name=self.connection_name,
             state=self.state.value,
         )
@@ -792,7 +792,7 @@ class KafkaConsumerConnection(_KafkaMixin, GenericConnection):
         self._ensure_created()
 
         self.debug(
-            msg=Event.Connect.name,
+            msg=Event.Connect,
             connection_name=self.connection_name,
             state=self.state.value,
         )
@@ -813,15 +813,15 @@ class KafkaConsumerConnection(_KafkaMixin, GenericConnection):
                 if set(topics) != current:
                     self._engine.subscribe(topics)
                     self.debug(
-                        msg=Event.Connect.name,
-                        scope=Event.Subscribe.name,
+                        msg=Event.Connect,
+                        scope=Event.Subscribe,
                         topics=topics,
                         connection_name=self.connection_name,
                     )
             self._fsm.apply(ConnectionAction.CONNECT_OK)
         except KafkaConnectionError as e:
             self._fsm.apply(ConnectionAction.CONNECT_FAIL)
-            self.debug(msg=Event.Connect.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Connect, step=Event.Failed, error=str(e))
             raise
         except Exception as e:
             self._fsm.apply(ConnectionAction.CONNECT_FAIL)
@@ -831,14 +831,14 @@ class KafkaConsumerConnection(_KafkaMixin, GenericConnection):
                 connection_name=self.connection_name,
                 state=self.state.value,
             )
-            self.debug(msg=Event.Connect.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Connect, step=Event.Failed, error=str(e))
             raise KafkaConnectionError(
                 caller=self,
                 error=f"Failed to subscribe to topics: {e}",
             ) from e
 
         self.debug(
-            msg=Event.Connected.name,
+            msg=Event.Connected,
             connection_name=self.connection_name,
             group_id=getattr(self, "group_id", "?"),
             topics=list(self._engine.subscription() or []),
@@ -854,19 +854,19 @@ class KafkaConsumerConnection(_KafkaMixin, GenericConnection):
                 connection_name=self.connection_name,
                 state=self.state.value,
             )
-            self.debug(msg=Event.Connect.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Connect, step=Event.Failed, error=str(e))
             raise
         finally:
             self._fsm.apply(ConnectionAction.DISCONNECT)
             self.debug(
-                msg=Event.Disconnected.name,
+                msg=Event.Disconnected,
                 connection_name=self.connection_name,
                 note="consumer engine still alive; call ensure_closed() to close",
             )
 
     def disconnect(self) -> None:
         self.debug(
-            msg=Event.Disconnect.name,
+            msg=Event.Disconnect,
             connection_name=self.connection_name,
             state=self.state.value,
         )
@@ -887,7 +887,7 @@ class KafkaConsumerConnection(_KafkaMixin, GenericConnection):
         finally:
             self._connection = None
             self.debug(
-                msg=Event.Disconnected.name,
+                msg=Event.Disconnected,
                 connection_name=self.connection_name,
                 state=self.state.value,
             )

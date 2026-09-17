@@ -42,7 +42,7 @@ from wattleflow.helpers.formatters.factory import FormatterFactory
 class CreateFileDocument(StrategyCreate):
     def execute(self, caller: IWattleflow, *args, **kwargs) -> Optional[ITarget]:
         try:
-            self.debug(msg=Event.Create.name, step=Event.Started.name, kwargs=kwargs)
+            self.debug(msg=Event.Create, step=Event.Started, kwargs=kwargs)
             assert isinstance(caller, IBlackboard), "Expected IBlackboard. Found %s" % type(caller)
 
             Attribute.mandatory(self, "filename", str, **kwargs)
@@ -62,15 +62,15 @@ class CreateFileDocument(StrategyCreate):
 
             if not document.size > 0:
                 self.warning(
-                    msg=Event.Create.name,
-                    step=Event.Check.name,
+                    msg=Event.Create,
+                    step=Event.Check,
                     reason="Document file's feeling a bit empty today!",
                     document=document,
                 )
 
             self.debug(
-                msg=Event.Create.name,
-                step=Event.Completed.name,
+                msg=Event.Create,
+                step=Event.Completed,
                 document=document,
                 filename=self.filename,
                 size=document.size,
@@ -78,11 +78,11 @@ class CreateFileDocument(StrategyCreate):
             return DocumentFacade(document)
         except AssertionError as e:
             error = f"Assertion: {str(e)}"
-            self.debug(msg=Event.Create.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Create, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
         except Exception as e:
             error = f"{self.name} caught exception: {str(e)}"
-            self.debug(msg=Event.Create.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Create, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
 
 
@@ -95,7 +95,7 @@ class ReadDocumentFile(StrategyRead):
 class WriteDocumentToFile(StrategyWrite):
     def execute(self, caller: IWattleflow, facade: ITarget, *args, **kwargs) -> bool:
         try:
-            self.debug(msg=Event.Write.name, step=Event.Started.name, kwargs=kwargs)
+            self.debug(msg=Event.Write, step=Event.Started, kwargs=kwargs)
             assert isinstance(caller, IRepository), "Expected IRepository. Found %s" % type(caller)
             assert isinstance(facade, ITarget), "Expected ITarget. Found %s" % type(facade)
 
@@ -113,8 +113,8 @@ class WriteDocumentToFile(StrategyWrite):
 
             if not document.size > 0:  # type: ignore
                 self.warning(
-                    msg=Event.Write.name,
-                    step=Event.Check.name,
+                    msg=Event.Write,
+                    step=Event.Check,
                     reason="Text content is feeling a bit empty today!",
                     document=document,
                     origin=filename,
@@ -141,8 +141,8 @@ class WriteDocumentToFile(StrategyWrite):
             document.update_metadata("source_format", formatter.SUFFIX)
 
             self.debug(
-                msg=Event.Write.name,
-                step=Event.Completed.name,
+                msg=Event.Write,
+                step=Event.Completed,
                 document=document,
                 output=output,
                 size=size,
@@ -151,11 +151,11 @@ class WriteDocumentToFile(StrategyWrite):
             return True
         except AssertionError as e:
             error = f"Assertion: {str(e)}"
-            self.debug(msg=Event.Write.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Write, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
         except Exception as e:
             error = f"{self.name} caught exception: {str(e)}"
-            self.debug(msg=Event.Write.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Write, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
 
 

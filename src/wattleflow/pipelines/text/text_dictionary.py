@@ -154,7 +154,7 @@ class PipelineTextRepairDictionary(GenericPipeline):
         except (FileNotFoundError, ParserError, ValueError) as e:
             # GenericParser wraps a missing file or a malformed payload into
             # ParserError, so that is now the expected shape here.
-            self.debug(msg=Event.Constructor.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Constructor, step=Event.Failed, error=str(e))
             raise PipelineException(caller=self, error=f"{source}: {e}") from e
 
         if not self._dictionary.confusions:
@@ -258,7 +258,7 @@ class PipelineTextRepairDictionary(GenericPipeline):
         Attribute.evaluate(caller=self, target=content, expected_type=str)
 
         if not content.strip():
-            self.warning(msg=Event.Transform.name, step=Event.Check.name, error="Content is empty!")
+            self.warning(msg=Event.Transform, step=Event.Check, error="Content is empty!")
             return
 
         text, substitutions, joins = self._repair(content)
@@ -276,7 +276,7 @@ class PipelineTextRepairDictionary(GenericPipeline):
         )
 
         self.debug(
-            msg=Event.Transform.name,
+            msg=Event.Transform,
             uid=uid,
             changed=changed,
             substitutions=substitutions,
@@ -311,7 +311,7 @@ class PipelineTextRepairStickyWords(GenericPipeline):
         try:
             words = DictionaryHelper.word_list(kwargs.get("words"))
         except (FileNotFoundError, ValueError) as e:
-            self.debug(msg=Event.Constructor.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Constructor, step=Event.Failed, error=str(e))
             raise PipelineException(caller=self, error=str(e)) from e
 
         self._lexicon: Lexicon = Lexicon(
@@ -342,7 +342,7 @@ class PipelineTextRepairStickyWords(GenericPipeline):
         Attribute.evaluate(caller=self, target=content, expected_type=str)
 
         if not content.strip():
-            self.warning(msg=Event.Transform.name, step=Event.Check.name, error="Content is empty!")
+            self.warning(msg=Event.Transform, step=Event.Check, error="Content is empty!")
             return
 
         splits = 0
@@ -370,7 +370,7 @@ class PipelineTextRepairStickyWords(GenericPipeline):
             pipeline=self,
         )
 
-        self.debug(msg=Event.Transform.name, uid=uid, splits=splits)
+        self.debug(msg=Event.Transform, uid=uid, splits=splits)
 
 
 # --------------------------------------------------------------------------- #

@@ -61,15 +61,15 @@ class SolrReadProcessor(GenericProcessor):
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.debug(
-            msg=Event.Constructor.name,
-            step=Event.Started.name,
+            msg=Event.Constructor,
+            step=Event.Started,
             driver=repr(getattr(self, "driver", None)),
             queries=len(getattr(self, "queries", []) or ["*:*"]),
             core=getattr(self, "core", None),
         )
 
     def create_generator(self) -> Generator[ITarget, None, None]:
-        self.debug(msg=Event.Generate.name, step=Event.Started.name)
+        self.debug(msg=Event.Generate, step=Event.Started)
 
         try:
             driver: Optional[DriverSolr] = getattr(self, "driver", None)
@@ -79,17 +79,17 @@ class SolrReadProcessor(GenericProcessor):
             core: Optional[str] = getattr(self, "core", None)
             read_options: Dict[str, Any] = dict(getattr(self, "read_options", {}) or {})
 
-            self.debug(msg=Event.Generate.name, queries=len(queries), core=core)
+            self.debug(msg=Event.Generate, queries=len(queries), core=core)
 
             for query in queries:
-                self.debug(msg=Event.Generate.name, scope="item", query=str(query)[:120])
+                self.debug(msg=Event.Generate, scope="item", query=str(query)[:120])
                 try:
                     records: SolrContent = driver.read(uri=query, **read_options)
                     if not isinstance(records, list):
                         records = list(records)
 
                     self.debug(
-                        msg=Event.Generate.name,
+                        msg=Event.Generate,
                         scope="item",
                         no=self.cycle + 1,
                         query=str(query)[:120],
@@ -108,8 +108,8 @@ class SolrReadProcessor(GenericProcessor):
                 except Exception as e:
                     error = f"Error: {str(e)} with {query!r}"
                     self.exception(
-                        msg=Event.Generate.name,
-                        step=Event.Failed.name,
+                        msg=Event.Generate,
+                        step=Event.Failed,
                         error=error,
                         query=str(query),
                     )
@@ -117,8 +117,8 @@ class SolrReadProcessor(GenericProcessor):
         except Exception as e:
             error = f"Error: {str(e)}"
             self.debug(
-                msg=Event.Generate.name,
-                step=Event.Failed.name,
+                msg=Event.Generate,
+                step=Event.Failed,
                 error=error,
                 trace=format_exc(),
             )
@@ -129,8 +129,8 @@ class SolrReadProcessor(GenericProcessor):
             ) from e
 
         self.debug(
-            msg=Event.Generate.name,
-            step=Event.Completed.name,
+            msg=Event.Generate,
+            step=Event.Completed,
             count=self.cycle,
         )
 
@@ -156,19 +156,19 @@ class SolrWriteProcessor(GenericProcessor):
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.debug(
-            msg=Event.Constructor.name,
-            step=Event.Started.name,
+            msg=Event.Constructor,
+            step=Event.Started,
             batches=len(getattr(self, "batches", []) or []),
         )
 
     def create_generator(self) -> Generator[ITarget, None, None]:
-        self.debug(msg=Event.Generate.name, step=Event.Started.name)
+        self.debug(msg=Event.Generate, step=Event.Started)
 
         try:
             batches: List[Dict[str, Any]] = list(getattr(self, "batches", []) or [])
             Attribute.mandatory(self, "batches", list, batches=batches)
 
-            self.debug(msg=Event.Generate.name, batches=len(batches))
+            self.debug(msg=Event.Generate, batches=len(batches))
 
             for batch in batches:
                 try:
@@ -178,8 +178,8 @@ class SolrWriteProcessor(GenericProcessor):
 
                     if not isinstance(records, list) or not records:
                         self.warning(
-                            msg=Event.Generate.name,
-                            step=Event.Check.name,
+                            msg=Event.Generate,
+                            step=Event.Check,
                             reason="empty/invalid batch; skipped",
                             core=core,
                         )
@@ -187,7 +187,7 @@ class SolrWriteProcessor(GenericProcessor):
 
                     uri = f"solr://{core or 'core'}/{len(records)}"
                     self.debug(
-                        msg=Event.Generate.name,
+                        msg=Event.Generate,
                         scope="item",
                         no=self.cycle + 1,
                         uri=uri,
@@ -208,16 +208,16 @@ class SolrWriteProcessor(GenericProcessor):
                 except Exception as e:
                     error = f"Error: {str(e)}"
                     self.exception(
-                        msg=Event.Generate.name,
-                        step=Event.Failed.name,
+                        msg=Event.Generate,
+                        step=Event.Failed,
                         error=error,
                     )
                     continue
         except Exception as e:
             error = f"Error: {str(e)}"
             self.debug(
-                msg=Event.Generate.name,
-                step=Event.Failed.name,
+                msg=Event.Generate,
+                step=Event.Failed,
                 error=error,
                 trace=format_exc(),
             )
@@ -228,8 +228,8 @@ class SolrWriteProcessor(GenericProcessor):
             ) from e
 
         self.debug(
-            msg=Event.Generate.name,
-            step=Event.Completed.name,
+            msg=Event.Generate,
+            step=Event.Completed,
             count=self.cycle,
         )
 

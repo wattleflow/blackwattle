@@ -30,9 +30,9 @@ class PipelineDummyWrite(GenericPipeline):
     """
 
     def transform(self, processor: IProcessor, facade: ITarget, **kwargs: Any) -> str:
-        self.debug(msg=Event.Transform.name, step=Event.Started.name)
+        self.debug(msg=Event.Transform, step=Event.Started)
         uid = processor.blackboard.write(pipeline=self, processor=processor, facade=facade)
-        self.debug(msg=Event.Transform.name, step=Event.Completed.name, uid=uid)
+        self.debug(msg=Event.Transform, step=Event.Completed, uid=uid)
         return uid
 
 

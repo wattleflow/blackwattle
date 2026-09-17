@@ -45,7 +45,7 @@ from wattleflow.helpers.dtime import Now
 class CreateTextDocument(StrategyCreate):
     def execute(self, caller: IWattleflow, *args, **kwargs) -> Optional[ITarget]:
         try:
-            self.debug(msg=Event.Create.name, step=Event.Started.name, kwargs=kwargs)
+            self.debug(msg=Event.Create, step=Event.Started, kwargs=kwargs)
 
             assert isinstance(caller, IBlackboard), "Expected IBlackboard. Found %s" % type(caller)
 
@@ -70,8 +70,8 @@ class CreateTextDocument(StrategyCreate):
             document.update_content(str(content))
 
             self.debug(
-                msg=Event.Create.name,
-                step=Event.Completed.name,
+                msg=Event.Create,
+                step=Event.Completed,
                 document=document,
                 file_path=self.filename,
                 size=document.size,
@@ -79,18 +79,18 @@ class CreateTextDocument(StrategyCreate):
             return facade
         except AssertionError as e:
             error = f"Assertion: {str(e)}"
-            self.debug(msg=Event.Create.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Create, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
         except Exception as e:
             error = f"{self.name} caught exception: {str(e)}"
-            self.debug(msg=Event.Create.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Create, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
 
 
 class WriteTextDocument(StrategyWrite):
     def execute(self, caller: IWattleflow, facade: ITarget, *args, **kwargs) -> bool:
         try:
-            self.debug(msg=Event.Write.name, step=Event.Started.name, kwargs=kwargs)
+            self.debug(msg=Event.Write, step=Event.Started, kwargs=kwargs)
             assert isinstance(caller, IRepository), "Expected IRepository. Found %s" % type(caller)
             assert isinstance(facade, ITarget), "Expected ITarget. Found %s" % type(facade)
 
@@ -106,13 +106,14 @@ class WriteTextDocument(StrategyWrite):
 
             if not document.size > 0:  # type: ignore
                 self.warning(
-                    msg=Event.Write.name,
-                    step=Event.Check.name,
+                    msg=Event.Write,
+                    step=Event.Check,
                     reason="Text content is feeling a bit empty today!",
                     document=document,
                     filepath=filepath,
                     size=document.size,
                 )
+                self.debug(msg=Event.Write, step=Event.Completed, written=False)
                 return False
             document.update_metadata("stored_by", caller.name)
             document.update_metadata("stored_at", document.utc_time_stamp())
@@ -126,8 +127,8 @@ class WriteTextDocument(StrategyWrite):
             document.update_metadata("storage_filename", output)
 
             self.debug(
-                msg=Event.Write.name,
-                step=Event.Completed.name,
+                msg=Event.Write,
+                step=Event.Completed,
                 size=document.size,
                 document=document,
                 output=output,
@@ -135,11 +136,11 @@ class WriteTextDocument(StrategyWrite):
             return True
         except AssertionError as e:
             error = f"Assertion: {str(e)}"
-            self.debug(msg=Event.Write.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Write, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
         except Exception as e:
             error = f"{self.name} caught exception: {str(e)}"
-            self.debug(msg=Event.Write.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Write, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
 
 
@@ -159,13 +160,13 @@ class WriteTextContent(StrategyWrite):
                 str(e),
                 __file__,
             )
-            self.debug(msg=Event.Write.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Write, step=Event.Failed, error=error)
             raise StrategyException(caller=self, error=error, exc=e) from e
 
     def execute(self, caller: IWattleflow, facade: ITarget, **kwargs: Any) -> bool:
         self.debug(
-            msg=Event.Write.name,
-            step=Event.Started.name,
+            msg=Event.Write,
+            step=Event.Started,
             caller=caller,
             facade=facade,
             kwargs=kwargs,
@@ -187,8 +188,8 @@ class WriteTextContent(StrategyWrite):
                 # record has to NAME the file: a pass over 242 PDFs produced 17
                 # of these, and an identifier alone cannot say which 17.
                 self.warning(
-                    msg=Event.Write.name,
-                    step=Event.Check.name,
+                    msg=Event.Write,
+                    step=Event.Check,
                     reason="no content to write",
                     filename=str(document.filename),
                     document=facade.identifier,
@@ -199,6 +200,7 @@ class WriteTextContent(StrategyWrite):
                 document.update_metadata("write_skipped_by", self.name)
                 document.update_metadata("write_skipped_at", Now.utc())
                 document.update_metadata("write_skipped_reason", "no content")
+                self.debug(msg=Event.Write, step=Event.Completed, written=False)
                 return False
 
             filename = self._stem_for(caller, document)
@@ -212,7 +214,7 @@ class WriteTextContent(StrategyWrite):
             document.update_metadata("storage_filename", output)
         except AssertionError as e:
             error = f"Assertion: {str(e)}"
-            self.debug(msg=Event.Write.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Write, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
         except Exception as e:
             error = "%s.execute: caught exception at %s at %s" % (
@@ -220,7 +222,7 @@ class WriteTextContent(StrategyWrite):
                 str(e),
                 __file__,
             )
-            self.debug(msg=Event.Write.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Write, step=Event.Failed, error=error)
             raise StrategyException(
                 caller=self,
                 error=error,
@@ -228,8 +230,8 @@ class WriteTextContent(StrategyWrite):
             ) from e
 
         self.debug(
-            msg=Event.Write.name,
-            step=Event.Completed.name,
+            msg=Event.Write,
+            step=Event.Completed,
             document=document,
             output=str(output),
             size=len(content),

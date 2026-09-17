@@ -60,8 +60,8 @@ class AvroReadProcessor(GenericProcessor):
         super().__init__(**kwargs)
 
         self.debug(
-            msg=Event.Constructor.name,
-            step=Event.Started.name,
+            msg=Event.Constructor,
+            step=Event.Started,
             driver=repr(getattr(self, "driver", None)),
             pattern=getattr(self, "pattern", "*.avro"),
             recursive=getattr(self, "recursive", False),
@@ -99,23 +99,23 @@ class AvroReadProcessor(GenericProcessor):
         )
 
     def create_generator(self) -> Generator[ITarget, None, None]:
-        self.debug(msg=Event.Generate.name, step=Event.Started.name)
+        self.debug(msg=Event.Generate, step=Event.Started)
 
         try:
             driver = self._ensure_driver()
             exclude = getattr(self, "exclude", []) or []
             paths = list(self._iter_paths(driver))
 
-            self.debug(msg=Event.Generate.name, files=len(paths))
+            self.debug(msg=Event.Generate, files=len(paths))
 
             for filename in paths:
                 uri = str(filename.absolute())
-                self.debug(msg=Event.Generate.name, scope="item", uri=uri)
+                self.debug(msg=Event.Generate, scope="item", uri=uri)
                 try:
                     if filename.name in exclude:
                         self.warning(
-                            msg=Event.Generate.name,
-                            step=Event.Check.name,
+                            msg=Event.Generate,
+                            step=Event.Check,
                             reason="excluded file; skipped",
                             uri=uri,
                         )
@@ -126,7 +126,7 @@ class AvroReadProcessor(GenericProcessor):
                         records = list(records)
 
                     self.debug(
-                        msg=Event.Generate.name,
+                        msg=Event.Generate,
                         scope="item",
                         no=self.cycle + 1,
                         uri=uri,
@@ -144,8 +144,8 @@ class AvroReadProcessor(GenericProcessor):
                 except Exception as e:
                     error = f"Error: {str(e)} with {uri!r}"
                     self.exception(
-                        msg=Event.Generate.name,
-                        step=Event.Failed.name,
+                        msg=Event.Generate,
+                        step=Event.Failed,
                         error=error,
                         uri=str(uri),
                     )
@@ -153,8 +153,8 @@ class AvroReadProcessor(GenericProcessor):
         except Exception as e:
             error = f"Error: {str(e)}"
             self.debug(
-                msg=Event.Generate.name,
-                step=Event.Failed.name,
+                msg=Event.Generate,
+                step=Event.Failed,
                 error=error,
                 trace=format_exc(),
             )
@@ -165,8 +165,8 @@ class AvroReadProcessor(GenericProcessor):
             ) from e
 
         self.debug(
-            msg=Event.Generate.name,
-            step=Event.Completed.name,
+            msg=Event.Generate,
+            step=Event.Completed,
             count=self.cycle,
         )
 
@@ -191,24 +191,24 @@ class AvroWriteProcessor(GenericProcessor):
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.debug(
-            msg=Event.Constructor.name,
-            step=Event.Started.name,
+            msg=Event.Constructor,
+            step=Event.Started,
             batches=len(getattr(self, "batches", []) or []),
         )
 
     def create_generator(self) -> Generator[ITarget, None, None]:
-        self.debug(msg=Event.Generate.name, step=Event.Started.name)
+        self.debug(msg=Event.Generate, step=Event.Started)
 
         try:
             batches: List[dict] = getattr(self, "batches", None) or []
             Attribute.mandatory(self, "batches", list, batches=batches)
 
-            self.debug(msg=Event.Generate.name, batches=len(batches))
+            self.debug(msg=Event.Generate, batches=len(batches))
 
             for batch in batches:
                 filename: str = batch.get("filename", "")
                 uri = str(Path(filename).with_suffix(".avro")) if filename else ""
-                self.debug(msg=Event.Generate.name, scope="item", uri=uri)
+                self.debug(msg=Event.Generate, scope="item", uri=uri)
                 try:
                     schema: AvroSchema = batch.get("schema", {})
                     records: AvroRecord = batch.get("records", [])
@@ -219,15 +219,15 @@ class AvroWriteProcessor(GenericProcessor):
                         or not isinstance(records, list)
                     ):
                         self.warning(
-                            msg=Event.Generate.name,
-                            step=Event.Check.name,
+                            msg=Event.Generate,
+                            step=Event.Check,
                             reason="invalid Avro batch (missing filename/schema/records); skipped",
                             filename=filename,
                         )
                         continue
 
                     self.debug(
-                        msg=Event.Generate.name,
+                        msg=Event.Generate,
                         scope="item",
                         no=self.cycle + 1,
                         uri=uri,
@@ -247,8 +247,8 @@ class AvroWriteProcessor(GenericProcessor):
                 except Exception as e:
                     error = f"Error: {str(e)} with {uri!r}"
                     self.exception(
-                        msg=Event.Generate.name,
-                        step=Event.Failed.name,
+                        msg=Event.Generate,
+                        step=Event.Failed,
                         error=error,
                         uri=str(uri),
                     )
@@ -256,8 +256,8 @@ class AvroWriteProcessor(GenericProcessor):
         except Exception as e:
             error = f"Error: {str(e)}"
             self.debug(
-                msg=Event.Generate.name,
-                step=Event.Failed.name,
+                msg=Event.Generate,
+                step=Event.Failed,
                 error=error,
                 trace=format_exc(),
             )
@@ -268,8 +268,8 @@ class AvroWriteProcessor(GenericProcessor):
             ) from e
 
         self.debug(
-            msg=Event.Generate.name,
-            step=Event.Completed.name,
+            msg=Event.Generate,
+            step=Event.Completed,
             count=self.cycle,
         )
 

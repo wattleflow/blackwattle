@@ -55,8 +55,8 @@ class _BaseFormatter(GenericFormatter):
         discarded = WordConverter.unknown(converter_kwargs)
         if discarded:
             self.warning(
-                msg=Event.Render.name,
-                step=Event.Check.name,
+                msg=Event.Render,
+                step=Event.Check,
                 reason="converter keys are not Word converter settings and were discarded",
                 discarded=discarded,
             )

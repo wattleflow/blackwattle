@@ -54,7 +54,7 @@ class BundleBlackboard(GenericBlackboard[Documents]):
         self._by_identifier: Dict[str, str] = {}
         self._bundle: Dict[str, List[str]] = {}
         self._aliases: Dict[str, str] = {}
-        self.debug(msg=Event.Constructor.name, step=Event.Completed.name)
+        self.debug(msg=Event.Constructor, step=Event.Completed)
 
     @staticmethod
     def _digest_of(document: Any) -> str:
@@ -102,8 +102,8 @@ class BundleBlackboard(GenericBlackboard[Documents]):
 
     def __broadcast__(self, facade: ITarget, **kwargs) -> None:
         self.debug(
-            msg=Event.Emit.name,
-            step=Event.Started.name,
+            msg=Event.Emit,
+            step=Event.Started,
             facade=facade,
             state=self._fsm.state.name,
             kwargs=kwargs,
@@ -114,13 +114,13 @@ class BundleBlackboard(GenericBlackboard[Documents]):
         except Exception as e:
             if self._fsm.can(BlackboardAction.FAIL):
                 self._fsm.apply(BlackboardAction.FAIL)
-            self.debug(msg=Event.Emit.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Emit, step=Event.Failed, error=str(e))
             raise
 
         if self._fsm.can(BlackboardAction.FLUSH):
             self._fsm.apply(BlackboardAction.FLUSH)
 
-        self.debug(msg=Event.Emit.name, step=Event.Completed.name, broadcasted=True)
+        self.debug(msg=Event.Emit, step=Event.Completed, broadcasted=True)
 
     def __repr__(self) -> str:
         state = self._fsm.state.name or "UNKNOWN"
@@ -147,11 +147,11 @@ class BundleBlackboard(GenericBlackboard[Documents]):
     # region Public
 
     def clean(self):
-        self.debug(msg=Event.Clean.name, step=Event.Started.name, state=self._fsm.state.name)
+        self.debug(msg=Event.Clean, step=Event.Started, state=self._fsm.state.name)
         try:
             if self._canvas and self._fsm.can(BlackboardAction.FLUSH):
                 self.warning(
-                    msg=Event.Clean.name,
+                    msg=Event.Clean,
                     reason="canvas has unflushed facades at lifecycle end",
                     cause="defer_flush=%s" % self.defer_flush,
                     count=len(self._canvas),
@@ -167,59 +167,59 @@ class BundleBlackboard(GenericBlackboard[Documents]):
             if self._fsm.can(BlackboardAction.CLEAN):
                 self._fsm.apply(BlackboardAction.CLEAN)
         except Exception as e:
-            self.debug(msg=Event.Clean.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Clean, step=Event.Failed, error=str(e))
             if self._fsm.can(BlackboardAction.FAIL):
                 self._fsm.apply(BlackboardAction.FAIL)
             raise
 
         self.debug(
-            msg=Event.Clean.name,
-            step=Event.Completed.name,
+            msg=Event.Clean,
+            step=Event.Completed,
             state=self._fsm.state.name,
             repositories=len(self._repositories),
         )
 
     def create(self, caller: IProcessor, **kwargs) -> Optional[ITarget]:
-        self.debug(msg=Event.Create.name, step=Event.Started.name, caller=caller.name)
+        self.debug(msg=Event.Create, step=Event.Started, caller=caller.name)
         assert isinstance(caller, IProcessor), "Expected IProcessor. Found %s" % type(caller)
 
         if not self._strategy_create:
             self.warning(
-                msg=Event.Create.name,
+                msg=Event.Create,
                 error=f"{self.name}._strategy_create is missing!",
             )
             return None
 
-        self.debug(msg=Event.Create.name, step=Event.Completed.name)
+        self.debug(msg=Event.Create, step=Event.Completed)
         return self._strategy_create.create(
             caller=self, processor=caller, blackboard=self, **kwargs
         )
 
     def delete(self, identifier: str, **kwargs) -> None:
-        self.debug(msg=Event.Delete.name, step=Event.Started.name, id=identifier)
+        self.debug(msg=Event.Delete, step=Event.Started, id=identifier)
         key = self._resolve_key(identifier)
         if key is not None:
             del self._canvas[key]
             self._by_identifier = {i: d for i, d in self._by_identifier.items() if d != key}
             self._bundle.pop(key, None)
-            self.debug(msg=Event.Deleted.name, identifier=identifier)
+            self.debug(msg=Event.Deleted, identifier=identifier)
         else:
             self.warning(
-                msg=Event.Delete.name,
+                msg=Event.Delete,
                 reason="The blackboard neither confirms nor denies the existence!",
                 identifier=identifier,
             )
-        self.debug(msg=Event.Delete.name, step=Event.Completed.name, id=identifier)
+        self.debug(msg=Event.Delete, step=Event.Completed, id=identifier)
 
     def flush(self, caller: IWattleflow, **kwargs) -> None:
         # The flush is the blackboard's unit of work — one record per cycle, never per document (NFRQ-OBS-03).
         pending = self.count
         (self.info if pending else self.debug)(
-            msg=Event.Flush.name,
-            step=Event.Started.name,
+            msg=Event.Flush,
+            step=Event.Started,
             documents=pending,
         )
-        self.debug(msg=Event.Flush.name, step=Event.Started.name, caller=caller, kwargs=kwargs)
+        self.debug(msg=Event.Flush, step=Event.Started, caller=caller, kwargs=kwargs)
 
         assert isinstance(caller, (IProcessor, IBlackboard)), (
             "Expected IProcessor or IBlackboard. Found %s" % type(caller)
@@ -237,28 +237,28 @@ class BundleBlackboard(GenericBlackboard[Documents]):
         if self._fsm.can(BlackboardAction.FLUSH):
             self._fsm.apply(BlackboardAction.FLUSH)
 
-        self.debug(msg=Event.Flush.name, step=Event.Completed.name)
+        self.debug(msg=Event.Flush, step=Event.Completed)
 
     def read(self, identifier: str, **kwargs) -> ITarget:
-        self.debug(msg=Event.Read.name, step=Event.Started.name, identifier=identifier)
+        self.debug(msg=Event.Read, step=Event.Started, identifier=identifier)
         key = self._resolve_key(identifier)
         if key is None:
             raise BlackboardException(self, f"Document {identifier} not found!")
         facade: ITarget = self._canvas[key]
         if self._fsm.can(BlackboardAction.READ):
             self._fsm.apply(BlackboardAction.READ)
-        self.debug(msg=Event.Read.name, step=Event.Completed.name, identifier=identifier)
+        self.debug(msg=Event.Read, step=Event.Completed, identifier=identifier)
         return facade
 
     def register(self, repository: IRepository) -> None:
-        self.debug(msg=Event.Register.name, step=Event.Started.name)
+        self.debug(msg=Event.Register, step=Event.Started)
         assert isinstance(repository, IRepository), "Expected IRepository. Found %s" % type(
             repository
         )
 
         if repository in self._repositories:
             self.warning(
-                msg=Event.Register.name,
+                msg=Event.Register,
                 repository=repository,
                 error="Repository already registered!",
             )
@@ -267,10 +267,10 @@ class BundleBlackboard(GenericBlackboard[Documents]):
         self._repositories.append(repository)
         if self._fsm.can(BlackboardAction.REGISTER):
             self._fsm.apply(BlackboardAction.REGISTER)
-        self.debug(msg=Event.Register.name, step=Event.Completed.name, added=repository)
+        self.debug(msg=Event.Register, step=Event.Completed, added=repository)
 
     def write(self, pipeline: IPipeline, facade: ITarget, **kwargs) -> str:
-        self.debug(msg=Event.Write.name, step=Event.Started.name, facade=facade, kwargs=kwargs)
+        self.debug(msg=Event.Write, step=Event.Started, facade=facade, kwargs=kwargs)
 
         assert isinstance(pipeline, IPipeline), "Expected IPipeline. Found %s" % type(pipeline)
         assert isinstance(facade, ITarget), "Expected ITarget. Found %s" % type(facade)
@@ -297,7 +297,7 @@ class BundleBlackboard(GenericBlackboard[Documents]):
                 self._by_identifier[facade.identifier] = digest
                 self._register_bundle(document, digest)
                 self.debug(
-                    msg=Event.Write.name,
+                    msg=Event.Write,
                     action=Event.Stored.value,
                     deduplicated=True,
                     digest=digest,
@@ -309,20 +309,20 @@ class BundleBlackboard(GenericBlackboard[Documents]):
             self._by_identifier[facade.identifier] = digest
             self._register_bundle(document, digest)
             self.debug(
-                msg=Event.Write.name,
-                action=Event.Stored.name,
+                msg=Event.Write,
+                action=Event.Stored,
                 identifier=facade.identifier,
                 digest=digest,
             )
 
         if not self._repositories:
-            self.warning(msg=Event.Write.name, error="No repositories have been registered.")
+            self.warning(msg=Event.Write, error="No repositories have been registered.")
             return ""
 
         if not self.defer_flush:
             self.__broadcast__(facade=facade, **kwargs)
 
-        self.debug(msg=Event.Write.name, step=Event.Completed.name)
+        self.debug(msg=Event.Write, step=Event.Completed)
         return facade.identifier
 
     # endregion Public

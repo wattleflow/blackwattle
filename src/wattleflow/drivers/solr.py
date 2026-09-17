@@ -78,9 +78,9 @@ class DriverSolr(GenericDriver):
         return self.connection_manager.get_connection(self.connection_name)
 
     def load(self) -> None:
-        self.debug(msg=Event.Load.name, step=Event.Started.name)
+        self.debug(msg=Event.Load, step=Event.Started)
         if self._loaded:
-            self.warning(msg=Event.Load.name, step=Event.Check.name, error="Already loaded!")
+            self.warning(msg=Event.Load, step=Event.Check, error="Already loaded!")
 
         self.id_field = self.id_field or "id"
         self.commit = self.commit if self.commit is not None else True
@@ -100,8 +100,8 @@ class DriverSolr(GenericDriver):
         self._loaded = True
 
         self.debug(
-            msg=Event.Load.name,
-            step=Event.Completed.name,
+            msg=Event.Load,
+            step=Event.Completed,
             connection_name=conn_name,
             id_field=self.id_field,
             commit=self.commit,
@@ -110,7 +110,7 @@ class DriverSolr(GenericDriver):
         )
 
     def close(self) -> None:
-        self.debug(msg=Event.Close.name, step=Event.Started.name)
+        self.debug(msg=Event.Close, step=Event.Started)
 
     def metadata(self) -> DriverMetadata:
         return DriverMetadata(
@@ -141,8 +141,8 @@ class DriverSolr(GenericDriver):
 
         if self.log_queries:
             self.debug(
-                msg=Event.Read.name,
-                step=Event.Started.name,
+                msg=Event.Read,
+                step=Event.Started,
                 query=query[:120],
                 rows=rows,
             )
@@ -154,12 +154,12 @@ class DriverSolr(GenericDriver):
         except SolrConnectionError:
             raise
         except Exception as e:
-            self.debug(msg=Event.Read.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Read, step=Event.Failed, error=str(e))
             raise DriverSolrError(caller=self, error=f"read error: {e}") from e
 
         self.debug(
-            msg=Event.Read.name,
-            step=Event.Completed.name,
+            msg=Event.Read,
+            step=Event.Completed,
             query=query[:120],
             hits=len(docs),
         )
@@ -179,7 +179,7 @@ class DriverSolr(GenericDriver):
             )
         if not data:
             self.warning(
-                msg=Event.Write.name, step=Event.Check.name, reason="empty batch, nothing to index."
+                msg=Event.Write, step=Event.Check, reason="empty batch, nothing to index."
             )
             return uri
 
@@ -206,12 +206,12 @@ class DriverSolr(GenericDriver):
         except SolrConnectionError:
             raise
         except Exception as e:
-            self.debug(msg=Event.Write.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Write, step=Event.Failed, error=str(e))
             raise DriverSolrError(caller=self, error=f"write error: {e}") from e
 
         self.debug(
-            msg=Event.Write.name,
-            step=Event.Completed.name,
+            msg=Event.Write,
+            step=Event.Completed,
             uri=uri,
             indexed=len(data),
             commit=commit,
@@ -224,7 +224,7 @@ class DriverSolr(GenericDriver):
             with self._get_connection().connect() as client:
                 client.delete(q=query, commit=commit)
         except Exception as e:
-            self.debug(msg=Event.Delete.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Delete, step=Event.Failed, error=str(e))
             raise DriverSolrError(caller=self, error=f"delete error: {e}") from e
 
     def search(
@@ -252,7 +252,7 @@ class DriverSolr(GenericDriver):
                         if fnmatch.fnmatch(sval, pattern):
                             yield sval
         except Exception as e:
-            self.debug(msg=Event.Search.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Search, step=Event.Failed, error=str(e))
             raise DriverSolrError(caller=self, error=f"search error: {e}") from e
 
     # ---------------------------------------------------------------------- #

@@ -115,7 +115,7 @@ class DriverClaude(GenericDriver):
 
     # region lifecycle
     def load(self) -> None:
-        self.debug(msg=Event.Load.name, step=Event.Started.name)
+        self.debug(msg=Event.Load, step=Event.Started)
 
         try:
             from anthropic import Anthropic
@@ -141,7 +141,7 @@ class DriverClaude(GenericDriver):
         try:
             self._client = Anthropic(**options)
         except Exception as e:
-            self.debug(msg=Event.Load.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Load, step=Event.Failed, error=str(e))
             raise DriverClaudeException(
                 caller=self,
                 error=(
@@ -159,17 +159,17 @@ class DriverClaude(GenericDriver):
         }
 
         self.debug(
-            msg=Event.Load.name,
-            step=Event.Completed.name,
+            msg=Event.Load,
+            step=Event.Completed,
             prompts=list(self._prompt_index.keys()),
         )
 
     def close(self) -> None:
-        self.debug(msg=Event.Close.name, step=Event.Started.name)
+        self.debug(msg=Event.Close, step=Event.Started)
         if not self.can(DriverAction.UNLOAD):
             return
         self._client = None
-        self.debug(msg=Event.Close.name, step=Event.Completed.name)
+        self.debug(msg=Event.Close, step=Event.Completed)
 
     # endregion lifecycle
 
@@ -227,7 +227,7 @@ class DriverClaude(GenericDriver):
             )
         except Exception as e:
             self.debug(
-                msg=Event.Write.name, step=Event.Failed.name, error=str(e), prompt=prompt_name
+                msg=Event.Write, step=Event.Failed, error=str(e), prompt=prompt_name
             )
             raise DriverClaudeException(caller=self, error=str(e)) from e
 
@@ -253,16 +253,16 @@ class DriverClaude(GenericDriver):
 
         if stop_reason == "max_tokens":
             self.warning(
-                msg=Event.Write.name,
-                step=Event.Check.name,
+                msg=Event.Write,
+                step=Event.Check,
                 error="Response truncated: max_tokens reached.",
                 max_tokens=int(max_tokens),
                 chars=len(text),
             )
 
         self.debug(
-            msg=Event.Write.name,
-            step=Event.Completed.name,
+            msg=Event.Write,
+            step=Event.Completed,
             prompt=prompt_name,
             model=model,
             stop_reason=stop_reason,

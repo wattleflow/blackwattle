@@ -65,24 +65,24 @@ class KafkaWriteProcessor(GenericProcessor):
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.debug(
-            msg=Event.Constructor.name,
-            step=Event.Started.name,
+            msg=Event.Constructor,
+            step=Event.Started,
             driver=repr(getattr(self, "driver", None)),
             message_count=len(getattr(self, "messages", []) or []),
         )
 
     def create_generator(self) -> Generator[ITarget, None, None]:
-        self.debug(msg=Event.Generate.name, step=Event.Started.name)
+        self.debug(msg=Event.Generate, step=Event.Started)
 
         try:
             driver: DriverKafka = self.driver
             messages: List[Dict] = getattr(self, "messages", None) or []
 
-            self.debug(msg=Event.Generate.name, messages=len(messages))
+            self.debug(msg=Event.Generate, messages=len(messages))
 
             for msg in messages:
                 topic: str = msg.get("topic", "")
-                self.debug(msg=Event.Generate.name, scope="item", topic=topic)
+                self.debug(msg=Event.Generate, scope="item", topic=topic)
                 try:
                     data = msg.get("data", b"")
                     key: Optional[str] = msg.get("key")
@@ -91,7 +91,7 @@ class KafkaWriteProcessor(GenericProcessor):
                     metadata = {"topic": topic, "result_uri": result_uri, "key": key}
 
                     self.debug(
-                        msg=Event.Generate.name,
+                        msg=Event.Generate,
                         scope="item",
                         no=self.cycle + 1,
                         topic=topic,
@@ -109,16 +109,16 @@ class KafkaWriteProcessor(GenericProcessor):
                 except Exception as e:
                     error = f"Error: {str(e)}"
                     self.exception(
-                        msg=Event.Generate.name,
-                        step=Event.Failed.name,
+                        msg=Event.Generate,
+                        step=Event.Failed,
                         error=error,
                     )
                     continue
         except Exception as e:
             error = f"Error: {str(e)}"
             self.debug(
-                msg=Event.Generate.name,
-                step=Event.Failed.name,
+                msg=Event.Generate,
+                step=Event.Failed,
                 error=error,
                 trace=format_exc(),
             )
@@ -129,8 +129,8 @@ class KafkaWriteProcessor(GenericProcessor):
             ) from e
 
         self.debug(
-            msg=Event.Generate.name,
-            step=Event.Completed.name,
+            msg=Event.Generate,
+            step=Event.Completed,
             count=self.cycle,
         )
 
@@ -161,15 +161,15 @@ class KafkaReadProcessor(GenericProcessor):
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.debug(
-            msg=Event.Constructor.name,
-            step=Event.Started.name,
+            msg=Event.Constructor,
+            step=Event.Started,
             driver=repr(getattr(self, "driver", None)),
             topic_filter=getattr(self, "topic_filter", "") or "(all)",
             max_messages=getattr(self, "max_messages", 0),
         )
 
     def create_generator(self) -> Generator[ITarget, None, None]:
-        self.debug(msg=Event.Generate.name, step=Event.Started.name)
+        self.debug(msg=Event.Generate, step=Event.Started)
 
         try:
             driver: DriverKafka = self.driver
@@ -178,12 +178,12 @@ class KafkaReadProcessor(GenericProcessor):
 
             messages = driver.read(uri=topic_filter)
 
-            self.debug(msg=Event.Generate.name, topic_filter=topic_filter or "(all)")
+            self.debug(msg=Event.Generate, topic_filter=topic_filter or "(all)")
 
             count = 0
             for msg in messages:
                 topic: str = msg.get("topic", "")
-                self.debug(msg=Event.Generate.name, scope="item", topic=topic)
+                self.debug(msg=Event.Generate, scope="item", topic=topic)
                 try:
                     msg_id: str = f"{msg['topic']}-{msg['partition']}-{msg['offset']}"
                     uri: str = f"kafka://{msg['topic']}/{msg['partition']}/{msg['offset']}"
@@ -191,7 +191,7 @@ class KafkaReadProcessor(GenericProcessor):
                     content = raw_content if isinstance(raw_content, list) else [raw_content]
 
                     self.debug(
-                        msg=Event.Generate.name,
+                        msg=Event.Generate,
                         scope="item",
                         no=self.cycle + 1,
                         uri=uri,
@@ -214,16 +214,16 @@ class KafkaReadProcessor(GenericProcessor):
                 except Exception as e:
                     error = f"Error: {str(e)}"
                     self.exception(
-                        msg=Event.Generate.name,
-                        step=Event.Failed.name,
+                        msg=Event.Generate,
+                        step=Event.Failed,
                         error=error,
                     )
                     continue
         except Exception as e:
             error = f"Error: {str(e)}"
             self.debug(
-                msg=Event.Generate.name,
-                step=Event.Failed.name,
+                msg=Event.Generate,
+                step=Event.Failed,
                 error=error,
                 trace=format_exc(),
             )
@@ -234,8 +234,8 @@ class KafkaReadProcessor(GenericProcessor):
             ) from e
 
         self.debug(
-            msg=Event.Generate.name,
-            step=Event.Completed.name,
+            msg=Event.Generate,
+            step=Event.Completed,
             count=self.cycle,
         )
 

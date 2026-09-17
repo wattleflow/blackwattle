@@ -200,7 +200,7 @@ class ProxyConnection(GenericConnection):
 
             _parsed = urlparse(str(uri))
             _safe_uri = _parsed._replace(query="", fragment="").geturl()
-            self.debug(msg=Event.Downloading.name, step=Event.Started.name, uri=_safe_uri)
+            self.debug(msg=Event.Downloading, step=Event.Started, uri=_safe_uri)
 
             response = session.request(method.upper(), str(uri), **request_kwargs)
             response.raise_for_status()
@@ -213,14 +213,14 @@ class ProxyConnection(GenericConnection):
                 if received > cap:
                     response.close()
                     reason = f"Download exceeds {cap} bytes limit: {_safe_uri}"
-                    self.error(msg=Event.Read.name, uri=_safe_uri, reason=reason)
+                    self.error(msg=Event.Read, uri=_safe_uri, reason=reason)
                     raise ValueError(reason)
                 chunks.append(chunk)
 
             response._content = b"".join(chunks)
             self.debug(
-                msg=Event.Downloading.name,
-                step=Event.Completed.name,
+                msg=Event.Downloading,
+                step=Event.Completed,
                 uri=_safe_uri,
                 size=received,
             )
@@ -242,7 +242,7 @@ class ProxyConnection(GenericConnection):
         self._connection = session
 
         self.debug(
-            msg=Event.Create.name,
+            msg=Event.Create,
             connection_name=self._connection_name,
             proxied=bool(kw.get("proxy_url") or kw.get("proxy_http") or kw.get("proxy_https")),
             verify=session.verify,
@@ -262,7 +262,7 @@ class ProxyConnection(GenericConnection):
     # region Context manager
     @contextmanager
     def connect(self) -> Generator[requests.Session, None, None]:
-        self.debug(msg=Event.Connecting.name, connection=self._connection_name)
+        self.debug(msg=Event.Connecting, connection=self._connection_name)
 
         if not self._connection:
             raise ProxyConnectionError(
@@ -275,10 +275,10 @@ class ProxyConnection(GenericConnection):
             self._fsm.apply(ConnectionAction.CONNECT_OK)
         except Exception as e:
             self._fsm.apply(ConnectionAction.CONNECT_FAIL)
-            self.debug(msg=Event.Connecting.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Connecting, step=Event.Failed, error=str(e))
             raise ProxyConnectionError(caller=self, error=str(e)) from e
 
-        self.debug(msg=Event.Connected.name, connection=self._connection_name)
+        self.debug(msg=Event.Connected, connection=self._connection_name)
 
         try:
             yield self._connection
@@ -286,24 +286,24 @@ class ProxyConnection(GenericConnection):
             raise
         except Exception as e:
             self.notify(self, error=str(e), connection_name=self.connection_name)
-            self.debug(msg=Event.Connecting.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Connecting, step=Event.Failed, error=str(e))
             raise ProxyConnectionError(caller=self, error=f"Session error: {e}") from e
         finally:
             self._fsm.apply(ConnectionAction.DISCONNECT)
-            self.debug(msg=Event.Disconnecting.name, connection=self._connection_name)
+            self.debug(msg=Event.Disconnecting, connection=self._connection_name)
 
     def disconnect(self) -> None:
-        self.debug(msg=Event.Disconnecting.name, connection=self._connection_name)
+        self.debug(msg=Event.Disconnecting, connection=self._connection_name)
         try:
             if self._connection:
                 try:
                     self._connection.close()
                 except Exception as e:
-                    self.warning(msg=Event.Disconnect.name, error=str(e))
+                    self.warning(msg=Event.Disconnect, error=str(e))
                 finally:
                     self._connection = None  # type: ignore
         finally:
-            self.debug(msg=Event.Disconnected.name, connection=self._connection_name)
+            self.debug(msg=Event.Disconnected, connection=self._connection_name)
 
     # endregion Context manager
 
@@ -329,10 +329,10 @@ class ProxyConnection(GenericConnection):
                     from requests_ntlm import HttpNtlmAuth  # noqa: PLC0415
 
                     session.auth = HttpNtlmAuth(username, password)
-                    self.debug(msg=Event.Authentication.name, scope="proxy", scheme="ntlm")
+                    self.debug(msg=Event.Authentication, scope="proxy", scheme="ntlm")
                 except ImportError:
                     self.warning(
-                        msg=Event.Authentication.name,
+                        msg=Event.Authentication,
                         scope="proxy",
                         error="requests-ntlm is not installed — falling back to "
                         "basic credential embedding for NTLM proxy.",
@@ -352,10 +352,10 @@ class ProxyConnection(GenericConnection):
                     from requests_kerberos import HTTPKerberosAuth, OPTIONAL  # noqa: PLC0415
 
                     session.auth = HTTPKerberosAuth(mutual_authentication=OPTIONAL)
-                    self.debug(msg=Event.Authentication.name, scope="proxy", scheme="kerberos")
+                    self.debug(msg=Event.Authentication, scope="proxy", scheme="kerberos")
                 except ImportError:
                     self.warning(
-                        msg=Event.Authentication.name,
+                        msg=Event.Authentication,
                         scope="proxy",
                         error="requests-kerberos is not installed — "
                         "Kerberos proxy auth unavailable.",
@@ -379,7 +379,7 @@ class ProxyConnection(GenericConnection):
 
         session.proxies.update(proxies)
         self.debug(
-            msg=Event.Configure.name,
+            msg=Event.Configure,
             component="proxy",
             schemes=list(proxies.keys()),
             no_proxy=bool(no_proxy),
@@ -409,11 +409,11 @@ class ProxyConnection(GenericConnection):
 
         if ca_bundle:
             session.verify = ca_bundle
-            self.debug(msg=Event.Configure.name, component="ssl", ca_bundle=ca_bundle)
+            self.debug(msg=Event.Configure, component="ssl", ca_bundle=ca_bundle)
         elif not verify_ssl:
             session.verify = False
             self.warning(
-                msg=Event.Configure.name,
+                msg=Event.Configure,
                 component="ssl",
                 connection_name=self._connection_name,
                 reason="SSL certificate verification is disabled (verify_ssl=False). "
@@ -425,7 +425,7 @@ class ProxyConnection(GenericConnection):
         if client_cert:
             session.cert = (client_cert, client_key) if client_key else client_cert
             self.debug(
-                msg=Event.Configure.name,
+                msg=Event.Configure,
                 component="ssl",
                 mutual_tls=True,
                 has_separate_key=bool(client_key),
@@ -441,11 +441,11 @@ class ProxyConnection(GenericConnection):
                 from requests_ntlm import HttpNtlmAuth  # noqa: PLC0415
 
                 session.auth = HttpNtlmAuth(*ntlm_auth)
-                self.debug(msg=Event.Authentication.name, scheme="ntlm")
+                self.debug(msg=Event.Authentication, scheme="ntlm")
                 return
             except ImportError:
                 self.warning(
-                    msg=Event.Authentication.name,
+                    msg=Event.Authentication,
                     error="requests-ntlm is not installed — NTLM endpoint auth unavailable.",
                 )
 
@@ -454,18 +454,18 @@ class ProxyConnection(GenericConnection):
                 from requests_kerberos import HTTPKerberosAuth, OPTIONAL  # noqa: PLC0415
 
                 session.auth = HTTPKerberosAuth(mutual_authentication=OPTIONAL)
-                self.debug(msg=Event.Authentication.name, scheme="kerberos")
+                self.debug(msg=Event.Authentication, scheme="kerberos")
                 return
             except ImportError:
                 self.warning(
-                    msg=Event.Authentication.name,
+                    msg=Event.Authentication,
                     error="requests-kerberos is not installed — "
                     "Kerberos endpoint auth unavailable.",
                 )
 
         if basic_auth:
             session.auth = tuple(basic_auth)
-            self.debug(msg=Event.Authentication.name, scheme="basic")
+            self.debug(msg=Event.Authentication, scheme="basic")
 
     def _configure_headers(self, session: requests.Session, kw: dict) -> None:
         merged: dict = {}
@@ -498,7 +498,7 @@ class ProxyConnection(GenericConnection):
 
             if resp.status_code == 407:
                 self.warning(
-                    msg=Event.Probe.name,
+                    msg=Event.Probe,
                     connection_name=self._connection_name,
                     error="Connectivity probe returned 407 Proxy Authentication Required. "
                     "Provide proxy_username and proxy_password to authenticate "
@@ -507,7 +507,7 @@ class ProxyConnection(GenericConnection):
                 return
 
             self.debug(
-                msg=Event.Probe.name,
+                msg=Event.Probe,
                 connection_name=self._connection_name,
                 url=url,
                 status=resp.status_code,
@@ -515,7 +515,7 @@ class ProxyConnection(GenericConnection):
 
         except requests.exceptions.ProxyError as e:
             self.warning(
-                msg=Event.Probe.name,
+                msg=Event.Probe,
                 connection_name=self._connection_name,
                 error="Connectivity probe failed: a proxy error was detected. "
                 "Set proxy_url (and proxy_username / proxy_password if authentication "
@@ -527,7 +527,7 @@ class ProxyConnection(GenericConnection):
             detail = str(e).lower()
             if any(k in detail for k in ("proxy", "407", "tunnel connection", "407 proxy")):
                 self.warning(
-                    msg=Event.Probe.name,
+                    msg=Event.Probe,
                     connection_name=self._connection_name,
                     error="Connectivity probe suggests a proxy is required but none is configured. "
                     "Set proxy_url (and proxy_username / proxy_password if credentials "
@@ -535,7 +535,7 @@ class ProxyConnection(GenericConnection):
                 )
             else:
                 self.debug(
-                    msg=Event.Probe.name,
+                    msg=Event.Probe,
                     connection_name=self._connection_name,
                     url=url,
                     note="Connectivity probe failed — network may be unavailable or restricted.",
@@ -544,7 +544,7 @@ class ProxyConnection(GenericConnection):
 
         except Exception as e:
             self.debug(
-                msg=Event.Probe.name,
+                msg=Event.Probe,
                 connection_name=self._connection_name,
                 url=url,
                 note=f"Connectivity probe failed: {type(e).__name__}",

@@ -125,8 +125,8 @@ class SolrConnection(GenericConnection):
 
     def create_connection(self) -> None:
         self.debug(
-            msg=Event.Create.name,
-            step=Event.Started.name,
+            msg=Event.Create,
+            step=Event.Started,
             name=self.connection_name,
             state=self.state.value,
         )
@@ -137,8 +137,8 @@ class SolrConnection(GenericConnection):
             ConnectionState.CONNECTING,
         ):
             self.debug(
-                msg=Event.Create.name,
-                step=Event.Check.name,
+                msg=Event.Create,
+                step=Event.Check,
                 reason="connection already created",
                 state=self.state.value,
             )
@@ -171,15 +171,15 @@ class SolrConnection(GenericConnection):
                 connection_name=self.connection_name,
                 state=self.state.value,
             )
-            self.debug(msg=Event.Create.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Create, step=Event.Failed, error=str(e))
             raise SolrConnectionError(
                 caller=self,
                 error=f"Solr client cannot be created: {e}",
             ) from e
 
         self.debug(
-            msg=Event.Create.name,
-            step=Event.Completed.name,
+            msg=Event.Create,
+            step=Event.Completed,
             name=self.connection_name,
             state=self.state.value,
             endpoint=endpoint,
@@ -207,7 +207,7 @@ class SolrConnection(GenericConnection):
             self._fsm.apply(ConnectionAction.CONNECT_OK)
         except Exception as e:
             self._fsm.apply(ConnectionAction.CONNECT_FAIL)
-            self.debug(msg=Event.Connect.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Connect, step=Event.Failed, error=str(e))
             raise SolrConnectionError(caller=self, error=str(e)) from e
 
         try:
@@ -224,7 +224,7 @@ class SolrConnection(GenericConnection):
                 self._engine = None
         finally:
             self.debug(
-                msg=Event.Disconnected.name,
+                msg=Event.Disconnected,
                 connection_name=self.connection_name,
                 state=self.state.value,
             )
@@ -238,8 +238,8 @@ class SolrConnection(GenericConnection):
             return True
         except Exception as e:
             self.warning(
-                msg=Event.Probe.name,
-                step=Event.Failed.name,
+                msg=Event.Probe,
+                step=Event.Failed,
                 error=str(e),
                 connection_name=self.connection_name,
             )

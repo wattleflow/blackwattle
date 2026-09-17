@@ -70,7 +70,7 @@ class OSCALCatalogRegistry(Wattleflow):
         try:
             return self._controls[control_id]
         except KeyError as e:
-            self.debug(msg=Event.Get.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Get, step=Event.Failed, error=str(e))
             raise KeyError(f"Unknown OSCAL control: {control_id}") from e
 
     def iter_catalogs(self) -> Iterator[Catalog]:

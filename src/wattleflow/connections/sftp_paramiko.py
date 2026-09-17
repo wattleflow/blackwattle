@@ -98,7 +98,7 @@ class SFTPConnection(GenericConnection):
         self._ensure_created()
 
         self.debug(
-            msg=Event.Connecting.name,
+            msg=Event.Connecting,
             connection=self._connection_name,
             status=Event.Authenticating.value,
             state=self.state.value,
@@ -135,7 +135,7 @@ class SFTPConnection(GenericConnection):
             self._fsm.apply(ConnectionAction.CONNECT_OK)
 
             self.debug(
-                msg=Event.Connected.name,
+                msg=Event.Connected,
                 host=self.host,
                 port=self.port,
                 user=self.username,
@@ -160,7 +160,7 @@ class SFTPConnection(GenericConnection):
                     finally:
                         self._engine = None
                 self._fsm.apply(ConnectionAction.DISCONNECT)
-                self.debug(msg=Event.Disconnected.name, state=self.state.value)
+                self.debug(msg=Event.Disconnected, state=self.state.value)
 
         except AuthenticationException as e:
             self._fsm.apply(ConnectionAction.CONNECT_FAIL)
@@ -170,7 +170,7 @@ class SFTPConnection(GenericConnection):
                 connection_name=self.connection_name,
                 state=self.state.value,
             )
-            self.debug(msg=Event.Connecting.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Connecting, step=Event.Failed, error=str(e))
             raise SFTPConnectionError(caller=self, error=f"Authentication failed: {e}") from e
         except BadHostKeyException as e:
             self._fsm.apply(ConnectionAction.CONNECT_FAIL)
@@ -180,7 +180,7 @@ class SFTPConnection(GenericConnection):
                 connection_name=self.connection_name,
                 state=self.state.value,
             )
-            self.debug(msg=Event.Connecting.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Connecting, step=Event.Failed, error=str(e))
             raise SFTPConnectionError(caller=self, error=f"Bad host key: {e}") from e
         except SSHException as e:
             self._fsm.apply(ConnectionAction.CONNECT_FAIL)
@@ -190,7 +190,7 @@ class SFTPConnection(GenericConnection):
                 connection_name=self.connection_name,
                 state=self.state.value,
             )
-            self.debug(msg=Event.Connecting.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Connecting, step=Event.Failed, error=str(e))
             raise SFTPConnectionError(caller=self, error=f"SSH error: {e}") from e
         except Exception as e:
             if self._fsm.state is ConnectionState.CONNECTING:
@@ -201,11 +201,11 @@ class SFTPConnection(GenericConnection):
                 connection_name=self.connection_name,
                 state=self.state.value,
             )
-            self.debug(msg=Event.Connecting.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Connecting, step=Event.Failed, error=str(e))
             raise SFTPConnectionError(caller=self, error=f"Connection error: {e}") from e
 
     def disconnect(self) -> None:
-        self.debug(msg=Event.Disconnecting.name, state=self.state.value)
+        self.debug(msg=Event.Disconnecting, state=self.state.value)
 
         try:
             if getattr(self, "_connection", None):
@@ -224,7 +224,7 @@ class SFTPConnection(GenericConnection):
                 finally:
                     self._engine = None
         finally:
-            self.debug(msg=Event.Disconnected.name, state=self.state.value)
+            self.debug(msg=Event.Disconnected, state=self.state.value)
 
 
 # --------------------------------------------------------------------------- #

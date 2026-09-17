@@ -108,8 +108,8 @@ class PipelineMailExtractAttachment(GenericPipeline):
 
         if not attachments:
             self.debug(
-                msg=Event.Transform.name,
-                step=Event.Started.name,
+                msg=Event.Transform,
+                step=Event.Started,
                 reason="no attachments",
             )
             return
@@ -123,8 +123,8 @@ class PipelineMailExtractAttachment(GenericPipeline):
                 # each, or "3 of 5 exported" becomes unreadable (NFRQ-OBS-01).
                 skipped += 1
                 self.debug(
-                    msg=Event.Transform.name,
-                    step=Event.Check.name,
+                    msg=Event.Transform,
+                    step=Event.Check,
                     reason=reason,
                     attachment=str(att.get("name") or ""),
                     content_type=AttachmentPolicy.content_type(att),
@@ -136,8 +136,8 @@ class PipelineMailExtractAttachment(GenericPipeline):
             emitted += 1
 
         self.debug(
-            msg=Event.Transform.name,
-            step=Event.Completed.name,
+            msg=Event.Transform,
+            step=Event.Completed,
             parent_digest=parent_digest,
             attachments=len(attachments),
             children=emitted,

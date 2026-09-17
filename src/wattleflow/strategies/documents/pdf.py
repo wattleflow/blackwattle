@@ -188,7 +188,7 @@ class CreatePdfDocument(StrategyCreate):
 
     def execute(self, caller: IWattleflow, **kwargs) -> Optional[ITarget]:
         try:
-            self.debug(msg=Event.Create.name, step=Event.Started.name, kwargs=kwargs)
+            self.debug(msg=Event.Create, step=Event.Started, kwargs=kwargs)
             assert isinstance(caller, IBlackboard), "Expected IBlackboard. Found %s" % (
                 type(caller).__name__
             )
@@ -225,26 +225,26 @@ class CreatePdfDocument(StrategyCreate):
 
             if document.size <= 0:
                 self.warning(
-                    msg=Event.Create.name,
-                    step=Event.Check.name,
+                    msg=Event.Create,
+                    step=Event.Check,
                     reason="PDF source is empty or unreadable.",
                     document=document,
                 )
 
             self.debug(
-                msg=Event.Create.name,
-                step=Event.Completed.name,
+                msg=Event.Create,
+                step=Event.Completed,
                 document=document.identifier,
                 size=document.size,
             )
             return DocumentFacade(document)
         except AssertionError as e:
             error = f"Assertion: {str(e)}"
-            self.debug(msg=Event.Create.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Create, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
         except Exception as e:
             error = f"{self.name} caught exception: {str(e)}"
-            self.debug(msg=Event.Create.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Create, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
 
 
@@ -273,7 +273,7 @@ class WritePdfArchive(BaseWriteStrategy):
         return None
 
     def execute(self, caller: IWattleflow, facade: ITarget, **kwargs: Any) -> bool:
-        self.debug(msg=Event.Write.name, step=Event.Started.name, caller=caller)
+        self.debug(msg=Event.Write, step=Event.Started, caller=caller)
         try:
             Attribute.evaluate(caller=self, target=caller, expected_type=IRepository)
             Attribute.evaluate(caller=self, target=facade, expected_type=ITarget)
@@ -284,8 +284,8 @@ class WritePdfArchive(BaseWriteStrategy):
 
             if not FileType.accepts(source.suffix, FileType.PDF):
                 self.debug(
-                    msg=Event.Write.name,
-                    step=Event.Check.name,
+                    msg=Event.Write,
+                    step=Event.Check,
                     reason="non-pdf source, skipped",
                     filename=str(source),
                 )
@@ -293,8 +293,8 @@ class WritePdfArchive(BaseWriteStrategy):
 
             if not source.is_file():
                 self.warning(
-                    msg=Event.Write.name,
-                    step=Event.Check.name,
+                    msg=Event.Write,
+                    step=Event.Check,
                     reason="source missing",
                     filename=str(source),
                 )
@@ -322,8 +322,8 @@ class WritePdfArchive(BaseWriteStrategy):
             document.update_metadata("output", output)
 
             self.debug(
-                msg=Event.Write.name,
-                step=Event.Completed.name,
+                msg=Event.Write,
+                step=Event.Completed,
                 kind=self.CORRESPONDENCE if correspondence else "document",
                 source=str(source),
                 output=output,
@@ -331,11 +331,11 @@ class WritePdfArchive(BaseWriteStrategy):
             return True
         except AssertionError as e:
             error = f"Assertion: {str(e)}"
-            self.debug(msg=Event.Write.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Write, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
         except Exception as e:
             error = f"{self.name} caught exception: {str(e)}"
-            self.debug(msg=Event.Write.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Write, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
 
 
@@ -345,7 +345,7 @@ class WritePdfPerPageToFile(BaseWriteStrategy):
     each page are applied to the corresponding single-page output."""
 
     def execute(self, caller: IWattleflow, facade: ITarget, **kwargs: Any) -> bool:
-        self.debug(msg=Event.Write.name, step=Event.Started.name, caller=caller, facade=facade)
+        self.debug(msg=Event.Write, step=Event.Started, caller=caller, facade=facade)
         try:
             Attribute.evaluate(caller=self, target=caller, expected_type=IRepository)
             Attribute.evaluate(caller=self, target=facade, expected_type=ITarget)
@@ -356,16 +356,16 @@ class WritePdfPerPageToFile(BaseWriteStrategy):
 
             if not FileType.accepts(source_path.suffix, FileType.PDF):
                 self.debug(
-                    msg=Event.Write.name,
-                    step=Event.Check.name,
+                    msg=Event.Write,
+                    step=Event.Check,
                     reason="non-pdf source, skipped",
                 )
                 return False
 
             if not source_path.exists():
                 self.warning(
-                    msg=Event.Write.name,
-                    step=Event.Check.name,
+                    msg=Event.Write,
+                    step=Event.Check,
                     reason="source missing",
                     filename=str(source_path),
                 )
@@ -391,8 +391,8 @@ class WritePdfPerPageToFile(BaseWriteStrategy):
                 written_size = len(page_bytes) if page_bytes else 0
 
             self.debug(
-                msg=Event.Write.name,
-                step=Event.Completed.name,
+                msg=Event.Write,
+                step=Event.Completed,
                 source=str(source_path),
                 pages=written,
                 output=last_output,
@@ -401,11 +401,11 @@ class WritePdfPerPageToFile(BaseWriteStrategy):
             return written > 0
         except AssertionError as e:
             error = f"Assertion: {str(e)}"
-            self.debug(msg=Event.Write.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Write, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
         except Exception as e:
             error = f"{self.name} caught exception: {str(e)}"
-            self.debug(msg=Event.Write.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Write, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
 
 
@@ -413,9 +413,9 @@ class WritePdfRedactedToFile(BaseWriteStrategy):
     """Apply PDF redaction spans on the source and write a single redacted PDF."""
 
     def execute(self, caller: IWattleflow, facade: ITarget, **kwargs: Any) -> bool:
-        self.debug(msg=Event.Write.name, step=Event.Started.name, caller=caller, facade=facade)
+        self.debug(msg=Event.Write, step=Event.Started, caller=caller, facade=facade)
         try:
-            self.debug(msg=Event.Write.name, step=Event.Started.name, kwargs=kwargs)
+            self.debug(msg=Event.Write, step=Event.Started, kwargs=kwargs)
             assert isinstance(caller, IRepository), "Expected IRepository. Found %s" % type(caller)
             assert isinstance(facade, ITarget), "Expected ITarget. Found %s" % type(facade)
 
@@ -426,8 +426,8 @@ class WritePdfRedactedToFile(BaseWriteStrategy):
 
             if not spans:
                 self.warning(
-                    msg=Event.Write.name,
-                    step=Event.Check.name,
+                    msg=Event.Write,
+                    step=Event.Check,
                     reason="no redact_spans yet, skipped",
                 )
                 return False
@@ -452,8 +452,8 @@ class WritePdfRedactedToFile(BaseWriteStrategy):
             document.update_metadata("output", output)
 
             self.debug(
-                msg=Event.Write.name,
-                step=Event.Completed.name,
+                msg=Event.Write,
+                step=Event.Completed,
                 document=document,
                 output=output,
                 spans=spans,
@@ -463,11 +463,11 @@ class WritePdfRedactedToFile(BaseWriteStrategy):
             return True
         except AssertionError as e:
             error = f"Assertion: {str(e)}"
-            self.debug(msg=Event.Write.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Write, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
         except Exception as e:
             error = f"{self.name} caught exception: {str(e)}"
-            self.debug(msg=Event.Write.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Write, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
 
 

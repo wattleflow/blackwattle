@@ -120,9 +120,9 @@ class SDRReadProcessor(GenericProcessor):
             summary.partial = True
             summary.reason = reason
         if summary.partial:
-            self.warning(msg=Event.Finished.name, summary=summary.as_record())
+            self.warning(msg=Event.Finished, summary=summary.as_record())
         else:
-            self.info(msg=Event.Finished.name, summary=summary.as_record())
+            self.info(msg=Event.Finished, summary=summary.as_record())
 
     def create_generator(self) -> Generator[ITarget, None, None]:
         summary = self._summary = SDRPassSummary()
@@ -150,11 +150,11 @@ class SDRReadProcessor(GenericProcessor):
             if segment:
                 yield self._emit(segment)
         except GeneratorExit:
-            self.debug(msg=Event.Generate.name, step=Event.Failed.name, error="closed early")
+            self.debug(msg=Event.Generate, step=Event.Failed, error="closed early")
             self._close(blocks, started, reason="pass ended before its boundary")
             raise
         except Exception as e:
-            self.debug(msg=Event.Generate.name, step=Event.Failed.name, error=type(e).__name__)
+            self.debug(msg=Event.Generate, step=Event.Failed, error=type(e).__name__)
             self._close(blocks, started, reason=f"{type(e).__name__}: {e}")
             raise ProcessorException(
                 caller=self, error=f"capture failed: {type(e).__name__}: {e}"

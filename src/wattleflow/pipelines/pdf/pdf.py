@@ -170,8 +170,8 @@ class PipelinePDFExtractText(GenericPipeline):
         filename: str = document.filename
         if not filename:
             self.warning(
-                msg=Event.Transform.name,
-                step=Event.Check.name,
+                msg=Event.Transform,
+                step=Event.Check,
                 error="FileDocument has no filename!",
             )
             return
@@ -179,8 +179,8 @@ class PipelinePDFExtractText(GenericPipeline):
         path = Path(filename)
         if not path.exists():
             self.warning(
-                msg=Event.Transform.name,
-                step=Event.Check.name,
+                msg=Event.Transform,
+                step=Event.Check,
                 error="File does not exist",
                 filename=filename,
             )
@@ -193,8 +193,8 @@ class PipelinePDFExtractText(GenericPipeline):
         existing: Optional[str] = document.content or ""
         if existing.strip() and not self.overwrite:
             self.debug(
-                msg=Event.Transform.name,
-                step=Event.Check.name,
+                msg=Event.Transform,
+                step=Event.Check,
                 reason="document already carries content",
                 filename=filename,
                 chars=len(existing),
@@ -204,8 +204,8 @@ class PipelinePDFExtractText(GenericPipeline):
             return
 
         self.debug(
-            msg=Event.Transform.name,
-            step=Event.Started.name,
+            msg=Event.Transform,
+            step=Event.Started,
             backend=self.backend,
             filename=filename,
         )
@@ -215,7 +215,7 @@ class PipelinePDFExtractText(GenericPipeline):
         except PipelineException:
             raise
         except Exception as e:
-            self.debug(msg=Event.Transform.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Transform, step=Event.Failed, error=str(e))
             raise PipelineException(
                 caller=self,
                 error=f"Extraction failed for {filename}: {e}",
@@ -223,8 +223,8 @@ class PipelinePDFExtractText(GenericPipeline):
 
         if result.scanned and not result.text:
             self.warning(
-                msg=Event.Transform.name,
-                step=Event.Check.name,
+                msg=Event.Transform,
+                step=Event.Check,
                 reason="no text layer and nothing recovered",
                 filename=filename,
                 backend=result.backend,
@@ -244,8 +244,8 @@ class PipelinePDFExtractText(GenericPipeline):
         )
 
         self.debug(
-            msg=Event.Transform.name,
-            step=Event.Completed.name,
+            msg=Event.Transform,
+            step=Event.Completed,
             backend=result.backend,
             uid=uid,
             pages=result.pages,
@@ -307,8 +307,8 @@ class PipelinePDFRedact(GenericPipeline):
 
         if not FileType.accepts(suffix, FileType.PDF):
             self.warning(
-                msg=Event.Transform.name,
-                step=Event.Check.name,
+                msg=Event.Transform,
+                step=Event.Check,
                 reason="unsupported source suffix",
                 suffix=suffix,
             )
@@ -328,7 +328,7 @@ class PipelinePDFRedact(GenericPipeline):
 
         if not targets:
             self.warning(
-                msg=Event.Transform.name, step=Event.Check.name, reason="no PII targets collected"
+                msg=Event.Transform, step=Event.Check, reason="no PII targets collected"
             )
             return
 
@@ -336,7 +336,7 @@ class PipelinePDFRedact(GenericPipeline):
             spans = self.locate_spans(source_path, targets)
         except Exception as e:
             self.error(
-                msg=Event.Transform.name, step=Event.Failed.name, error=f"PDF search failed: {e}"
+                msg=Event.Transform, step=Event.Failed, error=f"PDF search failed: {e}"
             )
             return
 

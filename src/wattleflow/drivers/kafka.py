@@ -229,8 +229,8 @@ class DriverKafka(GenericDriver):
 
         self.ensure_live()
         self.debug(
-            msg=Event.Constructor.name,
-            step=Event.Started.name,
+            msg=Event.Constructor,
+            step=Event.Started,
             manager=self._manager,
             connection=self._connection_name,
             topics=self.topics,
@@ -239,8 +239,8 @@ class DriverKafka(GenericDriver):
 
     def load(self):
         self.debug(
-            msg=Event.Load.name,
-            step=Event.Started.name,
+            msg=Event.Load,
+            step=Event.Started,
             connection=self._connection_name,
             manager=self._manager,
             state=self.state.name,
@@ -259,7 +259,7 @@ class DriverKafka(GenericDriver):
             from kafka import KafkaConsumer, KafkaProducer
             from kafka.errors import NoBrokersAvailable, NodeNotReadyError
         except ImportError as e:
-            self.debug(msg=Event.Load.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Load, step=Event.Failed, error=str(e))
             raise ModuleNotFoundError(
                 f"Kafka library is required to run this code.[{str(e)}\n"
                 "Please install it with `pip install kafka-python`"
@@ -291,8 +291,8 @@ class DriverKafka(GenericDriver):
         except NoBrokersAvailable as e:
             error_msg = f"{str(e)}: no brokers available for connection '{self._connection_name}'!"
             self.debug(
-                msg=Event.Load.name,
-                step=Event.Failed.name,
+                msg=Event.Load,
+                step=Event.Failed,
                 error=error_msg,
                 connection=self._connection_name,
             )
@@ -300,20 +300,20 @@ class DriverKafka(GenericDriver):
         except NodeNotReadyError as e:
             error_msg = f"Node is not ready: {str(e)} - '{self._connection_name}'!"
             self.debug(
-                msg=Event.Load.name,
-                step=Event.Failed.name,
+                msg=Event.Load,
+                step=Event.Failed,
                 error=error_msg,
                 connection=self._connection_name,
             )
             raise KafkaConnectionError(self, error_msg) from e
         except Exception as e:
-            self.debug(msg=Event.Load.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Load, step=Event.Failed, error=str(e))
             raise DriverKafkaError(caller=self, error=str(e)) from e
 
-        self.debug(msg=Event.Load.name, step=Event.Completed.name)
+        self.debug(msg=Event.Load, step=Event.Completed)
 
     def close(self):
-        self.debug(msg=Event.Close.name, step=Event.Started.name)
+        self.debug(msg=Event.Close, step=Event.Started)
 
         if not self.can(DriverAction.UNLOAD):
             return
@@ -321,7 +321,7 @@ class DriverKafka(GenericDriver):
         try:
             from kafka import KafkaConsumer, KafkaProducer
         except ImportError as e:
-            self.debug(msg=Event.Close.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Close, step=Event.Failed, error=str(e))
             raise ModuleNotFoundError(
                 f"Kafka library is required to run this code.[{str(e)}\n"
                 "Please install it with `pip install kafka-python`"
@@ -335,7 +335,7 @@ class DriverKafka(GenericDriver):
             )
             if consumer:
                 self.debug(
-                    msg=Event.Close.name,
+                    msg=Event.Close,
                     conn=ConnectionType.Consumer.name,
                 )
 
@@ -344,7 +344,7 @@ class DriverKafka(GenericDriver):
             )
             if producer:
                 self.debug(
-                    msg=Event.Close.name,
+                    msg=Event.Close,
                     conn=ConnectionType.Producer.name,
                 )
                 producer.close(timeout=10)
@@ -352,27 +352,27 @@ class DriverKafka(GenericDriver):
             self._manager.unregister_connection(self._get_conn_name(ConnectionType.Consumer))
             self._manager.unregister_connection(self._get_conn_name(ConnectionType.Producer))
 
-            self.debug(msg=Event.Close.name, step=Event.Completed.name)
+            self.debug(msg=Event.Close, step=Event.Completed)
         except Exception as e:
             error = f"{str(e)}: caught while closing {self!r}!"
             self.error(
-                msg=Event.Close.name,
-                step=Event.Failed.name,
+                msg=Event.Close,
+                step=Event.Failed,
                 error=error,
                 connection=self._connection_name,
                 manager=self._manager,
             )
 
     def read(self, uri: str, **kwargs) -> list:
-        self.debug(msg=Event.Read.name, step=Event.Started.name, uri=uri, kwargs=kwargs)
+        self.debug(msg=Event.Read, step=Event.Started, uri=uri, kwargs=kwargs)
 
         poll_timeout_ms: int = kwargs.get("poll_timeout_ms", 5000)
         max_records: int = kwargs.get("max_records", 100)
         topic_filter: Optional[str] = uri or None
 
         self.debug(
-            msg=Event.Read.name,
-            step=Event.Started.name,
+            msg=Event.Read,
+            step=Event.Started,
             topic_filter=topic_filter or "(all)",
             poll_timeout_ms=poll_timeout_ms,
             max_records=max_records,
@@ -381,7 +381,7 @@ class DriverKafka(GenericDriver):
         try:
             from kafka import KafkaConsumer
         except ImportError as e:
-            self.debug(msg=Event.Read.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Read, step=Event.Failed, error=str(e))
             raise ModuleNotFoundError(
                 f"Kafka library is required to run this code.[{str(e)}\n"
                 "Please install it with `pip install kafka-python`"
@@ -396,7 +396,7 @@ class DriverKafka(GenericDriver):
                 error=f"read: unexpected connection type: {consumer.__class__.__name__!r}!",
             )
 
-        self.debug(msg=Event.Read.name, consumer=consumer_name)
+        self.debug(msg=Event.Read, consumer=consumer_name)
 
         messages = []
         try:
@@ -417,20 +417,20 @@ class DriverKafka(GenericDriver):
                     )
         except KafkaConnectionError as e:
             error = f"{self.name!r} connection error caught while handling read request: {str(e)}!"
-            self.debug(msg=Event.Read.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Read, step=Event.Failed, error=error)
             raise DriverKafkaError(caller=self, error=error) from e
         except Exception as e:
             error = (
                 f"{self.name!r} unexpected exception caught while handling read request: {str(e)}!"
             )
-            self.debug(msg=Event.Read.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Read, step=Event.Failed, error=error)
             raise DriverKafkaError(caller=self, error=error) from e
 
-        self.debug(msg=Event.Read.name, step=Event.Completed.name, count=len(messages))
+        self.debug(msg=Event.Read, step=Event.Completed, count=len(messages))
         return messages
 
     def write(self, uri: str, **kwargs) -> str:
-        self.debug(msg=Event.Write.name, step=Event.Started.name, uri=uri, kwargs=kwargs)
+        self.debug(msg=Event.Write, step=Event.Started, uri=uri, kwargs=kwargs)
 
         topic: str = kwargs.get("topic") or uri
         data = kwargs.get("data")
@@ -448,8 +448,8 @@ class DriverKafka(GenericDriver):
         value: bytes = data if isinstance(data, bytes) else str(data).encode("utf-8")
 
         self.debug(
-            msg=Event.Write.name,
-            step=Event.Started.name,
+            msg=Event.Write,
+            step=Event.Started,
             topic=topic,
             key=key,
             value_size=len(value),
@@ -458,7 +458,7 @@ class DriverKafka(GenericDriver):
         try:
             from kafka import KafkaProducer
         except ImportError as e:
-            self.debug(msg=Event.Write.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Write, step=Event.Failed, error=str(e))
             raise ModuleNotFoundError(
                 f"Kafka library is required to run this code.[{str(e)}\n"
                 "Please install it with `pip install kafka-python`"
@@ -473,7 +473,7 @@ class DriverKafka(GenericDriver):
                 error=f"write: unexpected connection type: {producer.__class__.__name__!r}!",
             )
 
-        self.debug(msg=Event.Write.name, producer=producer_name)
+        self.debug(msg=Event.Write, producer=producer_name)
 
         try:
             future = producer.send(topic, key=key, value=value)
@@ -481,20 +481,20 @@ class DriverKafka(GenericDriver):
             record = future.get(timeout=flush_timeout)
         except KafkaConnectionError as e:
             error = f"{self.name!r} connection error caught while handling write request: {str(e)}!"
-            self.debug(msg=Event.Write.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Write, step=Event.Failed, error=error)
             raise DriverKafkaError(caller=self, error=error) from e
         except Exception as e:
             error = (
                 f"{self.name!r} unexpected exception caught while handling write request: {str(e)}!"
             )
-            self.debug(msg=Event.Write.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Write, step=Event.Failed, error=error)
             raise DriverKafkaError(caller=self, error=error) from e
 
         result_uri = f"kafka://{topic}/{record.partition}/{record.offset}"
 
         self.debug(
-            msg=Event.Write.name,
-            step=Event.Completed.name,
+            msg=Event.Write,
+            step=Event.Completed,
             topic=topic,
             partition=record.partition,
             offset=record.offset,
@@ -518,7 +518,7 @@ class DriverKafka(GenericDriver):
 
     def update(self, event: Event, **kwargs) -> None:
         event_name = event.name if hasattr(event, "name") else str(event)
-        self.debug(msg=Event.Update.name, step=Event.Started.name, event=event_name)
+        self.debug(msg=Event.Update, step=Event.Started, event=event_name)
 
         connection_name = kwargs.get("connection_name", self._connection_name)
         state = kwargs.get("state", "")
@@ -526,7 +526,7 @@ class DriverKafka(GenericDriver):
 
         if error:
             self.error(
-                msg=Event.Update.name,
+                msg=Event.Update,
                 event=event_name,
                 connection_name=connection_name,
                 error=error,
@@ -534,21 +534,21 @@ class DriverKafka(GenericDriver):
             )
         elif event in (Event.Disconnected, Event.Disconnecting):
             self.warning(
-                msg=Event.Update.name,
-                step=Event.Check.name,
+                msg=Event.Update,
+                step=Event.Check,
                 event=event_name,
                 connection_name=connection_name,
                 state=state,
             )
         else:
             self.debug(
-                msg=Event.Update.name,
+                msg=Event.Update,
                 event=event_name,
                 connection_name=connection_name,
                 state=state,
             )
 
-        self.debug(msg=Event.Update.name, step=Event.Completed.name)
+        self.debug(msg=Event.Update, step=Event.Completed)
 
     def _get_conn_name(self, conn_type: ConnectionType) -> str:
         return f"{self.name}-{id(self)}-{conn_type.name}"

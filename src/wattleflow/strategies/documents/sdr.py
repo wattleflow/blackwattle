@@ -49,7 +49,7 @@ RESERVED_KWARGS = ("caller", "content", "metadata", "processor", "blackboard")
 class CreateSDRSampleDocument(StrategyCreate):
     def execute(self, caller: IWattleflow, **kwargs: Any) -> Optional[ITarget]:
         try:
-            self.debug(msg=Event.Create.name, step=Event.Started.name)
+            self.debug(msg=Event.Create, step=Event.Started)
             if not isinstance(caller, IBlackboard):
                 raise TypeError(f"Expected IBlackboard. Found {type(caller).__name__}")
 
@@ -80,15 +80,15 @@ class CreateSDRSampleDocument(StrategyCreate):
             if not document.size:
                 # An empty segment describes nothing; the pass says so once.
                 self.warning(
-                    msg=Event.Create.name,
-                    step=Event.Check.name,
+                    msg=Event.Create,
+                    step=Event.Check,
                     reason="no sample_count in the description",
                     document=document.identifier,
                 )
 
             self.debug(
-                msg=Event.Create.name,
-                step=Event.Completed.name,
+                msg=Event.Create,
+                step=Event.Completed,
                 document=document.identifier,
                 samples=document.size,
                 format=document.format,
@@ -96,7 +96,7 @@ class CreateSDRSampleDocument(StrategyCreate):
             return DocumentFacade(document)
         except (TypeError, ValueError) as e:
             error = f"{self.name} refused the segment: {e}"
-            self.debug(msg=Event.Create.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Create, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
 
 
@@ -127,7 +127,7 @@ class CreateSDRDataframeDocument(CreateSDRSampleDocument):
                 frame = self._frame(document.content, description)
             except (ImportError, KeyError, TypeError, ValueError) as e:
                 error = f"{self.name} cannot build the table: {e}"
-                self.debug(msg=Event.Create.name, step=Event.Failed.name, error=error)
+                self.debug(msg=Event.Create, step=Event.Failed, error=error)
                 raise StrategyException(self, error=error, exc=e) from e
 
         table = DataFrameDocument(content=frame, level=self._level, handler=self._handler)
@@ -137,8 +137,8 @@ class CreateSDRDataframeDocument(CreateSDRSampleDocument):
         table.update_metadata("created_by", self.name)
         table.update_metadata("source_format", "iq_table")
         self.debug(
-            msg=Event.Create.name,
-            step=Event.Completed.name,
+            msg=Event.Create,
+            step=Event.Completed,
             document=table.identifier,
             rows=len(frame),
         )

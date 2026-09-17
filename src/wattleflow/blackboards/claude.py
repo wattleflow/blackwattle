@@ -215,10 +215,10 @@ class ClaudeDocument(Document[str], ABC):
         self.update_metadata(key="ai_summary", value=summary)
 
     def clean(self) -> None:
-        self.debug(msg=Event.Clean.name, step=Event.Started.name)
+        self.debug(msg=Event.Clean, step=Event.Started)
         self._metadata.clear()
         self._content = None
-        self.debug(msg=Event.Clean.name, step=Event.Completed.name)
+        self.debug(msg=Event.Clean, step=Event.Completed)
 
     def __del__(self) -> None:
         try:
@@ -278,8 +278,8 @@ class ClaudeBlackboard(GenericBlackboard[ClaudeDocument]):
         self._defer_flush = bool(defer_flush)
 
         self.debug(
-            msg=Event.Constructor.name,
-            step=Event.Completed.name,
+            msg=Event.Constructor,
+            step=Event.Completed,
             preset=self._preset,
             canvas=self._canvas,
             repositories=self._repositories,
@@ -288,13 +288,13 @@ class ClaudeBlackboard(GenericBlackboard[ClaudeDocument]):
     # region Private
     def __del__(self):
         try:
-            self.debug(msg=Event.Delete.name, step=Event.Started.name)
+            self.debug(msg=Event.Delete, step=Event.Started)
             self.clean()
             # Release structural references kept across clean() calls.
             # Use None instead of del to keep slots intact for __getattr__.
             self._strategy_create = None
             self._preset = None
-            self.debug(msg=Event.Delete.name, step=Event.Completed.name)
+            self.debug(msg=Event.Delete, step=Event.Completed)
         except Exception:
             pass
 
@@ -309,8 +309,8 @@ class ClaudeBlackboard(GenericBlackboard[ClaudeDocument]):
         (IRepository, IDriver), pa upstream Pipeline ne smije curiti dalje.
         """
         self.debug(
-            msg=Event.Emit.name,
-            step=Event.Started.name,
+            msg=Event.Emit,
+            step=Event.Started,
             facade=facade,
             kwargs=kwargs,
         )
@@ -321,8 +321,8 @@ class ClaudeBlackboard(GenericBlackboard[ClaudeDocument]):
         self._flushed = True
 
         self.debug(
-            msg=Event.Emit.name,
-            step=Event.Completed.name,
+            msg=Event.Emit,
+            step=Event.Completed,
             broadcasted=True,
         )
 
@@ -354,14 +354,14 @@ class ClaudeBlackboard(GenericBlackboard[ClaudeDocument]):
     def cache_lookup(self, content: str) -> Optional[Dict[str, Any]]:
         facade = self._find_by_digest(content)
         if facade is None:
-            self.debug(msg=Event.Read.name, cache="miss")
+            self.debug(msg=Event.Read, cache="miss")
             return None
         document: ClaudeDocument = facade.request()
         if not document.summary:
-            self.debug(msg=Event.Read.name, cache="miss-no-summary")
+            self.debug(msg=Event.Read, cache="miss-no-summary")
             return None
         self.debug(
-            msg=Event.Read.name,
+            msg=Event.Read,
             cache="hit",
             identifier=facade.identifier,
         )
@@ -370,7 +370,7 @@ class ClaudeBlackboard(GenericBlackboard[ClaudeDocument]):
     def cache_store(self, content: str, payload: Dict[str, Any]) -> str:
         facade = self._find_by_digest(content)
         if facade is None:
-            self.debug(msg=Event.Write.name, cache="store-skip-not-on-canvas")
+            self.debug(msg=Event.Write, cache="store-skip-not-on-canvas")
             return ""
         document: ClaudeDocument = facade.request()
         document.set_summary(
@@ -378,7 +378,7 @@ class ClaudeBlackboard(GenericBlackboard[ClaudeDocument]):
             summary=str(payload.get("summary", "")),
         )
         self.debug(
-            msg=Event.Write.name,
+            msg=Event.Write,
             cache="store",
             identifier=facade.identifier,
         )
@@ -407,8 +407,8 @@ class ClaudeBlackboard(GenericBlackboard[ClaudeDocument]):
 
     def clean(self):
         self.debug(
-            msg=Event.Clean.name,
-            step=Event.Started.name,
+            msg=Event.Clean,
+            step=Event.Started,
             repositories=len(self._repositories),
             canvases=len(self._canvas),
         )
@@ -417,7 +417,7 @@ class ClaudeBlackboard(GenericBlackboard[ClaudeDocument]):
         # prije CLEAN-a. Log warning s razlogom.
         if self._canvas and not self._flushed:
             self.warning(
-                msg=Event.Clean.name,
+                msg=Event.Clean,
                 reason="canvas has unflushed facades at lifecycle end",
                 cause="defer_flush=%s" % self._defer_flush,
                 count=len(self._canvas),
@@ -426,23 +426,23 @@ class ClaudeBlackboard(GenericBlackboard[ClaudeDocument]):
                 for facade in list(self._canvas.values()):
                     self.__emit__(facade=facade)
             except Exception as e:
-                self.exception(msg=Event.Clean.name, error=str(e))
+                self.exception(msg=Event.Clean, error=str(e))
 
         self._canvas.clear()
         self._repositories.clear()
         self._flushed = False
 
         self.debug(
-            msg=Event.Clean.name,
-            step=Event.Completed.name,
+            msg=Event.Clean,
+            step=Event.Completed,
             repositories=len(self._repositories),
             canvases=len(self._canvas),
         )
 
     def create(self, caller: IProcessor, **kwargs) -> Optional[ITarget]:
         self.debug(
-            msg=Event.Create.name,
-            step=Event.Started.name,
+            msg=Event.Create,
+            step=Event.Started,
             caller=caller.name,
         )
 
@@ -450,14 +450,14 @@ class ClaudeBlackboard(GenericBlackboard[ClaudeDocument]):
 
         if not self._strategy_create:
             self.warning(
-                msg=Event.Create.name,
+                msg=Event.Create,
                 error=f"{self.name}._strategy_create is missing!",
             )
             return None
 
         self.debug(
-            msg=Event.Create.name,
-            step=Event.Completed.name,
+            msg=Event.Create,
+            step=Event.Completed,
         )
 
         # Blackboard proslijeđuje SEBE kao caller-a prema strategiji
@@ -468,8 +468,8 @@ class ClaudeBlackboard(GenericBlackboard[ClaudeDocument]):
 
     def delete(self, identifier: str, **kwargs) -> None:
         self.debug(
-            msg=Event.Delete.name,
-            step=Event.Started.name,
+            msg=Event.Delete,
+            step=Event.Started,
             id=identifier,
             kwargs=kwargs,
         )
@@ -477,18 +477,18 @@ class ClaudeBlackboard(GenericBlackboard[ClaudeDocument]):
         if identifier in self._canvas:
             del self._canvas[identifier]
             self.debug(
-                msg=Event.Deleted.name,
+                msg=Event.Deleted,
                 identifier=identifier,
             )
         else:
             self.warning(
-                msg=Event.Delete.name,
+                msg=Event.Delete,
                 reason="The blackboard neither confirms nor denies the existence!",
                 identifier=identifier,
             )
         self.debug(
-            msg=Event.Delete.name,
-            step=Event.Completed.name,
+            msg=Event.Delete,
+            step=Event.Completed,
             id=identifier,
         )
 
@@ -499,13 +499,13 @@ class ClaudeBlackboard(GenericBlackboard[ClaudeDocument]):
         # operator's stream for work that did not happen.
         pending = self.count
         (self.info if pending else self.debug)(
-            msg=Event.Flush.name,
-            step=Event.Started.name,
+            msg=Event.Flush,
+            step=Event.Started,
             documents=pending,
         )
         self.debug(
-            msg=Event.Flush.name,
-            step=Event.Started.name,
+            msg=Event.Flush,
+            step=Event.Started,
             caller=caller.name,
             count=len(self._canvas),
             kwargs=kwargs,
@@ -525,16 +525,16 @@ class ClaudeBlackboard(GenericBlackboard[ClaudeDocument]):
         self._flushed = False
 
         self.debug(
-            msg=Event.Flush.name,
-            step=Event.Completed.name,
+            msg=Event.Flush,
+            step=Event.Completed,
             caller=caller.name,
             count=len(self._canvas),
         )
 
     def read(self, identifier: str) -> ITarget:
         self.debug(
-            msg=Event.Read.name,
-            step=Event.Started.name,
+            msg=Event.Read,
+            step=Event.Started,
             identifier=identifier,
         )
 
@@ -544,8 +544,8 @@ class ClaudeBlackboard(GenericBlackboard[ClaudeDocument]):
         facade: ITarget = self._canvas[identifier]
 
         self.debug(
-            msg=Event.Read.name,
-            step=Event.Completed.name,
+            msg=Event.Read,
+            step=Event.Completed,
             identifier=identifier,
         )
         return facade
@@ -557,8 +557,8 @@ class ClaudeBlackboard(GenericBlackboard[ClaudeDocument]):
         **kwargs,
     ) -> ITarget:
         self.debug(
-            msg=Event.Read.name,
-            step=Event.Started.name,
+            msg=Event.Read,
+            step=Event.Started,
             repository_name=repository_name,
             identifier=identifier,
         )
@@ -574,12 +574,12 @@ class ClaudeBlackboard(GenericBlackboard[ClaudeDocument]):
             msg = f"Repository {repository_name} not registered!"
             raise BlackboardException(self, msg)
 
-        self.debug(msg=Event.Read.name, step=Event.Completed.name, repository=repository)
+        self.debug(msg=Event.Read, step=Event.Completed, repository=repository)
 
         return repository.read(identifier=identifier, **kwargs)
 
     def register(self, repository: IRepository) -> None:
-        self.debug(msg=Event.Register.name, step=Event.Started.name, repository=repository)
+        self.debug(msg=Event.Register, step=Event.Started, repository=repository)
 
         assert isinstance(repository, IRepository), "Expected IRepository. Found %s" % type(
             repository
@@ -587,7 +587,7 @@ class ClaudeBlackboard(GenericBlackboard[ClaudeDocument]):
 
         if repository in self._repositories:
             self.warning(
-                msg=Event.Register.name,
+                msg=Event.Register,
                 repository=repository,
                 error="Repository already registered!",
             )
@@ -595,12 +595,12 @@ class ClaudeBlackboard(GenericBlackboard[ClaudeDocument]):
 
         self._repositories.append(repository)
 
-        self.debug(msg=Event.Register.name, step=Event.Completed.name, added=repository)
+        self.debug(msg=Event.Register, step=Event.Completed, added=repository)
 
     def write(self, pipeline: IPipeline, facade: ITarget, **kwargs) -> str:
         self.debug(
-            msg=Event.Write.name,
-            step=Event.Started.name,
+            msg=Event.Write,
+            step=Event.Started,
             pipeline=pipeline.name,
             facade=facade,
             kwargs=kwargs,
@@ -616,7 +616,7 @@ class ClaudeBlackboard(GenericBlackboard[ClaudeDocument]):
         self._canvas[facade.identifier] = facade  # type: ignore
 
         self.debug(
-            msg=Event.Write.name,
+            msg=Event.Write,
             action=Event.Stored.value,
             document=document,
             flush=self._defer_flush,
@@ -624,7 +624,7 @@ class ClaudeBlackboard(GenericBlackboard[ClaudeDocument]):
 
         if not self._repositories:
             self.warning(
-                msg=Event.Write.name,
+                msg=Event.Write,
                 error="No repositories have been registered.",
             )
             return ""
@@ -635,8 +635,8 @@ class ClaudeBlackboard(GenericBlackboard[ClaudeDocument]):
             self.__emit__(facade=facade, **kwargs)
 
         self.debug(
-            msg=Event.Write.name,
-            step=Event.Completed.name,
+            msg=Event.Write,
+            step=Event.Completed,
             document=document,  # type: ignore
         )
 
@@ -644,12 +644,12 @@ class ClaudeBlackboard(GenericBlackboard[ClaudeDocument]):
 
     # region Memento
     def save_state(self) -> GenericMemento:
-        self.debug(msg=Event.Save.name, count=len(self._canvas))
+        self.debug(msg=Event.Save, count=len(self._canvas))
         return GenericMemento(canvas=self._canvas)
 
     def restore_state(self, memento: GenericMemento) -> None:
         self._canvas = dict(memento.canvas)
-        self.debug(msg=Event.Restore.name, count=len(self._canvas))
+        self.debug(msg=Event.Restore, count=len(self._canvas))
 
     # endregion Memento
 

@@ -59,8 +59,8 @@ class OrcReadProcessor(GenericProcessor):
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.debug(
-            msg=Event.Constructor.name,
-            step=Event.Started.name,
+            msg=Event.Constructor,
+            step=Event.Started,
             driver=repr(getattr(self, "driver", None)),
             pattern=getattr(self, "pattern", "*.orc"),
             recursive=getattr(self, "recursive", False),
@@ -95,33 +95,33 @@ class OrcReadProcessor(GenericProcessor):
         )
 
     def create_generator(self) -> Generator[ITarget, None, None]:
-        self.debug(msg=Event.Generate.name, step=Event.Started.name)
+        self.debug(msg=Event.Generate, step=Event.Started)
 
         try:
             driver = self._ensure_driver()
             exclude = getattr(self, "exclude", []) or []
             paths = list(self._iter_paths(driver))
 
-            self.debug(msg=Event.Generate.name, files=len(paths))
+            self.debug(msg=Event.Generate, files=len(paths))
 
             for filename in paths:
                 if filename.name in exclude:
                     self.warning(
-                        msg=Event.Generate.name,
-                        step=Event.Check.name,
+                        msg=Event.Generate,
+                        step=Event.Check,
                         error=f"Excluded file: {filename}.",
                     )
                     continue
 
                 uri = str(filename.absolute())
-                self.debug(msg=Event.Generate.name, scope="item", uri=uri)
+                self.debug(msg=Event.Generate, scope="item", uri=uri)
                 try:
                     records: OrcContent = driver.read(uri=uri)
                     if not isinstance(records, list):
                         records = list(records)
 
                     self.debug(
-                        msg=Event.Generate.name,
+                        msg=Event.Generate,
                         scope="item",
                         no=self.cycle + 1,
                         uri=uri,
@@ -139,8 +139,8 @@ class OrcReadProcessor(GenericProcessor):
                 except Exception as e:
                     error = f"Error: {str(e)} with {uri!r}"
                     self.exception(
-                        msg=Event.Generate.name,
-                        step=Event.Failed.name,
+                        msg=Event.Generate,
+                        step=Event.Failed,
                         error=error,
                         uri=str(uri),
                     )
@@ -148,8 +148,8 @@ class OrcReadProcessor(GenericProcessor):
         except Exception as e:
             error = f"Error: {str(e)}"
             self.debug(
-                msg=Event.Generate.name,
-                step=Event.Failed.name,
+                msg=Event.Generate,
+                step=Event.Failed,
                 error=error,
                 trace=format_exc(),
             )
@@ -160,8 +160,8 @@ class OrcReadProcessor(GenericProcessor):
             ) from e
 
         self.debug(
-            msg=Event.Generate.name,
-            step=Event.Completed.name,
+            msg=Event.Generate,
+            step=Event.Completed,
             count=self.cycle,
         )
 
@@ -186,19 +186,19 @@ class OrcWriteProcessor(GenericProcessor):
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.debug(
-            msg=Event.Constructor.name,
-            step=Event.Started.name,
+            msg=Event.Constructor,
+            step=Event.Started,
             batches=len(getattr(self, "batches", []) or []),
         )
 
     def create_generator(self) -> Generator[ITarget, None, None]:
-        self.debug(msg=Event.Generate.name, step=Event.Started.name)
+        self.debug(msg=Event.Generate, step=Event.Started)
 
         try:
             batches: List[Dict[str, Any]] = list(getattr(self, "batches", []) or [])
             Attribute.mandatory(self, "batches", list, batches=batches)
 
-            self.debug(msg=Event.Generate.name, batches=len(batches))
+            self.debug(msg=Event.Generate, batches=len(batches))
 
             for batch in batches:
                 filename: str = batch.get("filename", "")
@@ -207,18 +207,18 @@ class OrcWriteProcessor(GenericProcessor):
 
                 if not filename or not isinstance(records, list):
                     self.warning(
-                        msg=Event.Generate.name,
-                        step=Event.Check.name,
+                        msg=Event.Generate,
+                        step=Event.Check,
                         error="Skipping invalid ORC batch (missing filename/records).",
                         filename=filename,
                     )
                     continue
 
                 uri = str(Path(filename).with_suffix(".orc"))
-                self.debug(msg=Event.Generate.name, scope="item", uri=uri)
+                self.debug(msg=Event.Generate, scope="item", uri=uri)
                 try:
                     self.debug(
-                        msg=Event.Generate.name,
+                        msg=Event.Generate,
                         scope="item",
                         no=self.cycle + 1,
                         uri=uri,
@@ -238,8 +238,8 @@ class OrcWriteProcessor(GenericProcessor):
                 except Exception as e:
                     error = f"Error: {str(e)} with {uri!r}"
                     self.exception(
-                        msg=Event.Generate.name,
-                        step=Event.Failed.name,
+                        msg=Event.Generate,
+                        step=Event.Failed,
                         error=error,
                         uri=str(uri),
                     )
@@ -247,8 +247,8 @@ class OrcWriteProcessor(GenericProcessor):
         except Exception as e:
             error = f"Error: {str(e)}"
             self.debug(
-                msg=Event.Generate.name,
-                step=Event.Failed.name,
+                msg=Event.Generate,
+                step=Event.Failed,
                 error=error,
                 trace=format_exc(),
             )
@@ -259,8 +259,8 @@ class OrcWriteProcessor(GenericProcessor):
             ) from e
 
         self.debug(
-            msg=Event.Generate.name,
-            step=Event.Completed.name,
+            msg=Event.Generate,
+            step=Event.Completed,
             count=self.cycle,
         )
 

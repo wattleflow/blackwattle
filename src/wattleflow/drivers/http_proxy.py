@@ -58,8 +58,8 @@ class DriverHttpProxy(GenericDriver):
     def load(self) -> None:
         if not self.verify_ssl:
             self.warning(
-                msg=Event.Load.name,
-                step=Event.Check.name,
+                msg=Event.Load,
+                step=Event.Check,
                 reason="SSL certificate verification is disabled (verify_ssl=False). "
                 "This makes connections vulnerable to MITM attacks.",
             )
@@ -67,8 +67,8 @@ class DriverHttpProxy(GenericDriver):
             if not self.create:
                 reason = f"local_path should be a directory: {self.local_path!r}"
                 self.error(
-                    msg=Event.Load.name,
-                    step=Event.Completed.name,
+                    msg=Event.Load,
+                    step=Event.Completed,
                     reason=reason,
                     local_path=self.local_path,
                 )
@@ -81,7 +81,7 @@ class DriverHttpProxy(GenericDriver):
         # The driver owns no socket of its own: every fetch goes through the
         # ProxyConnection held by the ConnectionManager, and downloads land in
         # the cache directory, which outlives the driver on purpose.
-        self.debug(msg=Event.Close.name, step=Event.Started.name)
+        self.debug(msg=Event.Close, step=Event.Started)
 
     def metadata(self) -> DriverMetadata:
         # write() raises NotImplementedError, so "write" is deliberately absent
@@ -102,8 +102,8 @@ class DriverHttpProxy(GenericDriver):
         when set, the origin's own name when not.
         """
         self.debug(
-            msg=Event.Download.name,
-            step=Event.Started.name,
+            msg=Event.Download,
+            step=Event.Started,
             uri=uri,
             kwargs=ProxyConnection._safe_log_kwargs(**kwargs),
         )
@@ -121,28 +121,28 @@ class DriverHttpProxy(GenericDriver):
 
             if storage.filename.exists() is False:
                 reason = f"Failed to save file to local cache: {storage.filename}"
-                self.error(msg=Event.Download.name, uri=uri, reason=reason)
+                self.error(msg=Event.Download, uri=uri, reason=reason)
                 raise IOError(reason)
 
             self.debug(
-                msg=Event.Download.name,
-                step=Event.Completed.name,
+                msg=Event.Download,
+                step=Event.Completed,
                 origin=storage.origin,
                 filename=storage.filename,
                 size=storage.size,
             )
             return storage.filename
         except AuditException as e:
-            self.debug(msg=Event.Download.name, step=Event.Failed.name, uri=uri, error=e.reason)
+            self.debug(msg=Event.Download, step=Event.Failed, uri=uri, error=e.reason)
             raise e
         except Exception as e:
-            self.debug(msg=Event.Download.name, step=Event.Failed.name, uri=uri, error=str(e))
+            self.debug(msg=Event.Download, step=Event.Failed, uri=uri, error=str(e))
             raise DriverHttpProxyError(caller=self, error=str(e)) from e
 
     def read(self, uri: str, **kwargs) -> Any:
         self.debug(
-            msg=Event.Read.name,
-            step=Event.Started.name,
+            msg=Event.Read,
+            step=Event.Started,
             uri=uri,
             kwargs=ProxyConnection._safe_log_kwargs(**kwargs),
         )
@@ -152,8 +152,8 @@ class DriverHttpProxy(GenericDriver):
             file_type = FileType.detect_content(payload)
 
             self.debug(
-                msg=Event.Read.name,
-                step=Event.Completed.name,
+                msg=Event.Read,
+                step=Event.Completed,
                 filename=filename,
                 size=len(payload),
                 file_type=file_type.name,
@@ -169,10 +169,10 @@ class DriverHttpProxy(GenericDriver):
                 return filename.read_text()
             return payload
         except AuditException as e:
-            self.debug(msg=Event.Read.name, step=Event.Failed.name, uri=uri, error=e.reason)
+            self.debug(msg=Event.Read, step=Event.Failed, uri=uri, error=e.reason)
             raise e
         except Exception as e:
-            self.debug(msg=Event.Read.name, step=Event.Failed.name, uri=uri, error=str(e))
+            self.debug(msg=Event.Read, step=Event.Failed, uri=uri, error=str(e))
             raise DriverHttpProxyError(caller=self, error=str(e)) from e
 
     def write(self, uri: str, filename: str, ftype: FileType, data: object, **kwargs) -> str:
@@ -184,20 +184,20 @@ class DriverHttpProxy(GenericDriver):
         )
 
     def _validate_uri(self, uri: str) -> None:
-        self.debug(msg=Event.Validate.name, step=Event.Started.name, uri=uri)
+        self.debug(msg=Event.Validate, step=Event.Started, uri=uri)
         parsed = urlparse(uri)
         if parsed.scheme not in ("http", "https"):
             reason = (
                 f"Unsupported URI scheme '{parsed.scheme}'. "
                 f"{self.__class__.__name__} supports http and https only."
             )
-            self.error(msg=Event.Validate.name, uri=uri, reason=reason)
+            self.error(msg=Event.Validate, uri=uri, reason=reason)
             raise ValueError(reason)
 
         host = parsed.hostname or ""
         if host.lower() in ("localhost", "0.0.0.0"):
             reason = f"Access to localhost is not allowed: {host!r}"
-            self.error(msg=Event.Validate.name, uri=uri, reason=reason)
+            self.error(msg=Event.Validate, uri=uri, reason=reason)
             raise PermissionError(reason)
 
         try:
@@ -205,7 +205,7 @@ class DriverHttpProxy(GenericDriver):
             if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved:
                 reason = f"Access to private/internal addresses is not allowed: {host!r}"
                 self.error(
-                    msg=Event.Validate.name, step=Event.Completed.name, uri=uri, reason=reason
+                    msg=Event.Validate, step=Event.Completed, uri=uri, reason=reason
                 )
                 raise PermissionError(reason)
         except ValueError:
@@ -266,8 +266,8 @@ class DriverHttpProxy(GenericDriver):
 
     def _download(self, uri: str, **kwargs):
         self.debug(
-            msg=Event.Download.name,
-            step=Event.Started.name,
+            msg=Event.Download,
+            step=Event.Started,
             uri=uri,
             kwargs=ProxyConnection._safe_log_kwargs(**kwargs),
         )

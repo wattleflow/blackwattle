@@ -52,7 +52,7 @@ class LargeBlackboard(GenericBlackboard[Documents], IOriginator):
             BlackboardState.IDLE,
             name="BlackboardFSM",
         )
-        self.debug(msg=Event.Constructor.name, step=Event.Completed.name)
+        self.debug(msg=Event.Constructor, step=Event.Completed)
 
     def __broadcast__(
         self,
@@ -62,8 +62,8 @@ class LargeBlackboard(GenericBlackboard[Documents], IOriginator):
         # Blackboard prema repozitoriju proslijeđuje SEBE kao caller-a.
         # Upstream caller (Pipeline/Processor) ne smije propasti do strategije.
         self.debug(
-            msg=Event.Emit.name,
-            step=Event.Started.name,
+            msg=Event.Emit,
+            step=Event.Started,
             facade=facade,
             state=self._fsm.state.name,
             kwargs=kwargs,
@@ -75,15 +75,15 @@ class LargeBlackboard(GenericBlackboard[Documents], IOriginator):
         except Exception as e:
             if self._fsm.can(BlackboardAction.FAIL):
                 self._fsm.apply(BlackboardAction.FAIL)
-            self.debug(msg=Event.Emit.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Emit, step=Event.Failed, error=str(e))
             raise
 
         if self._fsm.can(BlackboardAction.FLUSH):
             self._fsm.apply(BlackboardAction.FLUSH)
 
         self.debug(
-            msg=Event.Emit.name,
-            step=Event.Completed.name,
+            msg=Event.Emit,
+            step=Event.Completed,
             state=self._fsm.state.name,
             broadcasted=True,
         )
@@ -108,8 +108,8 @@ class LargeBlackboard(GenericBlackboard[Documents], IOriginator):
 
     def clean(self):
         self.debug(
-            msg=Event.Clean.name,
-            step=Event.Started.name,
+            msg=Event.Clean,
+            step=Event.Started,
             state=self._fsm.state.name,
         )
 
@@ -118,7 +118,7 @@ class LargeBlackboard(GenericBlackboard[Documents], IOriginator):
             # (DIRTY state), broadcastaj prije CLEAN-a. Log warning s razlogom.
             if self._canvas and self._fsm.can(BlackboardAction.FLUSH):
                 self.warning(
-                    msg=Event.Clean.name,
+                    msg=Event.Clean,
                     reason="canvas has unflushed facades at lifecycle end",
                     cause="defer_flush=%s" % self.defer_flush,
                     count=len(self._canvas),
@@ -132,8 +132,8 @@ class LargeBlackboard(GenericBlackboard[Documents], IOriginator):
                 self._fsm.apply(BlackboardAction.CLEAN)
         except Exception as e:
             self.debug(
-                msg=Event.Clean.name,
-                step=Event.Failed.name,
+                msg=Event.Clean,
+                step=Event.Failed,
                 error=str(e),
             )
             if self._fsm.can(BlackboardAction.FAIL):
@@ -141,16 +141,16 @@ class LargeBlackboard(GenericBlackboard[Documents], IOriginator):
             raise
 
         self.debug(
-            msg=Event.Clean.name,
-            step=Event.Completed.name,
+            msg=Event.Clean,
+            step=Event.Completed,
             state=self._fsm.state.name,
             repositories=len(self._repositories),
         )
 
     def create(self, caller: IProcessor, **kwargs) -> Optional[ITarget]:
         self.debug(
-            msg=Event.Create.name,
-            step=Event.Started.name,
+            msg=Event.Create,
+            step=Event.Started,
             caller=caller.name,
         )
 
@@ -158,12 +158,12 @@ class LargeBlackboard(GenericBlackboard[Documents], IOriginator):
 
         if not self._strategy_create:
             self.warning(
-                msg=Event.Create.name,
+                msg=Event.Create,
                 error=f"{self.name}._strategy_create is missing!",
             )
             return None
 
-        self.debug(msg=Event.Create.name, step=Event.Completed.name)
+        self.debug(msg=Event.Create, step=Event.Completed)
 
         # Blackboard proslijeđuje SEBE kao caller-a prema strategiji
         # (strategija asertira IBlackboard). Processor putuje kao kwarg.
@@ -173,25 +173,25 @@ class LargeBlackboard(GenericBlackboard[Documents], IOriginator):
 
     def delete(self, identifier: str, **kwargs) -> None:
         self.debug(
-            msg=Event.Delete.name,
-            step=Event.Started.name,
+            msg=Event.Delete,
+            step=Event.Started,
             id=identifier,
             kwargs=kwargs,
         )
 
         if identifier in self._canvas:
             del self._canvas[identifier]
-            self.debug(msg=Event.Deleted.name, identifier=identifier)
+            self.debug(msg=Event.Deleted, identifier=identifier)
         else:
             self.warning(
-                msg=Event.Delete.name,
+                msg=Event.Delete,
                 reason="The blackboard neither confirms nor denies the existence!",
                 identifier=identifier,
             )
 
         self.debug(
-            msg=Event.Delete.name,
-            step=Event.Completed.name,
+            msg=Event.Delete,
+            step=Event.Completed,
             id=identifier,
         )
 
@@ -202,13 +202,13 @@ class LargeBlackboard(GenericBlackboard[Documents], IOriginator):
         # operator's stream for work that did not happen.
         pending = self.count
         (self.info if pending else self.debug)(
-            msg=Event.Flush.name,
-            step=Event.Started.name,
+            msg=Event.Flush,
+            step=Event.Started,
             documents=pending,
         )
         self.debug(
-            msg=Event.Flush.name,
-            step=Event.Started.name,
+            msg=Event.Flush,
+            step=Event.Started,
             caller=caller,
             kwargs=kwargs,
         )
@@ -229,12 +229,12 @@ class LargeBlackboard(GenericBlackboard[Documents], IOriginator):
         if self._fsm.can(BlackboardAction.FLUSH):
             self._fsm.apply(BlackboardAction.FLUSH)
 
-        self.debug(msg=Event.Flush.name, step=Event.Completed.name)
+        self.debug(msg=Event.Flush, step=Event.Completed)
 
     def read(self, identifier: str, **kwargs) -> ITarget:
         self.debug(
-            msg=Event.Read.name,
-            step=Event.Started.name,
+            msg=Event.Read,
+            step=Event.Started,
             state=self._fsm.state.name,
             identifier=identifier,
             kwargs=kwargs,
@@ -250,15 +250,15 @@ class LargeBlackboard(GenericBlackboard[Documents], IOriginator):
             self._fsm.apply(BlackboardAction.READ)
 
         self.debug(
-            msg=Event.Read.name,
-            step=Event.Completed.name,
+            msg=Event.Read,
+            step=Event.Completed,
             state=self._fsm.state.name,
             identifier=identifier,
         )
         return facade
 
     def register(self, repository: IRepository) -> None:
-        self.debug(msg=Event.Register.name, step=Event.Started.name)
+        self.debug(msg=Event.Register, step=Event.Started)
 
         assert isinstance(repository, IRepository), "Expected IRepository. Found %s" % type(
             repository
@@ -266,7 +266,7 @@ class LargeBlackboard(GenericBlackboard[Documents], IOriginator):
 
         if repository in self._repositories:
             self.warning(
-                msg=Event.Register.name,
+                msg=Event.Register,
                 repository=repository,
                 error="Repository already registered!",
             )
@@ -278,15 +278,15 @@ class LargeBlackboard(GenericBlackboard[Documents], IOriginator):
             self._fsm.apply(BlackboardAction.REGISTER)
 
         self.debug(
-            msg=Event.Register.name,
-            step=Event.Completed.name,
+            msg=Event.Register,
+            step=Event.Completed,
             added=repository,
         )
 
     def write(self, pipeline: IPipeline, facade: ITarget, **kwargs) -> str:
         self.debug(
-            msg=Event.Write.name,
-            step=Event.Started.name,
+            msg=Event.Write,
+            step=Event.Started,
             facade=facade,
             kwargs=kwargs,
         )
@@ -300,14 +300,14 @@ class LargeBlackboard(GenericBlackboard[Documents], IOriginator):
             self._fsm.apply(BlackboardAction.WRITE)
             self._canvas[facade.identifier] = facade
             self.debug(
-                msg=Event.Write.name,
-                action=Event.Stored.name,
+                msg=Event.Write,
+                action=Event.Stored,
                 identifier=facade.identifier,
             )
 
         if not self._repositories:
             self.warning(
-                msg=Event.Write.name,
+                msg=Event.Write,
                 error="No repositories have been registered.",
             )
             return ""
@@ -318,7 +318,7 @@ class LargeBlackboard(GenericBlackboard[Documents], IOriginator):
         if not self.defer_flush:
             self.__broadcast__(facade=facade, **kwargs)
 
-        self.debug(msg=Event.Write.name, step=Event.Completed.name)
+        self.debug(msg=Event.Write, step=Event.Completed)
         return facade.identifier
 
     # endregion Public
@@ -326,11 +326,11 @@ class LargeBlackboard(GenericBlackboard[Documents], IOriginator):
     # region Memento
 
     def save_state(self) -> GenericMemento:
-        self.debug(msg=Event.Save.name, state=self._fsm.state.name, count=len(self._canvas))
+        self.debug(msg=Event.Save, state=self._fsm.state.name, count=len(self._canvas))
         return GenericMemento(canvas=dict(self._canvas), state=self._fsm.state)
 
     def restore_state(self, memento: GenericMemento) -> None:
-        self.debug(msg=Event.Restore.name, state=self._fsm.state.name, memento=memento)
+        self.debug(msg=Event.Restore, state=self._fsm.state.name, memento=memento)
 
         if not isinstance(memento, GenericMemento):
             raise BlackboardException(self, "Invalid memento")
@@ -348,7 +348,7 @@ class LargeBlackboard(GenericBlackboard[Documents], IOriginator):
         self._fsm.apply(BlackboardAction.LOAD)
         self._canvas = dict(memento.canvas)
 
-        self.debug(msg=Event.Restore.name, state=self._fsm.state.name, count=len(self._canvas))
+        self.debug(msg=Event.Restore, state=self._fsm.state.name, count=len(self._canvas))
 
     # endregion Memento
 

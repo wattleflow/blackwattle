@@ -33,7 +33,7 @@ from wattleflow.helpers.formatters.factory import FormatterFactory
 class CreateOrcDocument(StrategyCreate):
     def execute(self, caller: IWattleflow, **kwargs) -> Optional[ITarget]:
         try:
-            self.debug(msg=Event.Create.name, step=Event.Started.name, kwargs=kwargs)
+            self.debug(msg=Event.Create, step=Event.Started, kwargs=kwargs)
             assert isinstance(caller, IBlackboard), "Expected IBlackboard. Found %s" % type(caller)
 
             Attribute.mandatory(self, "content", list, **kwargs)
@@ -64,22 +64,22 @@ class CreateOrcDocument(StrategyCreate):
                 document.update_metadata(f"kwargs_{key}", value)
 
             self.debug(
-                msg=Event.Create.name,
-                step=Event.Configuring.name,
+                msg=Event.Create,
+                step=Event.Configuring,
                 schema_cols=list((schema or {}).keys()),
             )
 
             if not document.size > 0:
                 self.warning(
-                    msg=Event.Create.name,
-                    step=Event.Check.name,
+                    msg=Event.Create,
+                    step=Event.Check,
                     reason="ORC record set is empty.",
                     document=document,
                 )
 
             self.debug(
-                msg=Event.Create.name,
-                step=Event.Completed.name,
+                msg=Event.Create,
+                step=Event.Completed,
                 document=document.identifier,
                 rows=document.size,
             )
@@ -87,18 +87,18 @@ class CreateOrcDocument(StrategyCreate):
             return DocumentFacade(document)
         except AssertionError as e:
             error = f"Assertion: {str(e)}"
-            self.debug(msg=Event.Create.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Create, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
         except Exception as e:
             error = f"{self.name} caught exception: {str(e)}"
-            self.debug(msg=Event.Create.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Create, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
 
 
 class ReadOrcDocument(StrategyRead):
     def execute(self, caller: IWattleflow, **kwargs) -> Optional[ITarget]:
         try:
-            self.debug(msg=Event.Read.name, step=Event.Started.name, kwargs=kwargs)
+            self.debug(msg=Event.Read, step=Event.Started, kwargs=kwargs)
             assert isinstance(caller, IRepository), "Expected IRepository. Found %s" % type(caller)
             Attribute.mandatory(self, "identifier", str, **kwargs)
             uri: str = self.identifier
@@ -120,26 +120,26 @@ class ReadOrcDocument(StrategyRead):
             )
             document.update_metadata("source_uri", uri)
             self.debug(
-                msg=Event.Read.name,
-                step=Event.Completed.name,
+                msg=Event.Read,
+                step=Event.Completed,
                 document=document.identifier,
                 size=document.size,
             )
             return DocumentFacade(document)
         except AssertionError as e:
             error = f"Assertion: {str(e)}"
-            self.debug(msg=Event.Read.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Read, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
         except Exception as e:
             error = f"{self.name} caught exception: {str(e)}"
-            self.debug(msg=Event.Read.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Read, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
 
 
 class WriteOrcDocument(StrategyWrite):
     def execute(self, caller: IWattleflow, facade: ITarget, **kwargs) -> bool:
         try:
-            self.debug(msg=Event.Write.name, step=Event.Started.name, kwargs=kwargs)
+            self.debug(msg=Event.Write, step=Event.Started, kwargs=kwargs)
             assert isinstance(caller, IRepository), "Expected IRepository. Found %s" % type(caller)
             assert isinstance(facade, ITarget), "Expected ITarget. Found %s" % type(facade)
 
@@ -151,8 +151,8 @@ class WriteOrcDocument(StrategyWrite):
             document: OrcDocument = facade.request()
             if not isinstance(document.content, list) or document.size <= 0:
                 self.warning(
-                    msg=Event.Write.name,
-                    step=Event.Check.name,
+                    msg=Event.Write,
+                    step=Event.Check,
                     reason="ORC record set is empty.",
                     document=document,
                 )
@@ -188,8 +188,8 @@ class WriteOrcDocument(StrategyWrite):
             document.update_metadata("stored_at", document.utc_time_stamp())
 
             self.debug(
-                msg=Event.Write.name,
-                step=Event.Completed.name,
+                msg=Event.Write,
+                step=Event.Completed,
                 document=document,
                 output=output,
                 size=document.size,
@@ -197,11 +197,11 @@ class WriteOrcDocument(StrategyWrite):
             return True
         except AssertionError as e:
             error = f"Assertion: {str(e)}"
-            self.debug(msg=Event.Write.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Write, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
         except Exception as e:
             error = f"{self.name} caught exception: {str(e)}"
-            self.debug(msg=Event.Write.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Write, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
 
 

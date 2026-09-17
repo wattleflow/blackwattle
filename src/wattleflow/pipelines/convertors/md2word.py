@@ -58,8 +58,8 @@ class PipelineMarkdownToWord(GenericPipeline):
         filename: Path | None = Path(filename_raw) if filename_raw else None
         if filename is None or not filename.exists():
             self.error(
-                msg=Event.Transform.name,
-                step=Event.Started.name,
+                msg=Event.Transform,
+                step=Event.Started,
                 reason="No valid file to process!",
                 document=document,
                 filename=filename,
@@ -68,8 +68,8 @@ class PipelineMarkdownToWord(GenericPipeline):
 
         if not document.size > 0:
             self.warning(
-                msg=Event.Transform.name,
-                step=Event.Check.name,
+                msg=Event.Transform,
+                step=Event.Check,
                 reason="Nothing to process here!",
                 document=document,
                 size=document.size,
@@ -92,8 +92,8 @@ class PipelineMarkdownToWord(GenericPipeline):
         )
 
         self.debug(
-            msg=Event.Transform.name,
-            step=Event.Completed.name,
+            msg=Event.Transform,
+            step=Event.Completed,
             uid=uid,
             size=document.size,
             output=str(output),

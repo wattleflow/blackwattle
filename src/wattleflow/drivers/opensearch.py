@@ -109,10 +109,10 @@ class DriverOpenSearch(GenericDriver):
         return self.connection_manager.get_connection(self.connection_name)
 
     def load(self) -> None:
-        self.debug(msg=Event.Load.name, step=Event.Started.name)
+        self.debug(msg=Event.Load, step=Event.Started)
 
         if self._loaded:
-            self.warning(msg=Event.Load.name, step=Event.Check.name, error="Already loaded!")
+            self.warning(msg=Event.Load, step=Event.Check, error="Already loaded!")
 
         self.mode = self.mode if self.mode is not None else "index"
         self.refresh = self.refresh if self.refresh is not None else False
@@ -141,8 +141,8 @@ class DriverOpenSearch(GenericDriver):
         self._loaded = True
 
         self.debug(
-            msg=Event.Load.name,
-            step=Event.Completed.name,
+            msg=Event.Load,
+            step=Event.Completed,
             connection_name=conn_name,
             connection_type=type(os_conn).__name__,
             lazy_loading=self._lazy_loading,
@@ -154,7 +154,7 @@ class DriverOpenSearch(GenericDriver):
         )
 
     def close(self) -> None:
-        self.debug(msg=Event.Close.name, step=Event.Started.name)
+        self.debug(msg=Event.Close, step=Event.Started)
 
     def metadata(self) -> DriverMetadata:
         return DriverMetadata(
@@ -171,7 +171,7 @@ class DriverOpenSearch(GenericDriver):
     # ---------------------------------------------------------------------- #
 
     def read(self, uri: str, **kwargs) -> Any:
-        self.debug(msg=Event.Read.name, step=Event.Started.name, uri=uri)
+        self.debug(msg=Event.Read, step=Event.Started, uri=uri)
 
         if not uri:
             raise DriverOpenSearchError(caller=self, error="read: uri is required.")
@@ -188,7 +188,7 @@ class DriverOpenSearch(GenericDriver):
 
         if self.log_queries:
             self.debug(
-                msg=Event.Read.name,
+                msg=Event.Read,
                 index=index,
                 doc_id=doc_id,
                 has_body=body is not None,
@@ -206,13 +206,13 @@ class DriverOpenSearch(GenericDriver):
         except DriverOpenSearchError:
             raise
         except NotFoundError:
-            self.debug(msg=Event.Read.name, step=Event.Failed.name, index=index, doc_id=doc_id)
+            self.debug(msg=Event.Read, step=Event.Failed, index=index, doc_id=doc_id)
             return None
         except Exception as e:
             if self._is_transient(e) and self._try_reconnect():
                 self.debug(
-                    msg=Event.Read.name,
-                    step=Event.Failed.name,
+                    msg=Event.Read,
+                    step=Event.Failed,
                     error=str(e),
                     index=index,
                 )
@@ -231,8 +231,8 @@ class DriverOpenSearch(GenericDriver):
                 ) from e
 
         self.debug(
-            msg=Event.Read.name,
-            step=Event.Completed.name,
+            msg=Event.Read,
+            step=Event.Completed,
             index=index,
             count=len(result) if isinstance(result, list) else 1,
         )
@@ -262,8 +262,8 @@ class DriverOpenSearch(GenericDriver):
             self._validate_index_name(index)
 
         self.debug(
-            msg=Event.Write.name,
-            step=Event.Started.name,
+            msg=Event.Write,
+            step=Event.Started,
             index=index,
             doc_id=doc_id,
             mode=mode,
@@ -284,8 +284,8 @@ class DriverOpenSearch(GenericDriver):
         except Exception as e:
             if self._is_transient(e) and self._try_reconnect():
                 self.debug(
-                    msg=Event.Write.name,
-                    step=Event.Failed.name,
+                    msg=Event.Write,
+                    step=Event.Failed,
                     error=str(e),
                     index=index,
                 )
@@ -296,18 +296,18 @@ class DriverOpenSearch(GenericDriver):
                     error=f"write error for index={index!r}: {e}",
                 ) from e
 
-        self.debug(msg=Event.Write.name, step=Event.Completed.name, index=index)
+        self.debug(msg=Event.Write, step=Event.Completed, index=index)
         return result
 
     def search(self, pattern: str, **kwargs) -> Generator[str, None, None]:
         """Yield index names matching pattern via _cat/indices."""
-        self.debug(msg=Event.Search.name, step=Event.Started.name, pattern=pattern)
+        self.debug(msg=Event.Search, step=Event.Started, pattern=pattern)
 
         with self._get_connection().connect() as client:
             try:
                 rows = client.cat.indices(format="json")
             except Exception as e:
-                self.debug(msg=Event.Search.name, step=Event.Failed.name, error=str(e))
+                self.debug(msg=Event.Search, step=Event.Failed, error=str(e))
                 raise DriverOpenSearchError(
                     caller=self,
                     error=f"search: cat.indices failed: {e}",
@@ -320,7 +320,7 @@ class DriverOpenSearch(GenericDriver):
                 if self._matches(name, pattern):
                     yield name
 
-        self.debug(msg=Event.Search.name, step=Event.Completed.name)
+        self.debug(msg=Event.Search, step=Event.Completed)
 
     # endregion Read / Write
 
@@ -350,8 +350,8 @@ class DriverOpenSearch(GenericDriver):
         conn = self._get_connection()
         if conn.state == ConnectionState.FAILED:
             self.error(
-                msg=Event.Connect.name,
-                step=Event.Started.name,
+                msg=Event.Connect,
+                step=Event.Started,
                 error="Connection has FAILED - reconnect not possible.",
                 connection_name=self.connection_name,
             )
@@ -361,16 +361,16 @@ class DriverOpenSearch(GenericDriver):
             conn.disconnect()
             conn.create_connection()
             self.debug(
-                msg=Event.Connect.name,
-                step=Event.Completed.name,
+                msg=Event.Connect,
+                step=Event.Completed,
                 connection_name=self.connection_name,
                 state=conn.state.name,
             )
             return True
         except Exception as e:
             self.error(
-                msg=Event.Connect.name,
-                step=Event.Failed.name,
+                msg=Event.Connect,
+                step=Event.Failed,
                 error=str(e),
                 connection_name=self.connection_name,
             )
@@ -519,8 +519,8 @@ class DriverOpenSearch(GenericDriver):
                 )
                 if errors:
                     self.warning(
-                        msg=Event.Write.name,
-                        step=Event.Check.name,
+                        msg=Event.Write,
+                        step=Event.Check,
                         success=success,
                         errors=len(errors) if isinstance(errors, list) else errors,
                     )
@@ -537,8 +537,8 @@ class DriverOpenSearch(GenericDriver):
                 )
                 if errors:
                     self.warning(
-                        msg=Event.Write.name,
-                        step=Event.Check.name,
+                        msg=Event.Write,
+                        step=Event.Check,
                         success=success,
                         errors=len(errors) if isinstance(errors, list) else errors,
                     )
@@ -595,7 +595,7 @@ class DriverOpenSearch(GenericDriver):
             try:
                 parsed = json.loads(data)
             except (TypeError, ValueError) as e:
-                self.debug(msg=Event.Validate.name, step=Event.Failed.name, error=str(e))
+                self.debug(msg=Event.Validate, step=Event.Failed, error=str(e))
                 raise DriverOpenSearchError(
                     caller=self,
                     error=f"_coerce_documents: payload is not valid JSON: {e}",

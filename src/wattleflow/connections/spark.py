@@ -128,8 +128,8 @@ class SparkConnection(GenericConnection):
 
     def create_connection(self) -> None:
         self.debug(
-            msg=Event.Create.name,
-            step=Event.Started.name,
+            msg=Event.Create,
+            step=Event.Started,
             name=self.connection_name,
             state=self.state.value,
         )
@@ -140,8 +140,8 @@ class SparkConnection(GenericConnection):
             ConnectionState.CONNECTING,
         ):
             self.debug(
-                msg=Event.Create.name,
-                step=Event.Check.name,
+                msg=Event.Create,
+                step=Event.Check,
                 reason="connection already created",
                 state=self.state.value,
             )
@@ -156,7 +156,7 @@ class SparkConnection(GenericConnection):
         error, java_version = self._check_java()
         if error:
             raise SparkConnectionError(caller=self, error=error)
-        self.debug(msg=Event.Create.name, java=java_version)
+        self.debug(msg=Event.Create, java=java_version)
 
         # Ensure the gateway subprocess uses the same Python interpreter as the
         # calling process. On conda environments this is critical — without it
@@ -170,7 +170,7 @@ class SparkConnection(GenericConnection):
         os.environ.setdefault("SPARK_LOCAL_IP", "127.0.0.1")
 
         self.debug(
-            msg=Event.Create.name,
+            msg=Event.Create,
             pyspark_python=os.environ["PYSPARK_PYTHON"],
             spark_local_ip=os.environ["SPARK_LOCAL_IP"],
         )
@@ -200,15 +200,15 @@ class SparkConnection(GenericConnection):
                 connection_name=self.connection_name,
                 state=self.state.value,
             )
-            self.debug(msg=Event.Create.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Create, step=Event.Failed, error=str(e))
             raise SparkConnectionError(
                 caller=self,
                 error=f"SparkSession can not be created: {e}",
             ) from e
 
         self.debug(
-            msg=Event.Create.name,
-            step=Event.Completed.name,
+            msg=Event.Create,
+            step=Event.Completed,
             name=self.connection_name,
             state=self.state.value,
             spark_version=self._version,
@@ -219,7 +219,7 @@ class SparkConnection(GenericConnection):
         self._ensure_created()
 
         self.debug(
-            msg=Event.Connect.name,
+            msg=Event.Connect,
             connection_name=self.connection_name,
             state=self.state.value,
         )
@@ -255,11 +255,11 @@ class SparkConnection(GenericConnection):
             self._fsm.apply(ConnectionAction.CONNECT_OK)
         except Exception as e:
             self._fsm.apply(ConnectionAction.CONNECT_FAIL)
-            self.debug(msg=Event.Connect.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Connect, step=Event.Failed, error=str(e))
             raise SparkConnectionError(caller=self, error=str(e)) from e
 
         self.debug(
-            msg=Event.Connected.name,
+            msg=Event.Connected,
             connection_name=self.connection_name,
             state=self.state.value,
         )
@@ -273,20 +273,20 @@ class SparkConnection(GenericConnection):
                 connection_name=self.connection_name,
                 state=self.state.value,
             )
-            self.debug(msg=Event.Connect.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Connect, step=Event.Failed, error=str(e))
             raise
         finally:
             self._connection = None
             self._fsm.apply(ConnectionAction.DISCONNECT)
             self.debug(
-                msg=Event.Disconnected.name,
+                msg=Event.Disconnected,
                 connection_name=self.connection_name,
                 note="session still alive; call ensure_closed() to stop",
             )
 
     def disconnect(self) -> None:
         self.debug(
-            msg=Event.Disconnect.name,
+            msg=Event.Disconnect,
             connection_name=self.connection_name,
             state=self.state.value,
         )
@@ -309,7 +309,7 @@ class SparkConnection(GenericConnection):
         finally:
             self._version = ""
             self.debug(
-                msg=Event.Disconnected.name,
+                msg=Event.Disconnected,
                 connection_name=self.connection_name,
                 state=self.state.value,
             )

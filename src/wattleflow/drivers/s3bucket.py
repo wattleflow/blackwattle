@@ -187,8 +187,8 @@ class DriverS3(GenericDriver):
         self._s3_clients: dict = {}  # cache klijenata po regiji
 
         self.debug(
-            msg=Event.Load.name,
-            step=Event.Started.name,
+            msg=Event.Load,
+            step=Event.Started,
             driver="DriverS3",
             cache_dir=str(self._resolved_cache_dir),
             region=region,
@@ -197,17 +197,17 @@ class DriverS3(GenericDriver):
     def close(self) -> None:
         # Boto3 klijenti drže otvorene HTTPS veze u vlastitom bazenu, po jedan
         # po regiji. Bez ovoga ensure_unloaded() ne bi otpustio ni jednu utičnicu.
-        self.debug(msg=Event.Close.name, step=Event.Started.name)
+        self.debug(msg=Event.Close, step=Event.Started)
         clients: dict = getattr(self, "_s3_clients", None) or {}
         for region, client in clients.items():
             try:
                 client.close()
             except Exception as e:
                 self.warning(
-                    msg=Event.Close.name, step=Event.Check.name, region=region, error=str(e)
+                    msg=Event.Close, step=Event.Check, region=region, error=str(e)
                 )
         self._s3_clients = {}
-        self.debug(msg=Event.Close.name, step=Event.Completed.name, released=len(clients))
+        self.debug(msg=Event.Close, step=Event.Completed, released=len(clients))
 
     def metadata(self) -> DriverMetadata:
         return DriverMetadata(
@@ -231,7 +231,7 @@ class DriverS3(GenericDriver):
             IsADirectoryError: ako URI upućuje na prefiks, ne datoteku
             RuntimeError: ako preuzimanje ne uspije
         """
-        self.debug(msg=Event.Read.name, step=Event.Started.name, identifier=identifier)
+        self.debug(msg=Event.Read, step=Event.Started, identifier=identifier)
 
         info = S3UriParser.parse(identifier)
 
@@ -250,21 +250,21 @@ class DriverS3(GenericDriver):
             try:
                 self._client(info["region"]).download_file(bucket, key, str(local_path))
                 self.debug(
-                    msg=Event.Read.name,
-                    step=Event.Completed.name,
+                    msg=Event.Read,
+                    step=Event.Completed,
                     local_path=str(local_path),
                 )
             except Exception as e:
                 local_path.unlink(missing_ok=True)
-                self.debug(msg=Event.Read.name, step=Event.Failed.name, error=str(e))
+                self.debug(msg=Event.Read, step=Event.Failed, error=str(e))
                 raise DriverS3Error(
                     caller=self,
                     error=f"Download failed: s3://{bucket}/{key} — {e}",
                 ) from e
         else:
             self.debug(
-                msg=Event.Read.name,
-                step=Event.Completed.name,
+                msg=Event.Read,
+                step=Event.Completed,
                 local=str(local_path),
             )
 
@@ -288,8 +288,8 @@ class DriverS3(GenericDriver):
             RuntimeError: ako upload ne uspije
         """
         self.debug(
-            msg=Event.Write.name,
-            step=Event.Started.name,
+            msg=Event.Write,
+            step=Event.Started,
             identifier=identifier,
             ftype=ftype,
         )
@@ -305,8 +305,8 @@ class DriverS3(GenericDriver):
             tmp_path.unlink(missing_ok=True)
 
         self.debug(
-            msg=Event.Write.name,
-            step=Event.Completed.name,
+            msg=Event.Write,
+            step=Event.Completed,
             uri=result_uri,
         )
 
@@ -338,8 +338,8 @@ class DriverS3(GenericDriver):
         prefix = info["key"]
 
         self.debug(
-            msg=Event.Search.name,
-            step=Event.Started.name,
+            msg=Event.Search,
+            step=Event.Started,
             bucket=bucket,
             prefix=prefix,
             pattern=pattern,
@@ -367,7 +367,7 @@ class DriverS3(GenericDriver):
                     "is_file": S3UriParser.parse(f"s3://{bucket}/{key}")["is_file"],
                 }
 
-        self.debug(msg=Event.Search.name, step=Event.Completed.name)
+        self.debug(msg=Event.Search, step=Event.Completed)
 
     def _client(self, region: Optional[str] = None):
         r = region or self._default_region
@@ -403,12 +403,12 @@ class DriverS3(GenericDriver):
         key = info["key"] or src.name
 
         s3_uri = f"s3://{bucket}/{key}"
-        self.debug(msg=Event.Write.name, step=Event.Started.name, source=str(src), uri=s3_uri)
+        self.debug(msg=Event.Write, step=Event.Started, source=str(src), uri=s3_uri)
 
         try:
             self._client(info["region"]).upload_file(str(src), bucket, key)
         except Exception as e:
-            self.debug(msg=Event.Write.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Write, step=Event.Failed, error=str(e))
             raise DriverS3Error(caller=self, error=f"Upload failed: {s3_uri} — {e}") from e
 
         local_copy = self._cache_filename(destination_uri, src.name)

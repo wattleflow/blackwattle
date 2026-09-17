@@ -91,8 +91,8 @@ class PostgresConnection(GenericConnection):
 
     def create_connection(self) -> None:
         self.debug(
-            msg=Event.Create.name,
-            step=Event.Started.name,
+            msg=Event.Create,
+            step=Event.Started,
             state=self.state.value,
         )
 
@@ -102,8 +102,8 @@ class PostgresConnection(GenericConnection):
             ConnectionState.CONNECTING,
         ):
             self.warning(
-                msg=Event.Create.name,
-                step=Event.Check.name,
+                msg=Event.Create,
+                step=Event.Check,
                 reason="connection already created",
                 state=self.state.value,
             )
@@ -138,7 +138,7 @@ class PostgresConnection(GenericConnection):
                 connection_name=self.connection_name,
                 state=self.state.value,
             )
-            self.debug(msg=Event.Create.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Create, step=Event.Failed, error=str(e))
             raise PostgresError(
                 caller=self,
                 error=f"Failed to create PostgreSQL engine: {e}",
@@ -147,8 +147,8 @@ class PostgresConnection(GenericConnection):
         self._connection: Optional[Connection] = None
 
         self.debug(
-            msg=Event.Create.name,
-            step=Event.Completed.name,
+            msg=Event.Create,
+            step=Event.Completed,
             state=self.state.value,
         )
 
@@ -157,7 +157,7 @@ class PostgresConnection(GenericConnection):
         self._ensure_created()
 
         self.debug(
-            msg=Event.Connect.name,
+            msg=Event.Connect,
             connection_name=self.connection_name,
             state=self.state.value,
         )
@@ -199,14 +199,14 @@ class PostgresConnection(GenericConnection):
                 connection_name=self.connection_name,
                 state=self.state.value,
             )
-            self.debug(msg=Event.Connect.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Connect, step=Event.Failed, error=str(e))
             raise PostgresError(
                 caller=self,
                 error=f"connect error: {e}",
             ) from e
 
         self.debug(
-            msg=Event.Connected.name,
+            msg=Event.Connected,
             connection_name=self.connection_name,
             state=self.state.value,
         )
@@ -220,7 +220,7 @@ class PostgresConnection(GenericConnection):
                 connection_name=self.connection_name,
                 state=self.state.value,
             )
-            self.debug(msg=Event.Connect.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Connect, step=Event.Failed, error=str(e))
             raise
         finally:
             if self._connection:
@@ -237,14 +237,14 @@ class PostgresConnection(GenericConnection):
                     self._connection = None
             self._fsm.apply(ConnectionAction.DISCONNECT)
             self.debug(
-                msg=Event.Disconnected.name,
+                msg=Event.Disconnected,
                 connection_name=self.connection_name,
                 note="engine still alive; call ensure_closed() to dispose",
             )
 
     def disconnect(self) -> None:
         self.debug(
-            msg=Event.Disconnect.name,
+            msg=Event.Disconnect,
             connection_name=self.connection_name,
             state=self.state.value,
         )
@@ -276,7 +276,7 @@ class PostgresConnection(GenericConnection):
                     self._engine = None
         finally:
             self.debug(
-                msg=Event.Disconnected.name,
+                msg=Event.Disconnected,
                 connection_name=self.connection_name,
                 state=self.state.value,
             )

@@ -67,7 +67,7 @@ class CreateEmailDocument(StrategyCreate):
 
     def execute(self, caller: IWattleflow, *args, **kwargs) -> Optional[ITarget]:
         try:
-            self.debug(msg=Event.Create.name, step=Event.Started.name, kwargs=kwargs)
+            self.debug(msg=Event.Create, step=Event.Started, kwargs=kwargs)
             assert isinstance(caller, IBlackboard), "Expected IBlackboard. Found %s" % type(caller)
 
             Attribute.mandatory(self, "filename", str, **kwargs)
@@ -90,15 +90,15 @@ class CreateEmailDocument(StrategyCreate):
 
             if not document.size > 0:
                 self.warning(
-                    msg=Event.Create.name,
-                    step=Event.Check.name,
+                    msg=Event.Create,
+                    step=Event.Check,
                     reason="Document file's feeling a bit empty today!",
                     document=document,
                 )
 
             self.debug(
-                msg=Event.Create.name,
-                step=Event.Completed.name,
+                msg=Event.Create,
+                step=Event.Completed,
                 document=document,
                 filename=self.filename,
                 digest=message.digest,
@@ -109,11 +109,11 @@ class CreateEmailDocument(StrategyCreate):
             return DocumentFacade(document)
         except AssertionError as e:
             error = f"Assertion: {str(e)}"
-            self.debug(msg=Event.Create.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Create, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
         except Exception as e:
             error = f"{self.name} caught exception: {str(e)}"
-            self.debug(msg=Event.Create.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Create, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
 
 
@@ -152,7 +152,7 @@ class WriteEmailCopyOLD(StrategyWrite):
         return f"{stamp}-{subject}" if stamp else subject
 
     def execute(self, caller: IWattleflow, facade: ITarget, **kwargs: Any) -> bool:
-        self.debug(msg=Event.Write.name, step=Event.Started.name, caller=caller)
+        self.debug(msg=Event.Write, step=Event.Started, caller=caller)
         try:
             assert isinstance(caller, IRepository), "Expected IRepository. Found %s" % type(caller)
             assert isinstance(facade, ITarget), "Expected ITarget. Found %s" % type(facade)
@@ -166,8 +166,8 @@ class WriteEmailCopyOLD(StrategyWrite):
 
             if not source.is_file():
                 self.warning(
-                    msg=Event.Write.name,
-                    step=Event.Check.name,
+                    msg=Event.Write,
+                    step=Event.Check,
                     reason="source message missing",
                     filename=str(source),
                 )
@@ -178,8 +178,8 @@ class WriteEmailCopyOLD(StrategyWrite):
 
             if Path(output).resolve() == source.resolve():
                 self.warning(
-                    msg=Event.Write.name,
-                    step=Event.Check.name,
+                    msg=Event.Write,
+                    step=Event.Check,
                     reason="write_path resolves onto the source — nothing copied",
                     filename=str(source),
                     output=output,
@@ -188,8 +188,8 @@ class WriteEmailCopyOLD(StrategyWrite):
 
             document.update_metadata("storage_filename", output)
             self.info(
-                msg=Event.Write.name,
-                step=Event.Completed.name,
+                msg=Event.Write,
+                step=Event.Completed,
                 stem=stem,
                 strategija=self.name,
                 output=str(output),
@@ -197,11 +197,11 @@ class WriteEmailCopyOLD(StrategyWrite):
             return True
         except AssertionError as e:
             error = f"Assertion: {str(e)}"
-            self.debug(msg=Event.Write.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Write, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
         except Exception as e:
             error = f"{self.name} caught exception: {str(e)}"
-            self.debug(msg=Event.Write.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Write, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
 
 
@@ -241,8 +241,8 @@ class WriteEmailWithAttachmentOLD(WriteEmailCopyOLD):
                 )
             except (IndexError, ValueError) as e:
                 self.warning(
-                    msg=Event.Write.name,
-                    step=Event.Check.name,
+                    msg=Event.Write,
+                    step=Event.Check,
                     reason="attachment not written",
                     attachment=name,
                     error=str(e),
@@ -258,8 +258,8 @@ class WriteEmailWithAttachmentOLD(WriteEmailCopyOLD):
             )
             written.append(str(output))
             self.info(
-                msg=Event.Write.name,
-                step=Event.Completed.name,
+                msg=Event.Write,
+                step=Event.Completed,
                 # scope="item",
                 attachment=name,
                 digest=attachment.digest,
@@ -273,8 +273,8 @@ class WriteEmailWithAttachmentOLD(WriteEmailCopyOLD):
         ### TRICK with parent class
         if not super().execute(caller, facade, **kwargs):
             self.warning(
-                msg=Event.Execute.name,
-                step=Event.Completed.name,
+                msg=Event.Execute,
+                step=Event.Completed,
                 reason="parent strategy did not complete",
             )
             return False
@@ -291,8 +291,8 @@ class WriteEmailWithAttachmentOLD(WriteEmailCopyOLD):
             document.update_metadata("storage_attachments", written)
 
             self.debug(
-                msg=Event.Write.name,
-                step=Event.Completed.name,
+                msg=Event.Write,
+                step=Event.Completed,
                 stem=stem,
                 attachments=document.metadata.get(MailKeys.ATTACHMENT_COUNT),
                 written=len(written),
@@ -300,7 +300,7 @@ class WriteEmailWithAttachmentOLD(WriteEmailCopyOLD):
             return True
         except Exception as e:
             error = f"{self.name} caught exception: {str(e)}"
-            self.debug(msg=Event.Write.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Write, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
         finally:
             # The bundle is complete, so the memo has no next reader — holding it
@@ -354,7 +354,7 @@ class WriteEmailCopy(StrategyWrite):
 
     def execute(self, caller: IWattleflow, facade: ITarget, **kwargs: Any) -> bool:
         try:
-            self.debug(msg=Event.Write.name, step=Event.Started.name, caller=caller)
+            self.debug(msg=Event.Write, step=Event.Started, caller=caller)
             Attribute.evaluate(caller=self, target=caller, expected_type=IRepository)
             Attribute.evaluate(caller=self, target=facade, expected_type=ITarget)
 
@@ -367,8 +367,8 @@ class WriteEmailCopy(StrategyWrite):
 
             if not source.is_file():
                 self.warning(
-                    msg=Event.Write.name,
-                    step=Event.Check.name,
+                    msg=Event.Write,
+                    step=Event.Check,
                     reason="source message missing",
                     filename=str(source),
                 )
@@ -385,8 +385,8 @@ class WriteEmailCopy(StrategyWrite):
                 # stamped, so the processor will not settle the source either:
                 # nothing is deleted for an archive that was never written.
                 self.error(
-                    msg=Event.Write.name,
-                    step=Event.Failed.name,
+                    msg=Event.Write,
+                    step=Event.Failed,
                     reason="destination not written",
                     filename=str(source),
                     stem=stem,
@@ -396,8 +396,8 @@ class WriteEmailCopy(StrategyWrite):
 
             if Path(output).resolve() == source.resolve():
                 self.warning(
-                    msg=Event.Write.name,
-                    step=Event.Check.name,
+                    msg=Event.Write,
+                    step=Event.Check,
                     reason="write_path resolves onto the source — nothing copied",
                     filename=str(source),
                     output=str(output),
@@ -412,8 +412,8 @@ class WriteEmailCopy(StrategyWrite):
             document.update_metadata("stored_at", Now.utc())
 
             self.debug(
-                msg=Event.Write.name,
-                step=Event.Completed.name,
+                msg=Event.Write,
+                step=Event.Completed,
                 stem=stem,
                 output=str(output),
             )
@@ -422,7 +422,7 @@ class WriteEmailCopy(StrategyWrite):
             raise
         except Exception as e:
             error = f"{self.name} caught exception: {str(e)}"
-            self.debug(msg=Event.Write.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Write, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
 
 
@@ -509,8 +509,8 @@ class WriteEmailAttachments(StrategyWrite):
             self._tika = TikaConnection.from_environment(f"{self.name}-tika", level=self._level, handler=self._handler)
             if self._tika is None:
                 self.warning(
-                    msg=Event.Write.name,
-                    step=Event.Check.name,
+                    msg=Event.Write,
+                    step=Event.Check,
                     reason="no Tika configured: a scanned PDF keeps no text",
                     hint="set runtime.tika_server_jar or TIKA_SERVER_ENDPOINT",
                 )
@@ -548,8 +548,8 @@ class WriteEmailAttachments(StrategyWrite):
         except Exception as e:  # noqa: BLE001 — the original is written; its text is not
             outcome["text_missing"].append(where)
             self.warning(
-                msg=Event.Write.name,
-                step=Event.Check.name,
+                msg=Event.Write,
+                step=Event.Check,
                 reason="text not extracted",
                 attachment=where,
                 error=f"{type(e).__name__}: {e}",
@@ -560,8 +560,8 @@ class WriteEmailAttachments(StrategyWrite):
             # A scanned PDF has pages and no text layer; that is a finding, not a file.
             outcome["text_missing"].append(where)
             self.warning(
-                msg=Event.Write.name,
-                step=Event.Check.name,
+                msg=Event.Write,
+                step=Event.Check,
                 reason="no text to write",
                 attachment=where,
             )
@@ -582,8 +582,8 @@ class WriteEmailAttachments(StrategyWrite):
         except (DriverException, OSError) as e:
             outcome["text_missing"].append(where)
             self.error(
-                msg=Event.Write.name,
-                step=Event.Failed.name,
+                msg=Event.Write,
+                step=Event.Failed,
                 reason="text not written",
                 attachment=where,
                 error=str(e),
@@ -612,8 +612,8 @@ class WriteEmailAttachments(StrategyWrite):
         except (DriverException, OSError) as e:
             outcome["failed"].append(f"{subdir}/{name}")
             self.error(
-                msg=Event.Write.name,
-                step=Event.Failed.name,
+                msg=Event.Write,
+                step=Event.Failed,
                 reason="attachment not written",
                 attachment=f"{subdir}/{name}",
                 error=str(e),
@@ -622,8 +622,8 @@ class WriteEmailAttachments(StrategyWrite):
 
         outcome["written"].append(str(output))
         self.debug(
-            msg=Event.Write.name,
-            step=Event.Completed.name,
+            msg=Event.Write,
+            step=Event.Completed,
             scope="item",
             attachment=name,
             digest=attachment.digest,
@@ -636,8 +636,8 @@ class WriteEmailAttachments(StrategyWrite):
             return
         if depth >= self.MAX_DEPTH:
             self.warning(
-                msg=Event.Write.name,
-                step=Event.Check.name,
+                msg=Event.Write,
+                step=Event.Check,
                 reason="nesting deeper than MAX_DEPTH, inner attachments not written",
                 attachment=f"{subdir}/{name}",
                 depth=depth,
@@ -667,8 +667,8 @@ class WriteEmailAttachments(StrategyWrite):
             if reason:
                 outcome["skipped"].append(f"{subdir}/{name}")
                 self.debug(
-                    msg=Event.Write.name,
-                    step=Event.Check.name,
+                    msg=Event.Write,
+                    step=Event.Check,
                     scope="item",
                     reason=reason,
                     attachment=f"{subdir}/{name}",
@@ -699,8 +699,8 @@ class WriteEmailAttachments(StrategyWrite):
             if reason:
                 outcome["skipped"].append(name)
                 self.debug(
-                    msg=Event.Write.name,
-                    step=Event.Check.name,
+                    msg=Event.Write,
+                    step=Event.Check,
                     scope="item",
                     reason=reason,
                     attachment=name,
@@ -716,8 +716,8 @@ class WriteEmailAttachments(StrategyWrite):
             except (IndexError, ValueError) as e:
                 outcome["failed"].append(name)
                 self.warning(
-                    msg=Event.Write.name,
-                    step=Event.Check.name,
+                    msg=Event.Write,
+                    step=Event.Check,
                     reason="attachment not written",
                     attachment=name,
                     error=str(e),
@@ -735,7 +735,7 @@ class WriteEmailAttachments(StrategyWrite):
 
     def execute(self, caller: IWattleflow, facade: ITarget, **kwargs: Any) -> bool:
         try:
-            self.debug(msg=Event.Write.name, step=Event.Started.name, caller=caller)
+            self.debug(msg=Event.Write, step=Event.Started, caller=caller)
             Attribute.evaluate(caller=self, target=caller, expected_type=IRepository)
             Attribute.evaluate(caller=self, target=facade, expected_type=ITarget)
 
@@ -748,8 +748,8 @@ class WriteEmailAttachments(StrategyWrite):
             # BR01 — nothing to bundle is a complete outcome, not a failure.
             if not document.metadata.get(MailKeys.HAS_ATTACHMENTS):
                 self.debug(
-                    msg=Event.Write.name,
-                    step=Event.Check.name,
+                    msg=Event.Write,
+                    step=Event.Check,
                     reason="message declares no attachments",
                 )
                 return True
@@ -757,8 +757,8 @@ class WriteEmailAttachments(StrategyWrite):
             output = str(document.metadata.get("output_filename") or "")
             if not output:
                 self.warning(
-                    msg=Event.Write.name,
-                    step=Event.Check.name,
+                    msg=Event.Write,
+                    step=Event.Check,
                     reason="no output_filename — the copy repository must be registered first",
                     document=document.identifier,
                 )
@@ -767,8 +767,8 @@ class WriteEmailAttachments(StrategyWrite):
             source = Path(str(document.filename))
             if not source.is_file():
                 self.warning(
-                    msg=Event.Write.name,
-                    step=Event.Check.name,
+                    msg=Event.Write,
+                    step=Event.Check,
                     reason="source message missing",
                     filename=str(source),
                 )
@@ -794,8 +794,8 @@ class WriteEmailAttachments(StrategyWrite):
                 document.update_metadata(f"attachments_{key}", outcome[key])
 
             self.debug(
-                msg=Event.Write.name,
-                step=Event.Completed.name,
+                msg=Event.Write,
+                step=Event.Completed,
                 subdir=subdir,
                 attachments=document.metadata.get(MailKeys.ATTACHMENT_COUNT),
                 counts={key: len(values) for key, values in outcome.items()},
@@ -808,7 +808,7 @@ class WriteEmailAttachments(StrategyWrite):
             raise
         except Exception as e:
             error = f"{self.name} caught exception: {str(e)}"
-            self.debug(msg=Event.Write.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Write, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
         finally:
             # The bundle is complete, so the memo has no next reader — holding it
@@ -838,7 +838,7 @@ class WriteEmailText(StrategyWrite):
 
     def execute(self, caller: IWattleflow, facade: ITarget, **kwargs: Any) -> bool:
         try:
-            self.debug(msg=Event.Write.name, step=Event.Started.name, caller=caller)
+            self.debug(msg=Event.Write, step=Event.Started, caller=caller)
             Attribute.evaluate(caller=self, target=caller, expected_type=IRepository)
             Attribute.evaluate(caller=self, target=facade, expected_type=ITarget)
 
@@ -851,8 +851,8 @@ class WriteEmailText(StrategyWrite):
             output = str(document.metadata.get("output_filename") or "")
             if not output:
                 self.warning(
-                    msg=Event.Write.name,
-                    step=Event.Check.name,
+                    msg=Event.Write,
+                    step=Event.Check,
                     reason="no output_filename — the copy repository must be registered first",
                     document=document.identifier,
                 )
@@ -861,8 +861,8 @@ class WriteEmailText(StrategyWrite):
             source = Path(str(document.filename))
             if not source.is_file():
                 self.warning(
-                    msg=Event.Write.name,
-                    step=Event.Check.name,
+                    msg=Event.Write,
+                    step=Event.Check,
                     reason="source message missing",
                     filename=str(source),
                 )
@@ -875,8 +875,8 @@ class WriteEmailText(StrategyWrite):
 
             if not payload.strip():
                 self.warning(
-                    msg=Event.Write.name,
-                    step=Event.Check.name,
+                    msg=Event.Write,
+                    step=Event.Check,
                     reason="message rendered empty, nothing written",
                     filename=str(source),
                 )
@@ -896,8 +896,8 @@ class WriteEmailText(StrategyWrite):
                 # it owns the ERROR, and one unwritable destination costs its own
                 # message and no other.
                 self.error(
-                    msg=Event.Write.name,
-                    step=Event.Failed.name,
+                    msg=Event.Write,
+                    step=Event.Failed,
                     reason="text not written",
                     filename=str(source),
                     stem=stem,
@@ -913,8 +913,8 @@ class WriteEmailText(StrategyWrite):
             document.update_metadata("text_chars", len(payload))
 
             self.debug(
-                msg=Event.Write.name,
-                step=Event.Completed.name,
+                msg=Event.Write,
+                step=Event.Completed,
                 stem=stem,
                 chars=len(payload),
                 output=str(written),
@@ -924,7 +924,7 @@ class WriteEmailText(StrategyWrite):
             raise
         except Exception as e:
             error = f"{self.name} caught exception: {str(e)}"
-            self.debug(msg=Event.Write.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Write, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
         finally:
             # Nothing else reads this message, so the memo has no next reader.

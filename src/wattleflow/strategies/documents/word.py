@@ -54,7 +54,7 @@ DEFAULT_DOCX_SUFFIX = ".docx"
 class CreateMarkdownFileDocument(StrategyCreate):
     def execute(self, caller: IWattleflow, *args, **kwargs) -> Optional[ITarget]:
         try:
-            self.debug(msg=Event.Create.name, step=Event.Started.name, kwargs=kwargs)
+            self.debug(msg=Event.Create, step=Event.Started, kwargs=kwargs)
             assert isinstance(caller, IBlackboard), "Expected IBlackboard. Found %s" % type(caller)
 
             Attribute.mandatory(self, "filename", str, **kwargs)
@@ -85,8 +85,8 @@ class CreateMarkdownFileDocument(StrategyCreate):
             document.update_content(str(content))
 
             self.debug(
-                msg=Event.Create.name,
-                step=Event.Completed.name,
+                msg=Event.Create,
+                step=Event.Completed,
                 document=document,
                 filename=filename,
                 size=document.size,
@@ -94,11 +94,11 @@ class CreateMarkdownFileDocument(StrategyCreate):
             return facade
         except AssertionError as e:
             error = f"Assertion: {str(e)}"
-            self.debug(msg=Event.Create.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Create, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
         except Exception as e:
             error = f"{self.name} caught exception: {str(e)}"
-            self.debug(msg=Event.Create.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Create, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
 
     @staticmethod
@@ -113,7 +113,7 @@ class CreateMarkdownFileDocument(StrategyCreate):
 class WriteMarkdownToWordDocument(StrategyWrite):
     def execute(self, caller: IWattleflow, facade: ITarget, *args, **kwargs) -> bool:
         try:
-            self.debug(msg=Event.Write.name, step=Event.Started.name)
+            self.debug(msg=Event.Write, step=Event.Started)
 
             assert isinstance(caller, IRepository), "Expected IRepository. Found %s" % type(caller)
             assert isinstance(facade, ITarget), "Expected ITarget. Found %s" % type(facade)
@@ -133,8 +133,8 @@ class WriteMarkdownToWordDocument(StrategyWrite):
             if not content.strip():
                 if document.size <= 0:
                     self.warning(
-                        msg=Event.Write.name,
-                        step=Event.Check.name,
+                        msg=Event.Write,
+                        step=Event.Check,
                         reason="Markdown content is empty — nothing to write.",
                         document=document,
                         size=document.size,
@@ -150,8 +150,8 @@ class WriteMarkdownToWordDocument(StrategyWrite):
             document.update_metadata("stored_by", caller.name)
             document.update_metadata("stored_at", Now.utc())
             self.debug(
-                msg=Event.Write.name,
-                step=Event.Started.name,
+                msg=Event.Write,
+                step=Event.Started,
                 source=filepath.name,
                 target=filename,
                 size=document.size,
@@ -173,8 +173,8 @@ class WriteMarkdownToWordDocument(StrategyWrite):
             )
             document.update_metadata("output", output)
             self.debug(
-                msg=Event.Write.name,
-                step=Event.Completed.name,
+                msg=Event.Write,
+                step=Event.Completed,
                 source=filepath.name,
                 output=output,
                 size=document.size,
@@ -182,11 +182,11 @@ class WriteMarkdownToWordDocument(StrategyWrite):
             return True
         except AssertionError as e:
             error = f"Assertion: {str(e)}"
-            self.debug(msg=Event.Write.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Write, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
         except Exception as e:
             error = f"{self.name} caught exception: {str(e)}"
-            self.debug(msg=Event.Write.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Write, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
 
 
@@ -195,7 +195,7 @@ class ReadWordDocument(StrategyRead):
 
     def execute(self, caller: IWattleflow, **kwargs) -> Optional[ITarget]:
         try:
-            self.debug(msg=Event.Read.name, step=Event.Started.name)
+            self.debug(msg=Event.Read, step=Event.Started)
             assert isinstance(caller, IRepository), "Expected IRepository. Found %s" % type(caller)
             Attribute.mandatory(self, "identifier", str, **kwargs)
 
@@ -220,8 +220,8 @@ class ReadWordDocument(StrategyRead):
             document.update_metadata("read_at", Now.utc())
 
             self.debug(
-                msg=Event.Read.name,
-                step=Event.Completed.name,
+                msg=Event.Read,
+                step=Event.Completed,
                 document=document.identifier,
                 size=len(content),
             )
@@ -230,11 +230,11 @@ class ReadWordDocument(StrategyRead):
             raise
         except AssertionError as e:
             error = f"Assertion: {str(e)}"
-            self.debug(msg=Event.Read.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Read, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
         except Exception as e:
             error = f"{self.name} caught exception: {str(e)}"
-            self.debug(msg=Event.Read.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Read, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
 
 

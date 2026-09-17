@@ -49,27 +49,27 @@ class SparkReadProcessor(GenericProcessor):
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
         self.debug(
-            msg=Event.Constructor.name,
-            step=Event.Started.name,
+            msg=Event.Constructor,
+            step=Event.Started,
             driver=repr(getattr(self, "driver", None)),
             sources=[s.get("uri") for s in (getattr(self, "sources", []) or [])],
         )
 
     def create_generator(self) -> Generator[ITarget, None, None]:
-        self.debug(msg=Event.Generate.name, step=Event.Started.name)
+        self.debug(msg=Event.Generate, step=Event.Started)
 
         try:
             driver: DriverSpark = self.driver
             sources: List[Dict] = getattr(self, "sources", []) or []
 
-            self.debug(msg=Event.Generate.name, source_count=len(sources))
+            self.debug(msg=Event.Generate, source_count=len(sources))
 
             for source in sources:
                 uri: str = source.get("uri", "")
                 fmt: Optional[str] = source.get("format")
                 read_options: dict = source.get("read_options", {})
 
-                self.debug(msg=Event.Generate.name, scope="item", uri=uri, format=fmt)
+                self.debug(msg=Event.Generate, scope="item", uri=uri, format=fmt)
 
                 try:
                     df = driver.read(uri, format=fmt, read_options=read_options)
@@ -87,7 +87,7 @@ class SparkReadProcessor(GenericProcessor):
                     }
 
                     self.debug(
-                        msg=Event.Generate.name,
+                        msg=Event.Generate,
                         scope="item",
                         no=self.cycle + 1,
                         uri=uri,
@@ -104,13 +104,13 @@ class SparkReadProcessor(GenericProcessor):
 
                 except Exception as e:
                     error = f"Error: {str(e)}"
-                    self.exception(msg=Event.Generate.name, step=Event.Failed.name, error=error)
+                    self.exception(msg=Event.Generate, step=Event.Failed, error=error)
                     continue
         except Exception as e:
             error = f"Error: {str(e)}"
             self.debug(
-                msg=Event.Generate.name,
-                step=Event.Failed.name,
+                msg=Event.Generate,
+                step=Event.Failed,
                 error=error,
                 trace=format_exc(),
             )
@@ -121,8 +121,8 @@ class SparkReadProcessor(GenericProcessor):
             ) from e
 
         self.debug(
-            msg=Event.Generate.name,
-            step=Event.Completed.name,
+            msg=Event.Generate,
+            step=Event.Completed,
             count=self.cycle,
         )
 
@@ -164,8 +164,8 @@ class SparkWriteProcessor(GenericProcessor):
         kwargs.setdefault("mode", "overwrite")
         super().__init__(**kwargs)
         self.debug(
-            msg=Event.Constructor.name,
-            step=Event.Started.name,
+            msg=Event.Constructor,
+            step=Event.Started,
             driver=repr(getattr(self, "driver", None)),
             source_uri=getattr(self, "source_uri", None),
             destination_uri=getattr(self, "destination_uri", None),
@@ -174,7 +174,7 @@ class SparkWriteProcessor(GenericProcessor):
         )
 
     def create_generator(self) -> Generator[ITarget, None, None]:
-        self.debug(msg=Event.Generate.name, step=Event.Started.name)
+        self.debug(msg=Event.Generate, step=Event.Started)
 
         try:
             driver: DriverSpark = self.driver
@@ -185,7 +185,7 @@ class SparkWriteProcessor(GenericProcessor):
             mode: str = getattr(self, "mode", "overwrite")
 
             self.debug(
-                msg=Event.Generate.name,
+                msg=Event.Generate,
                 source=source_uri,
                 destination=destination_uri,
             )
@@ -213,7 +213,7 @@ class SparkWriteProcessor(GenericProcessor):
             }
 
             self.debug(
-                msg=Event.Generate.name,
+                msg=Event.Generate,
                 no=self.cycle + 1,
                 result_uri=result_uri,
                 row_count=row_count,
@@ -229,8 +229,8 @@ class SparkWriteProcessor(GenericProcessor):
         except Exception as e:
             error = f"Error: {str(e)}"
             self.debug(
-                msg=Event.Generate.name,
-                step=Event.Failed.name,
+                msg=Event.Generate,
+                step=Event.Failed,
                 error=error,
                 trace=format_exc(),
             )
@@ -241,8 +241,8 @@ class SparkWriteProcessor(GenericProcessor):
             ) from e
 
         self.debug(
-            msg=Event.Generate.name,
-            step=Event.Completed.name,
+            msg=Event.Generate,
+            step=Event.Completed,
             count=self.cycle,
         )
 

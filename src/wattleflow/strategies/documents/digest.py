@@ -34,11 +34,11 @@ class GenerateFileDigest(StrategyGenerate):
     """
 
     def execute(self, caller: IWattleflow, **kwargs: Any) -> str | None:
-        self.debug(msg=Event.Generate.name, step=Event.Started.name, caller=caller)
+        self.debug(msg=Event.Generate, step=Event.Started, caller=caller)
         source = kwargs.get("source") or kwargs.get("filename")
         if not source:
             self.warning(
-                msg=Event.Generate.name, step=Event.Check.name, reason="no source for digest"
+                msg=Event.Generate, step=Event.Check, reason="no source for digest"
             )
             return None
         algorithm = kwargs.get("algorithm") or FileDigest.DEFAULT_ALGORITHM
@@ -46,10 +46,10 @@ class GenerateFileDigest(StrategyGenerate):
             digest = FileDigest.labelled(source, algorithm=algorithm)
         except Exception as e:
             error = f"{self.name} caught exception: {str(e)}"
-            self.debug(msg=Event.Generate.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Generate, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
 
-        self.debug(msg=Event.Generate.name, step=Event.Completed.name, digest=digest)
+        self.debug(msg=Event.Generate, step=Event.Completed, digest=digest)
         return digest
 
 

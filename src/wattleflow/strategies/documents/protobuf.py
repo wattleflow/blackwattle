@@ -50,7 +50,7 @@ class CreateProtobufDocument(StrategyCreate):
 
     def execute(self, caller: IWattleflow, **kwargs) -> Optional[ITarget]:
         try:
-            self.debug(msg=Event.Create.name, step=Event.Started.name, kwargs=kwargs)
+            self.debug(msg=Event.Create, step=Event.Started, kwargs=kwargs)
             assert isinstance(caller, IBlackboard), "Expected IBlackboard. Found %s" % type(caller)
             Attribute.mandatory(self, "content", list, **kwargs)
             schema: ProtobufSchema = kwargs.get("schema")
@@ -79,25 +79,25 @@ class CreateProtobufDocument(StrategyCreate):
 
             if document.size <= 0:
                 self.warning(
-                    msg=Event.Create.name,
-                    step=Event.Check.name,
+                    msg=Event.Create,
+                    step=Event.Check,
                     reason="Protobuf record set is empty.",
                     document=document,
                 )
             self.debug(
-                msg=Event.Create.name,
-                step=Event.Completed.name,
+                msg=Event.Create,
+                step=Event.Completed,
                 document=document.identifier,
                 size=document.size,
             )
             return DocumentFacade(document)
         except AssertionError as e:
             error = f"Assertion: {str(e)}"
-            self.debug(msg=Event.Create.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Create, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
         except Exception as e:
             error = f"{self.name} caught exception: {str(e)}"
-            self.debug(msg=Event.Create.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Create, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
 
 
@@ -114,7 +114,7 @@ class ReadProtobufDocument(StrategyRead):
 
     def execute(self, caller: IWattleflow, **kwargs) -> Optional[ITarget]:
         try:
-            self.debug(msg=Event.Read.name, step=Event.Started.name, kwargs=kwargs)
+            self.debug(msg=Event.Read, step=Event.Started, kwargs=kwargs)
             assert isinstance(caller, IRepository), "Expected IRepository. Found %s" % type(caller)
             Attribute.mandatory(self, "identifier", str, **kwargs)
             uri: str = self.identifier  # type: ignore[attr-defined]
@@ -146,19 +146,19 @@ class ReadProtobufDocument(StrategyRead):
             )
             document.update_metadata("source_uri", uri)
             self.debug(
-                msg=Event.Read.name,
-                step=Event.Completed.name,
+                msg=Event.Read,
+                step=Event.Completed,
                 document=document.identifier,
                 size=document.size,
             )
             return DocumentFacade(document)
         except AssertionError as e:
             error = f"Assertion: {str(e)}"
-            self.debug(msg=Event.Read.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Read, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
         except Exception as e:
             error = f"{self.name} caught exception: {str(e)}"
-            self.debug(msg=Event.Read.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Read, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
 
 
@@ -167,7 +167,7 @@ class WriteProtobufDocument(StrategyWrite):
 
     def execute(self, caller: IWattleflow, facade: ITarget, **kwargs) -> bool:
         try:
-            self.debug(msg=Event.Write.name, step=Event.Started.name, kwargs=kwargs)
+            self.debug(msg=Event.Write, step=Event.Started, kwargs=kwargs)
             assert isinstance(caller, IRepository), "Expected IRepository. Found %s" % type(caller)
             assert isinstance(facade, ITarget), "Expected ITarget. Found %s" % type(facade)
             driver = kwargs.get("driver")
@@ -178,8 +178,8 @@ class WriteProtobufDocument(StrategyWrite):
             document: ProtobufDocument = facade.request()  # type: ignore[assignment]
             if not isinstance(document.content, list) or document.size <= 0:
                 self.warning(
-                    msg=Event.Write.name,
-                    step=Event.Check.name,
+                    msg=Event.Write,
+                    step=Event.Check,
                     reason="Protobuf record set is empty.",
                     document=document,
                 )
@@ -187,8 +187,8 @@ class WriteProtobufDocument(StrategyWrite):
             schema: ProtobufSchema = document.schema
             if schema is None:
                 self.error(
-                    msg=Event.Write.name,
-                    step=Event.Check.name,
+                    msg=Event.Write,
+                    step=Event.Check,
                     reason="Missing protobuf schema on document metadata.",
                     document=document,
                 )
@@ -208,8 +208,8 @@ class WriteProtobufDocument(StrategyWrite):
             document.update_metadata("stored_by", caller.name)
             document.update_metadata("stored_at", document.utc_time_stamp())
             self.debug(
-                msg=Event.Write.name,
-                step=Event.Completed.name,
+                msg=Event.Write,
+                step=Event.Completed,
                 document=document,
                 size=document.size,
                 output=output,
@@ -217,11 +217,11 @@ class WriteProtobufDocument(StrategyWrite):
             return True
         except AssertionError as e:
             error = f"Assertion: {str(e)}"
-            self.debug(msg=Event.Write.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Write, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
         except Exception as e:
             error = f"{self.name} caught exception: {str(e)}"
-            self.debug(msg=Event.Write.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Write, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
 
 

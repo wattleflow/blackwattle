@@ -257,8 +257,8 @@ class PipelineAnnotateEntities(GenericPipeline):
             rows = driver.read(table="entitet")
         except Exception as e:
             self.warning(
-                msg=Event.Transform.name,
-                step=Event.Check.name,
+                msg=Event.Transform,
+                step=Event.Check,
                 reason="entity table unreadable",
                 error=str(e),
             )
@@ -313,7 +313,7 @@ class PipelineAnnotateEntities(GenericPipeline):
 
         if not text.strip():
             self.warning(
-                msg=Event.Transform.name, step=Event.Check.name, reason="no content to annotate"
+                msg=Event.Transform, step=Event.Check, reason="no content to annotate"
             )
             return
 
@@ -338,8 +338,8 @@ class PipelineAnnotateEntities(GenericPipeline):
         )
 
         self.debug(
-            msg=Event.Transform.name,
-            step=Event.Completed.name,
+            msg=Event.Transform,
+            step=Event.Completed,
             uid=uid,
             annotations=len(annotations),
             size=len(text),

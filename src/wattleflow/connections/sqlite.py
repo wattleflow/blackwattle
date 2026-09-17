@@ -56,7 +56,7 @@ class SqliteConnection(GenericConnection):
     OSCAL_CONTROLS: ClassVar[Tuple[str, ...]] = ("ac-3",)
 
     def create_connection(self) -> None:
-        self.debug(msg=Event.Create.name, step=Event.Started.name, state=self.state.value)
+        self.debug(msg=Event.Create, step=Event.Started, state=self.state.value)
 
         if self.state in (
             ConnectionState.CREATED,
@@ -64,8 +64,8 @@ class SqliteConnection(GenericConnection):
             ConnectionState.CONNECTING,
         ):
             self.warning(
-                msg=Event.Create.name,
-                step=Event.Check.name,
+                msg=Event.Create,
+                step=Event.Check,
                 reason="connection already created",
                 state=self.state.value,
             )
@@ -102,10 +102,10 @@ class SqliteConnection(GenericConnection):
             self._connection.row_factory = sqlite3.Row
             self._connection.execute("PRAGMA foreign_keys = ON;")
         except Exception as e:
-            self.debug(msg=Event.Create.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Create, step=Event.Failed, error=str(e))
             raise SqliteConnectionError(caller=self, error=f"create error: {e}") from e
 
-        self.debug(msg=Event.Created.name, path=str(path), state=self.state.value)
+        self.debug(msg=Event.Created, path=str(path), state=self.state.value)
 
     @contextmanager
     def connect(self) -> Generator[sqlite3.Connection, None, None]:
@@ -118,7 +118,7 @@ class SqliteConnection(GenericConnection):
             self._fsm.apply(ConnectionAction.CONNECT)
             self._fsm.apply(ConnectionAction.CONNECT_OK)
 
-        self.debug(msg=Event.Connected.name, state=self.state.value)
+        self.debug(msg=Event.Connected, state=self.state.value)
 
         # A file handle is not a pooled session: it stays open for the process
         # and only `disconnect()` closes it, so the block must not close it.
@@ -126,11 +126,11 @@ class SqliteConnection(GenericConnection):
             yield self._connection
         except Exception as e:
             self.notify(self, error=f"Error during connection use: {e}", state=self.state.value)
-            self.debug(msg=Event.Connect.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Connect, step=Event.Failed, error=str(e))
             raise
 
     def disconnect(self) -> None:
-        self.debug(msg=Event.Disconnect.name, state=self.state.value)
+        self.debug(msg=Event.Disconnect, state=self.state.value)
         try:
             if self._connection is not None:
                 try:
@@ -142,7 +142,7 @@ class SqliteConnection(GenericConnection):
                     if self._fsm.can(ConnectionAction.DISCONNECT):
                         self._fsm.apply(ConnectionAction.DISCONNECT)
         finally:
-            self.debug(msg=Event.Disconnected.name, state=self.state.value)
+            self.debug(msg=Event.Disconnected, state=self.state.value)
 
     def __repr__(self) -> str:
         return f"{self.name}({getattr(self, 'path', None)}, state={self.state.value})"

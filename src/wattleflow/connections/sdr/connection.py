@@ -140,7 +140,7 @@ class SDRConnection(GenericConnection):
                 tuning_plan=SDRTuningPlan.from_mapping(plan) if plan else None,
             )
         except (TypeError, ValueError, KeyError) as e:
-            self.debug(msg=Event.Configure.name, step=Event.Failed.name, error=str(e))
+            self.debug(msg=Event.Configure, step=Event.Failed, error=str(e))
             raise SDRConfigurationError(
                 caller=self, error=f"invalid SDR configuration: {e}"
             ) from e
@@ -234,7 +234,7 @@ class SDRConnection(GenericConnection):
             except SDRDeviceBusy as e:
                 if time.monotonic() >= deadline:
                     self.debug(
-                        msg=Event.Connect.name, step=Event.Failed.name, error=str(e), timeout=timeout
+                        msg=Event.Connect, step=Event.Failed, error=str(e), timeout=timeout
                     )
                     raise
                 time.sleep(self.CLAIM_RETRY)
@@ -270,7 +270,7 @@ class SDRConnection(GenericConnection):
 
     def create_connection(self) -> None:
         self.debug(
-            msg=Event.Create.name, step=Event.Started.name, connection_name=self.connection_name
+            msg=Event.Create, step=Event.Started, connection_name=self.connection_name
         )
         profile, instance = self._configure()
         backend = SDRBackend.for_family(profile.family, owner=self)
@@ -289,7 +289,7 @@ class SDRConnection(GenericConnection):
             backend.apply(session, instance)
             effective = backend.read_back(session)
         except BaseException as e:
-            self.debug(msg=Event.Create.name, step=Event.Failed.name, error=f"{type(e).__name__}: {e}")
+            self.debug(msg=Event.Create, step=Event.Failed, error=f"{type(e).__name__}: {e}")
             self._release_quietly(backend, session)
             raise
 
@@ -299,8 +299,8 @@ class SDRConnection(GenericConnection):
         self._effective = effective
         self._engine = session
         self.debug(
-            msg=Event.Create.name,
-            step=Event.Completed.name,
+            msg=Event.Create,
+            step=Event.Completed,
             connection_name=self.connection_name,
             family=backend.FAMILY,
             effective=effective.as_record(),
@@ -326,7 +326,7 @@ class SDRConnection(GenericConnection):
         self._engine = None
         if session is not None and backend is not None:
             backend.release(session)
-        self.debug(msg=Event.Disconnect.name, connection_name=self.connection_name)
+        self.debug(msg=Event.Disconnect, connection_name=self.connection_name)
 
     # endregion GenericConnection API
 

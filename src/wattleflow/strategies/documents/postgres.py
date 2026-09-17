@@ -109,7 +109,7 @@ class WriteFileToPgVector(StrategyWrite):
 
     def execute(self, caller: IWattleflow, facade: ITarget, *args, **kwargs) -> bool:
         try:
-            self.debug(msg=Event.Write.name, step=Event.Started.name, kwargs=kwargs)
+            self.debug(msg=Event.Write, step=Event.Started, kwargs=kwargs)
             assert isinstance(caller, IRepository), "Expected IRepository. Found %s" % type(caller)
             assert isinstance(facade, ITarget), "Expected ITarget. Found %s" % type(facade)
             driver = kwargs.get("driver")
@@ -121,14 +121,14 @@ class WriteFileToPgVector(StrategyWrite):
                 from sqlalchemy import text  # noqa: PLC0415
             except ImportError as e:
                 error = "SQLAlchemy is required for WriteFileToPgVector."
-                self.debug(msg=Event.Write.name, step=Event.Failed.name, error=error)
+                self.debug(msg=Event.Write, step=Event.Failed, error=error)
                 raise StrategyException(self, error=error, exc=e) from e
 
             document: FileDocument = facade.request()
             if not document.content:
                 self.warning(
-                    msg=Event.Write.name,
-                    step=Event.Check.name,
+                    msg=Event.Write,
+                    step=Event.Check,
                     reason="Empty content — refusing to insert.",
                     filename=document.filename,
                 )
@@ -147,19 +147,19 @@ class WriteFileToPgVector(StrategyWrite):
             document.update_metadata("stored_at", document.utc_time_stamp())
 
             self.debug(
-                msg=Event.Write.name,
-                step=Event.Completed.name,
+                msg=Event.Write,
+                step=Event.Completed,
                 document=document,
                 pgvector_id=str(new_id) if new_id else None,
             )
             return True
         except AssertionError as e:
             error = f"Assertion: {str(e)}"
-            self.debug(msg=Event.Write.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Write, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
         except Exception as e:
             error = f"{self.name} caught exception: {str(e)}"
-            self.debug(msg=Event.Write.name, step=Event.Failed.name, error=error)
+            self.debug(msg=Event.Write, step=Event.Failed, error=error)
             raise StrategyException(self, error=error, exc=e) from e
 
 
