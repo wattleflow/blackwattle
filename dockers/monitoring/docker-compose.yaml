@@ -1,0 +1,77 @@
+# Monitoring stack for a wattleflow run — FRQ-MET-01.
+#
+# The run does not scrape and is not scraped: it PUSHES one exposition per pass
+# to the Pushgateway, which Prometheus then scrapes. That matches what a
+# workflow is — a job that ends — rather than a service that is always up.
+#
+#   docker compose -f examples/monitoring/docker-compose.yaml up -d
+#   Grafana     http://localhost:3000   (credentials from examples/monitoring/.env)
+#               dashboard "WattleFlow — resource cost per run" (folder WattleFlow)
+#   Prometheus  http://localhost:9090
+#   Pushgateway http://localhost:9091
+#
+# A workflow pushes when its YAML carries `monitoring: exporters:` with a
+# `PrometheusSink` over a `DriverPrometheus` whose `pushgateway_url` points here
+# (examples/workflows/03_pdf_pii.yaml; the URL comes from `.env`,
+# `runtime.pushgateway_url`), and the example calls `run()` (DR-WFL-033).
+#
+services:
+  pushgateway:
+    image: prom/pushgateway:v1.9.0
+    container_name: wf-pushgateway
+    # `--persistence.file` keeps pushed groups across a restart, so a dashboard
+    # does not go blank because the container was recycled between runs.
+    command:
+      - --persistence.file=/data/pushgateway.store
+      - --persistence.interval=1m
+    volumes:
+      - pushgateway-data:/data
+    ports:
+      - "127.0.0.1:9091:9091"
+    restart: unless-stopped
+
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: wf-prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=15d
+      - --web.enable-lifecycle
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "127.0.0.1:9090:9090"
+    depends_on:
+      - pushgateway
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    container_name: wf-grafana
+    environment:
+      # No credential lives in this file (P-23, NFRQ-SEC-09): both come from
+      # `.env` beside this file, which git ignores; `.env.example` shows the keys.
+      # `:?` makes Compose refuse to start without them.
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:?set GRAFANA_ADMIN_USER in .env}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?set GRAFANA_ADMIN_PASSWORD in .env}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_THEME_DEFAULT: dark
+      GF_BRANDING_APP_TITLE: "WattleFlow"
+      GF_BRANDING_LOGIN_TITLE: "WattleFlow Monitoring"
+      GF_BRANDING_LOGIN_SUBTITLE: "Resource cost analysis per run"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/grafana.ini:/etc/grafana/grafana.ini:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+volumes:
+  pushgateway-data:
+  prometheus-data:
+  grafana-data:

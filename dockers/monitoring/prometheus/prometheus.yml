@@ -1,0 +1,23 @@
+# Prometheus for a wattleflow run — FRQ-MET-01.
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: wattleflow
+
+scrape_configs:
+  - job_name: pushgateway
+    # A pushed sample carries the job/instance the run declared. Without this
+    # Prometheus would overwrite them with the Pushgateway's own, and every run
+    # would look like it came from the gateway.
+    honor_labels: true
+    static_configs:
+      - targets: ["pushgateway:9091"]
+
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]
+
+# No alerting rules. A threshold picked before the process has a history is
+# tampering (NFRQ-OBS-04 c.7): limits are derived from the distribution once one
+# exists, and anything that stops work needs a DR (NFRQ-DEF-02 c.5).

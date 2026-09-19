@@ -1,0 +1,249 @@
+{
+  "title": "WattleFlow Template Library",
+  "uid": "wattleflow-templates",
+  "schemaVersion": 39,
+  "version": 1,
+  "tags": [
+    "wattleflow",
+    "template"
+  ],
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Stat Panel — Default",
+      "description": "Reusable stat panel with wattleflow color scheme",
+      "libraryPanel": {
+        "uid": "wattleflow-stat-default",
+        "name": "Stat Panel — Default"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#e8b924"
+          },
+          "custom": {
+            "hideFrom": {
+              "tooltip": false,
+              "viz": false,
+              "legend": false
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#6ba89e",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "fields": "",
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 0,
+        "y": 0
+      }
+    },
+    {
+      "type": "stat",
+      "title": "Stat Panel — Threshold",
+      "description": "Stat panel with wattleflow thresholds: OK (green), Warning (yellow), Critical (red)",
+      "libraryPanel": {
+        "uid": "wattleflow-stat-threshold",
+        "name": "Stat Panel — Threshold"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "custom": {
+            "hideFrom": {
+              "tooltip": false,
+              "viz": false,
+              "legend": false
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#6ba89e",
+                "value": null,
+                "label": "OK"
+              },
+              {
+                "color": "#e8b924",
+                "value": 75,
+                "label": "Warning"
+              },
+              {
+                "color": "#c74c3c",
+                "value": 90,
+                "label": "Critical"
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "values": false,
+          "fields": "",
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "orientation": "auto",
+        "textMode": "auto",
+        "colorMode": "background",
+        "graphMode": "none",
+        "justifyMode": "auto"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 3,
+        "y": 0
+      }
+    },
+    {
+      "type": "bargauge",
+      "title": "Bar Gauge — Gradient",
+      "description": "Bar gauge with wattleflow gradient (green → yellow → red)",
+      "libraryPanel": {
+        "uid": "wattleflow-bargauge-gradient",
+        "name": "Bar Gauge — Gradient"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "gradient",
+            "scheme": "RdYlGr"
+          },
+          "custom": {
+            "hideFrom": {
+              "tooltip": false,
+              "viz": false,
+              "legend": false
+            }
+          },
+          "mappings": [],
+          "min": 0,
+          "thresholds": {
+            "mode": "percentage",
+            "steps": [
+              {
+                "color": "#6ba89e",
+                "value": null
+              },
+              {
+                "color": "#e8b924",
+                "value": 60
+              },
+              {
+                "color": "#c74c3c",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "orientation": "horizontal",
+        "showThresholdLabels": false,
+        "showThresholdMarkers": true,
+        "displayMode": "gradient",
+        "reduceOptions": {
+          "values": false,
+          "fields": "",
+          "calcs": [
+            "lastNotNull"
+          ]
+        }
+      },
+      "gridPos": {
+        "h": 9,
+        "w": 12,
+        "x": 0,
+        "y": 4
+      }
+    },
+    {
+      "type": "timeseries",
+      "title": "Time Series — Bars",
+      "description": "Time series chart with wattleflow accent colors",
+      "libraryPanel": {
+        "uid": "wattleflow-timeseries-bars",
+        "name": "Time Series — Bars"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "bars",
+            "fillOpacity": 60,
+            "lineWidth": 1,
+            "hideFrom": {
+              "tooltip": false,
+              "viz": false,
+              "legend": false
+            }
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "#6ba89e",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 0,
+        "y": 13
+      }
+    }
+  ]
+}

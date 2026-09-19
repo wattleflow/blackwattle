@@ -197,11 +197,14 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+# Other files and directories
 .yaml
 *.ignore
 Makefile
 CLAUDE.md
+nlp/
 documentation/
 documentation
 tests/
-nlp/
+*.md

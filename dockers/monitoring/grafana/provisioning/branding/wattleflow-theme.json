@@ -1,0 +1,19 @@
+{
+  "name": "wattleflow",
+  "description": "Wattleflow brand theme — teal background, yellow accents, green highlights",
+  "type": "dark",
+  "colors": {
+    "primary": "#e8b924",
+    "secondary": "#6ba89e",
+    "error": "#c74c3c",
+    "success": "#6ba89e",
+    "warning": "#e8b924",
+    "info": "#e8b924",
+    "background": "#2d5a54",
+    "text": "#ffffff"
+  },
+  "panelDefaults": {
+    "backgroundColor": "#2d5a54",
+    "borderColor": "rgba(232, 185, 36, 0.3)"
+  }
+}
