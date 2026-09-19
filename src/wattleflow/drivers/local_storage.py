@@ -659,24 +659,14 @@ class DriverLocalStorage(GenericDriver):
         _resolved = _base.joinpath(name).resolve()
         if not _resolved.is_relative_to(_base):
             reason = f"Path traversal detected: {name!r}"
-            self.error(
-                msg=Event.Configure,
-                step=Event.Started,
-                name=name,
-                reason=reason,
-            )
+            self.error(msg=Event.Configure, name=name, reason=reason)
             raise PermissionError(reason)
 
         if mkdir and not _resolved.exists():
             _resolved.mkdir(parents=True)
 
-        self.debug(
-            msg=Event.Configure,
-            step=Event.Completed,
-            name=name,
-            mkdir=mkdir,
-            resolved=str(_resolved),
-        )
+        # A resolution, not an operation: no pair (DR-WFL-031 t.5).
+        self.debug(msg=Event.Configure, name=name, mkdir=mkdir, resolved=str(_resolved))
         return _resolved
 
     # endregion private methods

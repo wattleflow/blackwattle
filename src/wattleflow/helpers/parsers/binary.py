@@ -14,6 +14,8 @@ protobuf and PNG sources. GenericParser resolves the source and owns the reader
 # region Imports                                                              #
 # --------------------------------------------------------------------------- #
 from __future__ import annotations
+from datetime import datetime
+import re
 from dataclasses import dataclass
 from io import BytesIO
 from typing import Any, BinaryIO, Callable, ClassVar
@@ -25,7 +27,7 @@ from wattleflow.helpers.parsers.tika import TikaParser
 # endregion Imports                                                           #
 # --------------------------------------------------------------------------- #
 
-__all__ = ["PdfParser", "PdfText", "PickleParser", "ProtobufParser", "PngParser"]
+__all__ = ["PdfInfo", "PdfParser", "PdfText", "PickleParser", "ProtobufParser", "PngParser"]
 
 
 @dataclass(frozen=True)
@@ -33,6 +35,18 @@ class PdfText:
     """Text a PDF yielded, and which backend produced it."""
 
     pages: tuple[str, ...]
+    backend: str
+
+
+@dataclass(frozen=True)
+class PdfInfo:
+    """The Info dictionary a PDF carries (ISO 32000-1 §14.3.3) and its page count — v0.0.4,
+    DR-PRC-009. `created` is ISO 8601 or None; a value the file does not carry stays None."""
+
+    title: str | None
+    author: str | None
+    created: str | None
+    pages: int | None
     backend: str
 
 
@@ -78,6 +92,8 @@ class PdfParser(GenericParser):
     OCR_LANGUAGE: ClassVar[str] = "eng"
 
     def deserialise(self, reader: BinaryIO, **opts: Any) -> object:
+        if opts.pop("info", False):
+            return self._info(reader.read(), opts.pop("password", None) or self.password or "")
         if not opts.pop("extract_text", False):
             return reader.read()
 
@@ -124,6 +140,70 @@ class PdfParser(GenericParser):
         )
         # Tika answers for the whole document, so its text is one page.
         return PdfText(pages=(text,), backend=self.TIKA_BACKEND)
+
+    # region Info
+
+    #: `D:YYYYMMDDHHmmSS` with optional zone, as PDF writes it.
+    PDF_DATE: ClassVar[re.Pattern[str]] = re.compile(
+        r"^(?:D:)?(\d{4})(\d{2})?(\d{2})?(\d{2})?(\d{2})?(\d{2})?"
+    )
+
+    @classmethod
+    def pdf_date(cls, raw: Any) -> str | None:
+        """A PDF date string as ISO 8601 (`YYYY-MM-DD[THH:MM:SS]`), or None when invalid."""
+        match = cls.PDF_DATE.match(str(raw or "").strip())
+        if not match:
+            return None
+        year, month, day, hour, minute, second = (
+            int(g) if g else None for g in match.groups()
+        )
+        try:
+            stamp = datetime(year, month or 1, day or 1, hour or 0, minute or 0, second or 0)
+        except ValueError:
+            return None
+        if not 1900 <= stamp.year <= 2100:
+            return None
+        date = stamp.strftime("%Y-%m-%d")
+        return f"{date}T{stamp.strftime('%H:%M:%S')}" if hour is not None else date
+
+    def _info(self, payload: bytes, password: str) -> PdfInfo:
+        """Info dictionary and page count through the first local backend that can read it."""
+        name, _ = self._resolve(self.backend or self.DEFAULT_BACKEND)
+        if name == "pymupdf":
+            import fitz  # PyMuPDF
+
+            doc = fitz.open(stream=payload, filetype="pdf")
+            try:
+                if doc.is_encrypted and not doc.authenticate(password):
+                    raise ParserError(caller=self, error="PDF is password-protected")
+                meta = doc.metadata or {}
+                return PdfInfo(
+                    title=(meta.get("title") or "").strip() or None,
+                    author=(meta.get("author") or "").strip() or None,
+                    created=self.pdf_date(meta.get("creationDate")),
+                    pages=len(doc),
+                    backend=name,
+                )
+            finally:
+                doc.close()
+        if name == "pypdf":
+            import pypdf
+
+            reader = pypdf.PdfReader(BytesIO(payload))
+            if reader.is_encrypted and not reader.decrypt(password):
+                raise ParserError(caller=self, error="PDF is password-protected")
+            meta = reader.metadata or {}
+            return PdfInfo(
+                title=(str(meta.get("/Title") or "")).strip() or None,
+                author=(str(meta.get("/Author") or "")).strip() or None,
+                created=self.pdf_date(meta.get("/CreationDate")),
+                pages=len(reader.pages),
+                backend=name,
+            )
+        # pdfminer: text only — the Info dictionary is a declared gap of this backend.
+        return PdfInfo(title=None, author=None, created=None, pages=None, backend=name)
+
+    # endregion Info
 
     # region Backends
 

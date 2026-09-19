@@ -253,6 +253,8 @@ class WritePdfArchive(BaseWriteStrategy):
 
     KIND_KEY: ClassVar[str] = "document_kind"
     CORRESPONDENCE: ClassVar[str] = "correspondence"
+    #: Stem composed upstream (`PipelinePDFName`, FRQ-PDF-01 BR-07); used verbatim when present.
+    NAME_KEY: ClassVar[str] = "archive_name"
 
     #  (`FRQ-PRC-15.22` §5.2).
     def __init__(self, **kwargs: Any) -> None:
@@ -302,7 +304,8 @@ class WritePdfArchive(BaseWriteStrategy):
 
             metadata = document.metadata
             correspondence = metadata.get(self.KIND_KEY) == self.CORRESPONDENCE
-            stem = PdfArchiveName.compose(
+            # v0.0.4 (DR-PRC-009 t.2): a pipeline may have composed the name already.
+            stem = str(metadata.get(self.NAME_KEY) or "").strip() or PdfArchiveName.compose(
                 metadata,
                 source,
                 zone=self._archive_zone(document, kwargs),

@@ -46,6 +46,47 @@ Patterns = List[Dict[str, str]]
 # --------------------------------------------------------------------------- #
 
 
+class PdfTextReader:
+    """Text for a PDF, the way a pipeline reaches it — v0.0.4, DR-PRC-009 t.3.
+
+    Through the processor's `DriverPdf` when there is one (local libraries, Tika
+    for a scan); otherwise the local parser alone. Shared by every PDF pipeline
+    that needs the text, so the backend decision has one definition.
+    """
+
+    @staticmethod
+    def read(pipeline: GenericPipeline, processor: IProcessor, path: Path) -> PdfRead:
+        driver = getattr(processor, "driver", None)
+        if isinstance(driver, DriverPdf):
+            return driver.extract(str(path), backend=pipeline.backend)
+
+        if pipeline.backend == DriverPdf.TIKA_BACKEND:
+            raise PipelineException(
+                caller=pipeline,
+                error=(
+                    "backend 'tika' needs a DriverPdf on the processor "
+                    "(configuration.driver); it reaches Tika through a connection."
+                ),
+            )
+
+        parsed: PdfText = PdfParser(
+            backend=pipeline.backend,
+            password=pipeline.password,
+            preserve_layout=pipeline.preserve_layout,
+            level=pipeline._level,
+            handler=pipeline._handler,
+        ).parse(path=path, extract_text=True)
+
+        kept = [page for page in parsed.pages if len(page.strip()) >= pipeline.min_chars]
+        text = pipeline.page_separator.join(kept).strip()
+        return PdfRead(
+            text=text,
+            backend=parsed.backend,
+            pages=len(parsed.pages),
+            scanned=not text,
+        )
+
+
 class PipelinePDFExtractText(GenericPipeline):
     """Put a PDF's text on the document.
 
@@ -98,42 +139,8 @@ class PipelinePDFExtractText(GenericPipeline):
     # region Extraction
 
     def _extract(self, processor: IProcessor, path: Path) -> PdfRead:
-        """Text for ``path``, through the driver when the processor carries one.
-
-        With a `DriverPdf` the scan path is available: a PDF whose pages carry
-        images instead of a text layer goes to Tika. Without one, only the local
-        libraries are reachable, and asking for `tika` is a configuration error
-        rather than something to fail on silently.
-        """
-        driver = getattr(processor, "driver", None)
-        if isinstance(driver, DriverPdf):
-            return driver.extract(str(path), backend=self.backend)
-
-        if self.backend == DriverPdf.TIKA_BACKEND:
-            raise PipelineException(
-                caller=self,
-                error=(
-                    "backend 'tika' needs a DriverPdf on the processor "
-                    "(configuration.driver); it reaches Tika through a connection."
-                ),
-            )
-
-        parsed: PdfText = PdfParser(
-            backend=self.backend,
-            password=self.password,
-            preserve_layout=self.preserve_layout,
-            level=self._level,
-            handler=self._handler,
-        ).parse(path=path, extract_text=True)
-
-        kept = [page for page in parsed.pages if len(page.strip()) >= self.min_chars]
-        text = self.page_separator.join(kept).strip()
-        return PdfRead(
-            text=text,
-            backend=parsed.backend,
-            pages=len(parsed.pages),
-            scanned=not text,
-        )
+        """Text for ``path``: the driver's scan path when the processor has one (`PdfTextReader`)."""
+        return PdfTextReader.read(self, processor, path)
 
     # endregion Extraction
 

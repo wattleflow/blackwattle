@@ -23,6 +23,8 @@
   "registry": "wattleflow-code-vocabulary",
   "distribution": "blackwattle",
   "_criterion_version": [
+    "0.12.0 (2026-09-18) — operations gains `Name` (PipelinePDFName composes a",
+    "descriptive archive name; FRQ-PDF-01). Authority: autor, 2026-09-18 (DR-PRC-009).",
     "0.11.0 (2026-09-15) — foundation_packages lists enums (DR-WFL-016, already",
     "recorded in _domains) and resources (distribution templates, DR-PRC-008):",
     "material every layer may read, not a domain. Authority: autor, 2026-09-15 (DR-",
@@ -155,7 +157,7 @@
     "    collapse to it, NFRQ-ORG-02 DRY note) is an open question the run surfaces",
     "    as findings rather than a gap this file quietly fills."
   ],
-  "criterion_version": "0.11.0",
+  "criterion_version": "0.12.0",
   "dictionary_version": "0.2.0",
   "dictionary_source": "tools/naming_registry.yaml (retired by DR-PRC-001)",
   "_python_reference": "Defines the 'stdlib' set for ORG-01; must track requires-python in pyproject.toml.",
@@ -505,7 +507,8 @@
     "Repair",
     "Translate",
     "Write",
-    "Measure"
+    "Measure",
+    "Name"
   ],
   "targets": [
     "Sheets",

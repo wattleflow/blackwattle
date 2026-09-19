@@ -29,11 +29,13 @@ from typing import Any
 # the single declaration of what this package exposes and from where.
 _EXPORTS: dict[str, str] = {
     "PipelinePDFExtractText": "pdf",
+    "PipelinePDFName": "name",
     "PipelinePDFRedact": "pdf",
 }
 
 __all__ = [
     "PipelinePDFExtractText",
+    "PipelinePDFName",
     "PipelinePDFRedact",
 ]
 
