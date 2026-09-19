@@ -47,7 +47,7 @@ and sinks — connections, drivers, processors, pipelines, documents, strategies
 repositories — plus the compliance layer (OSCAL). It builds on the interfaces in `wattleflow`
 and the generic implementations in `wattleflow-workflow`.
 
-# New in 0.0.7 — a run you can watch
+# New in 0.0.8 — a run you can watch
 
 A pass has always measured itself: the audit log is observed, resources are sampled while the
 work runs, and a report closes the pass. What was missing was somewhere to look. This release
