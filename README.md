@@ -55,10 +55,6 @@ adds the monitoring instance — measurement leaves the process as Prometheus ex
 pushed once per pass to a Pushgateway, and lands on a Grafana dashboard that ships provisioned,
 palette and panel library included.
 
-```bash
-cp dockers/monitoring/.env.example dockers/monitoring/.env   # then set the three values
-docker compose -f dockers/monitoring/docker-compose.yaml up -d
-```
 
 Grafana on `http://localhost:3000`, folder **WattleFlow**, dashboard *resource cost per run*.
 No dashboard to build, no datasource to wire, no panel to import.
