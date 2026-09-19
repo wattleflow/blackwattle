@@ -1,164 +1,71 @@
-# WattleFlow Grafana Setup
+# WattleFlow monitoring instance — Grafana
 
-Grafana konfiguracija za WattleFlow monitoring stack koristi branding boje i template panele dostojne profesionalnog dashboard-a.
+The instance is `HLRQ-20` / `FRQ-OPS-20.1`: one `docker compose up` from this directory plus an
+untracked `.env` gives a Pushgateway, a Prometheus that scrapes it, and a Grafana provisioned with
+the "resource cost per run" dashboard, a panel template library and the wattleflow palette.
 
-## Boje — WattleFlow Palette
-
-| Namjena | HEX | RGB | Uloga |
-|---------|-----|-----|-------|
-| Pozadina | `#2d5a54` | rgb(45, 90, 84) | Panel backgrounds, dark theme |
-| Primarni (žuta) | `#e8b924` | rgb(232, 185, 36) | Alerts, accents, key metrics |
-| Sekundarni (zelena) | `#6ba89e` | rgb(107, 168, 158) | Success, OK status |
-| Kritično (crveno) | `#c74c3c` | rgb(199, 76, 60) | Errors, critical threshold |
-| Tekst | `#ffffff` | rgb(255, 255, 255) | Text on dark background |
-
-### Threshold Logika
-
-- 🟢 **OK** (`#6ba89e`): vrijednost ispod 60% normalnog opsega
-- 🟡 **Warning** (`#e8b924`): vrijednost između 60–80%
-- 🔴 **Critical** (`#c74c3c`): vrijednost iznad 80% ili kritična kršenja
-
-**Iznimka — Free storage:** inverzna logika (niska vrijednost = kritično)
-- 🔴 **Critical**: < 20% slobodno
-- 🟡 **Warning**: 20–50% slobodno
-- 🟢 **OK**: > 50% slobodno
-
-## Komponente
-
-### 1. Docker Compose (`docker-compose.yaml`)
-
-Grafana servis konfiguriran s:
-- **Theme**: `dark` (koristi tamnu pozadinu)
-- **Branding**: WattleFlow naziv, subtitle i naslovi
-- **Volume**: `grafana/provisioning/` za dashboarde i datasources
-- **Config**: `grafana/grafana.ini` za custom konfiguraciju
-
-```yaml
-grafana:
-  image: grafana/grafana:11.2.0
-  environment:
-    GF_THEME_DEFAULT: dark
-    GF_BRANDING_APP_TITLE: "WattleFlow"
-    GF_BRANDING_LOGIN_TITLE: "WattleFlow Monitoring"
-    GF_BRANDING_LOGIN_SUBTITLE: "Resource cost analysis per run"
-  volumes:
-    - ./grafana/provisioning:/etc/grafana/provisioning:ro
-    - ./grafana/grafana.ini:/etc/grafana/grafana.ini:ro
-```
-
-### 2. Theme Configuration (`grafana/provisioning/branding/wattleflow-theme.json`)
-
-Definiše boje i defaultne postavke panela:
-- Primarni: `#e8b924` (žuta za akcente)
-- Sekundarni: `#6ba89e` (zelena za success)
-- Pozadina: `#2d5a54` (tamna teal)
-
-### 3. Template Library (`grafana/provisioning/dashboards/wattleflow-templates.json`)
-
-Sadrži 4 reusable panel template-a:
-
-#### Stat Panel — Default
-- Fiksna žuta boja (`#e8b924`)
-- Koristi se za obične KPI-je
-
-#### Stat Panel — Threshold
-- Threshold-based coloriranje (zeleno → žuto → crveno)
-- Prilagođeno za postotke i postignuća
-
-#### Bar Gauge — Gradient
-- RdYlGr gradient (red → yellow → green)
-- Prilagođeno za performanse i resurse
-
-#### Time Series — Bars
-- Bar chart s legend-om
-- Prilagođeno za vremenski pregled prolaza
-
-### 4. Dashboard (`grafana/provisioning/dashboards/wattleflow.json`)
-
-Glavno 3-dijelno dashboard sa 19 panela:
-
-**Sekcija 1: Prosječni prolaz**
-- Documents, Duration, Docs/min
-- CPU total, utilisation, per document
-- Memory: RSS start/end/peak, growth per doc
-- Storage and threshold alerts
-
-**Sekcija 2: Vremenski profil**
-- Hotspots — exclusive time per operation
-- Longest single call
-- Failed operations
-- Bytes, characters, storage po komponenti
-
-**Sekcija 3: Trendovi kroz vremenske periode**
-- Documents i duration po prolazu
-- RSS peak po prolazu
-- CPU seconds po prolazu
-
-Svi bar gauge paneli koriste:
-- WattleFlow gradient boje
-- Threshold markere
-- Horizontal layout za lakšu čitanju
-
-## Pokretanje
+## Run
 
 ```bash
-# Pokreni monitoring stack
-docker compose -f examples/monitoring/docker-compose.yaml up -d
-
-# Grafana je dostupna na
-http://localhost:3000
-
-# Login
-admin / admin (promijeni prije produkcije)
-
-# Dashboard
-Folder "WattleFlow" → "WattleFlow — resource cost per run"
+cp dockers/monitoring/.env.example dockers/monitoring/.env   # then set the three values
+docker compose -f dockers/monitoring/docker-compose.yaml up -d
 ```
 
-## Prilagođavanje
+| Service | URL | Note |
+|---|---|---|
+| Grafana | http://localhost:3000 | sign in with the values from `.env`; folder **WattleFlow** → *WattleFlow — resource cost per run* |
+| Prometheus | http://localhost:9090 | scrapes the Pushgateway every 15 s, keeps 15 days |
+| Pushgateway | http://localhost:9091 | a run pushes once per pass (`DR-WFL-033`) |
 
-### Dodavanje novog panela sa WattleFlow bojama
+All three ports bind to `127.0.0.1`. Without `.env` Compose refuses to start and names the
+missing key. No credential and no signing key exists in any tracked file (P-23, `NFRQ-SEC-09`).
 
-1. Otvori dashboard za ediranje
-2. Dodaj panel
-3. Odaberi tip (stat, bargauge, timeseries)
-4. U `Field Config` → `Color` odaberi:
-   - `Mode: thresholds` za stat panele
-   - `Mode: gradient` s `Scheme: RdYlGr` za bar gauge
-   - `Mode: palette-classic` za timeseries
+## Palette
 
-5. U `Thresholds` postavi:
-   ```json
-   {
-     "mode": "absolute",
-     "steps": [
-       { "color": "#6ba89e", "value": null, "label": "OK" },
-       { "color": "#e8b924", "value": 75, "label": "Warning" },
-       { "color": "#c74c3c", "value": 90, "label": "Critical" }
-     ]
-   }
-   ```
+Source of truth: `grafana/provisioning/branding/wattleflow-theme.json`. Dashboards and templates
+cite the role; the hex value changes only in that file.
 
-### Prilagođavanje threshold vrijednosti
+| Role | Hex | Use |
+|---|---|---|
+| `background` | `#2d5a54` | panel background, dark theme |
+| `primary` / `warning` / `info` | `#e8b924` | accents, key measures, *warning* threshold |
+| `secondary` / `success` | `#6ba89e` | *ok* state |
+| `error` | `#c74c3c` | *critical* threshold |
+| `text` | `#ffffff` | text on the dark background |
 
-Threshold-ove možeš prilagoditi temeljem tvojih SLA-eva:
-- Otvori panel za ediranje
-- Idi u `Field Config` → `Thresholds`
-- Promijeni `value` za Warning (obično 60–75%) i Critical (obično 80–95%)
+Grafana OSS does not load a theme from a file; the roles are applied by the panel templates.
 
-## Reference
+## Thresholds shown on panels
 
-- Grafana verzija: 11.2.0
-- Schema verzija: 39
-- Dark theme: Grafana default dark
-- Boje: WattleFlow brand palette
-- Threshold logika: FRQ-PTN-18.1 (alerts), NFRQ-OBS-02 (metrics)
+Display only, never a gate (`NFRQ-DEF-02`): *ok* below 60 % of the usual range, *warning*
+60–80 %, *critical* above 80 %. Free storage is inverted: *critical* below 20 % free, *warning*
+20–50 %. The usual range is read from the process history, not prescribed (`NFRQ-OBS-04`).
 
----
+## Files
 
-**Napomena za produkciju:**
-- Promijeni `admin` password prije deployinga
-- Dodaj `HTTPS` i reverse proxy
-- Konfigurira `GF_ROOT_URL` za production domain
-- Koristi external database za persistence (ne SQLite)
-- Aktivira auth provider (OAuth, LDAP, itd.)
+| File | Carries |
+|---|---|
+| `docker-compose.yaml` | three services, pinned images, loopback ports, `${VAR:?}` for the three Grafana secrets, named volumes |
+| `.env.example` | the keys Compose needs, without values |
+| `prometheus/prometheus.yml` | scrape of the Pushgateway with `honor_labels`; no alerting rules |
+| `grafana/grafana.ini` | branding, anonymous access off, sign-up off, vendor analytics off |
+| `grafana/provisioning/datasources/prometheus.yml` | the `Prometheus` datasource, not editable |
+| `grafana/provisioning/dashboards/dashboards.yml` | folder **WattleFlow**, reload every 30 s |
+| `grafana/provisioning/dashboards/wattleflow.json` | the dashboard: average pass, last pass, history — filtered by `$workflow` |
+| `grafana/provisioning/dashboards/wattleflow-templates.json` | library panels: *Stat — Default*, *Stat — Threshold*, *Bar Gauge — Gradient*, *Time Series — Bars* |
+| `grafana/provisioning/branding/wattleflow-theme.json` | the palette |
+
+## Adding a panel
+
+1. Edit the dashboard, add a panel (stat, bar gauge or time series).
+2. Colour mode: `thresholds` for stat panels, `gradient` with scheme `RdYlGr` for bar gauges,
+   `palette-classic` for time series.
+3. Threshold steps use the palette roles: `#6ba89e` (ok), `#e8b924` (warning), `#c74c3c` (critical).
+4. Save the JSON back into `grafana/provisioning/dashboards/` — the file is the source of truth;
+   a change kept only in the UI is lost on the next provisioning reload.
+
+## Beyond a laptop
+
+Publishing a port on another interface, TLS, a reverse proxy, an external database and an
+identity provider are each a change to the compose file with a named audience (`NFRQ-SEC-13`);
+none is configured here.

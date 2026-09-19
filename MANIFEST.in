@@ -71,6 +71,8 @@ global-exclude *enti*.py
 # `documentation` is a dev symlink to another repository (CLAUDE.md §8): untracked
 # here, but it still resolves in a developer tree — which is when this rule matters.
 prune documentation
+prune dockers
+prune .env
 
 # --- Package data: vendored OSCAL catalogues, read at runtime by the loaders ---
 # `include-package-data = false` means this line fills the SDIST only; the WHEEL

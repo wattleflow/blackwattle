@@ -208,3 +208,5 @@ documentation/
 documentation
 tests/
 *.md
+# Local symlink to a Makefile outside the repository; its target names a path on one machine.
+dockers/**/Makefile

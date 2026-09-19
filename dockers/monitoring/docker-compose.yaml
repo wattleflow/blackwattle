@@ -4,8 +4,8 @@
 # to the Pushgateway, which Prometheus then scrapes. That matches what a
 # workflow is — a job that ends — rather than a service that is always up.
 #
-#   docker compose -f examples/monitoring/docker-compose.yaml up -d
-#   Grafana     http://localhost:3000   (credentials from examples/monitoring/.env)
+#   docker compose -f dockers/monitoring/docker-compose.yaml up -d
+#   Grafana     http://localhost:3000   (credentials from dockers/monitoring/.env)
 #               dashboard "WattleFlow — resource cost per run" (folder WattleFlow)
 #   Prometheus  http://localhost:9090
 #   Pushgateway http://localhost:9091
@@ -29,6 +29,8 @@ services:
     ports:
       - "127.0.0.1:9091:9091"
     restart: unless-stopped
+    networks:
+      - wattleflow-network
 
   prometheus:
     image: prom/prometheus:v2.54.1
@@ -45,16 +47,19 @@ services:
     depends_on:
       - pushgateway
     restart: unless-stopped
+    networks:
+      - wattleflow-network
 
   grafana:
     image: grafana/grafana:11.2.0
     container_name: wf-grafana
     environment:
-      # No credential lives in this file (P-23, NFRQ-SEC-09): both come from
-      # `.env` beside this file, which git ignores; `.env.example` shows the keys.
-      # `:?` makes Compose refuse to start without them.
-      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:?set GRAFANA_ADMIN_USER in .env}
-      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?set GRAFANA_ADMIN_PASSWORD in .env}
+      # No credential lives in this file (P-23, NFRQ-SEC-09): all three come
+      # from `.env` beside this file, which git ignores; `.env.example` shows
+      # the keys. `:?` makes Compose refuse to start without them.
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:?set GRAFANA_ADMIN_USER in dockers/monitoring/.env}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:?set GRAFANA_ADMIN_PASSWORD in dockers/monitoring/.env}
+      GF_SECURITY_SECRET_KEY: ${GRAFANA_SECRET_KEY:?set GRAFANA_SECRET_KEY in dockers/monitoring/.env}
       GF_USERS_ALLOW_SIGN_UP: "false"
       GF_ANALYTICS_REPORTING_ENABLED: "false"
       GF_THEME_DEFAULT: dark
@@ -70,8 +75,14 @@ services:
     depends_on:
       - prometheus
     restart: unless-stopped
+    networks:
+      - wattleflow-network
 
 volumes:
   pushgateway-data:
   prometheus-data:
   grafana-data:
+
+networks:
+  wattleflow-network:
+    name: wattleflow-network

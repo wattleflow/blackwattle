@@ -2,7 +2,7 @@
   "title": "WattleFlow — resource cost per run",
   "uid": "wattleflow-flow",
   "schemaVersion": 39,
-  "version": 3,
+  "version": 5,
   "editable": true,
   "tags": [
     "wattleflow",
@@ -73,7 +73,11 @@
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "short"
+          "unit": "short",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#e8b924"
+          }
         },
         "overrides": []
       },
@@ -85,7 +89,7 @@
           "fields": "",
           "values": false
         },
-        "colorMode": "none",
+        "colorMode": "value",
         "graphMode": "none",
         "textMode": "value"
       },
@@ -110,7 +114,11 @@
       "fieldConfig": {
         "defaults": {
           "unit": "s",
-          "decimals": 1
+          "decimals": 1,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#6ba89e"
+          }
         },
         "overrides": []
       },
@@ -122,7 +130,7 @@
           "fields": "",
           "values": false
         },
-        "colorMode": "none",
+        "colorMode": "value",
         "graphMode": "none",
         "textMode": "value"
       },
@@ -147,7 +155,11 @@
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "decimals": 1
+          "decimals": 1,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#e8b924"
+          }
         },
         "overrides": []
       },
@@ -159,7 +171,7 @@
           "fields": "",
           "values": false
         },
-        "colorMode": "none",
+        "colorMode": "value",
         "graphMode": "none",
         "textMode": "value"
       },
@@ -184,7 +196,11 @@
       "fieldConfig": {
         "defaults": {
           "unit": "s",
-          "decimals": 2
+          "decimals": 2,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#6ba89e"
+          }
         },
         "overrides": []
       },
@@ -196,7 +212,7 @@
           "fields": "",
           "values": false
         },
-        "colorMode": "none",
+        "colorMode": "value",
         "graphMode": "none",
         "textMode": "value"
       },
@@ -221,7 +237,11 @@
       "fieldConfig": {
         "defaults": {
           "unit": "percentunit",
-          "decimals": 1
+          "decimals": 1,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#6ba89e"
+          }
         },
         "overrides": []
       },
@@ -233,7 +253,7 @@
           "fields": "",
           "values": false
         },
-        "colorMode": "none",
+        "colorMode": "value",
         "graphMode": "none",
         "textMode": "value"
       },
@@ -258,7 +278,11 @@
       "fieldConfig": {
         "defaults": {
           "unit": "s",
-          "decimals": 3
+          "decimals": 3,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#6ba89e"
+          }
         },
         "overrides": []
       },
@@ -270,7 +294,7 @@
           "fields": "",
           "values": false
         },
-        "colorMode": "none",
+        "colorMode": "value",
         "graphMode": "none",
         "textMode": "value"
       },
@@ -294,7 +318,11 @@
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "short"
+          "unit": "short",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#c74c3c"
+          }
         },
         "overrides": []
       },
@@ -306,7 +334,7 @@
           "fields": "",
           "values": false
         },
-        "colorMode": "none",
+        "colorMode": "value",
         "graphMode": "none",
         "textMode": "value"
       },
@@ -330,7 +358,11 @@
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "short"
+          "unit": "short",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#c74c3c"
+          }
         },
         "overrides": []
       },
@@ -342,7 +374,7 @@
           "fields": "",
           "values": false
         },
-        "colorMode": "none",
+        "colorMode": "value",
         "graphMode": "none",
         "textMode": "value"
       },
@@ -366,7 +398,11 @@
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "bytes"
+          "unit": "bytes",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#6ba89e"
+          }
         },
         "overrides": []
       },
@@ -378,7 +414,7 @@
           "fields": "",
           "values": false
         },
-        "colorMode": "none",
+        "colorMode": "value",
         "graphMode": "none",
         "textMode": "value"
       },
@@ -402,7 +438,11 @@
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "bytes"
+          "unit": "bytes",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#6ba89e"
+          }
         },
         "overrides": []
       },
@@ -414,7 +454,7 @@
           "fields": "",
           "values": false
         },
-        "colorMode": "none",
+        "colorMode": "value",
         "graphMode": "none",
         "textMode": "value"
       },
@@ -438,7 +478,11 @@
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "bytes"
+          "unit": "bytes",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#6ba89e"
+          }
         },
         "overrides": []
       },
@@ -450,7 +494,7 @@
           "fields": "",
           "values": false
         },
-        "colorMode": "none",
+        "colorMode": "value",
         "graphMode": "none",
         "textMode": "value"
       },
@@ -474,7 +518,11 @@
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "bytes"
+          "unit": "bytes",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#6ba89e"
+          }
         },
         "overrides": []
       },
@@ -486,7 +534,7 @@
           "fields": "",
           "values": false
         },
-        "colorMode": "none",
+        "colorMode": "value",
         "graphMode": "none",
         "textMode": "value"
       },
@@ -511,7 +559,11 @@
       "fieldConfig": {
         "defaults": {
           "unit": "percentunit",
-          "decimals": 2
+          "decimals": 2,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#6ba89e"
+          }
         },
         "overrides": []
       },
@@ -523,7 +575,7 @@
           "fields": "",
           "values": false
         },
-        "colorMode": "none",
+        "colorMode": "value",
         "graphMode": "none",
         "textMode": "value"
       },
@@ -548,7 +600,11 @@
       "fieldConfig": {
         "defaults": {
           "unit": "s",
-          "decimals": 2
+          "decimals": 2,
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#6ba89e"
+          }
         },
         "overrides": []
       },
@@ -560,7 +616,7 @@
           "fields": "",
           "values": false
         },
-        "colorMode": "none",
+        "colorMode": "value",
         "graphMode": "none",
         "textMode": "value"
       },
@@ -1219,6 +1275,223 @@
         {
           "expr": "sum by (instance) (wf_cpu_seconds{job=\"wattleflow\",workflow=~\"$workflow\"})",
           "legendFormat": "{{workflow}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "type": "row",
+      "title": "Shape of the run — what ran, how much it held",
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 37
+      },
+      "collapsed": false,
+      "panels": []
+    },
+    {
+      "type": "stat",
+      "title": "Pipelines",
+      "description": "Distinct pipeline components that recorded an operation. The `Pipeline` prefix marks exactly the classes implementing the pipeline contract (NFRQ-ORG-02 c.2).",
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 0,
+        "y": 38
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#e8b924"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value"
+      },
+      "targets": [
+        {
+          "expr": "count(count by (component) (wf_operation_seconds_total{job=\"wattleflow\",workflow=~\"$workflow\",component=~\"Pipeline.*\"}))",
+          "instant": true,
+          "legendFormat": "__auto",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Cycles",
+      "description": "Generator iterations the processors reported. Its own series since the cycle split; before that it was added into wf_documents_total.",
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 3,
+        "y": 38
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#e8b924"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value"
+      },
+      "targets": [
+        {
+          "expr": "sum(wf_cycles_total{job=\"wattleflow\",workflow=~\"$workflow\"})",
+          "instant": true,
+          "legendFormat": "__auto",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Documents (counted)",
+      "description": "Documents components counted explicitly. Empty for a workflow that counts no documents.",
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 6,
+        "y": 38
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#e8b924"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value"
+      },
+      "targets": [
+        {
+          "expr": "sum(wf_documents_total{job=\"wattleflow\",workflow=~\"$workflow\"})",
+          "instant": true,
+          "legendFormat": "__auto",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Process RSS",
+      "description": "Resident set size of the process, as opposed to the per-run start/end/peak samples.",
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 9,
+        "y": 38
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#6ba89e"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value"
+      },
+      "targets": [
+        {
+          "expr": "wf_process_rss_bytes{job=\"wattleflow\",workflow=~\"$workflow\"}",
+          "instant": true,
+          "legendFormat": "__auto",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "type": "stat",
+      "title": "Storage total",
+      "description": "Capacity of the filesystem the run writes to; pair with storage free.",
+      "gridPos": {
+        "h": 4,
+        "w": 3,
+        "x": 12,
+        "y": 38
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "bytes",
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "#6ba89e"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value"
+      },
+      "targets": [
+        {
+          "expr": "wf_storage_total_bytes{job=\"wattleflow\",workflow=~\"$workflow\"}",
+          "instant": true,
+          "legendFormat": "__auto",
           "refId": "A"
         }
       ]
