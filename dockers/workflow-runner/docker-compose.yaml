@@ -1,0 +1,63 @@
+# Workflow runner with monitoring integration
+#
+# IMPORTANT: Monitoring stack (Pushgateway, Prometheus, Grafana) must be running separately.
+# Start it first:
+#
+#   cd ../monitoring
+#   make start
+#
+# Then start the runner:
+#
+#   cd ../workflow-runner
+#   make start-build
+#
+# The runner connects to existing monitoring services on the wattleflow-network.
+# See dockers/monitoring/.env for Grafana credentials.
+
+services:
+  workflow-runner:
+    build:
+      context: ../..  # Project root (blackwattle/)
+      dockerfile: dockers/workflow-runner/Dockerfile
+      args:
+        PYTHON_VERSION: "3.12"  # or "3.13"
+    container_name: wf-workflow-runner
+    image: workflow-runner
+    environment:
+      # Workflow configuration
+      PYTHONUNBUFFERED: "1"
+      LOG_LEVEL: INFO
+
+      # Prometheus pushgateway (must match monitoring stack name: wf-pushgateway)
+      PROMETHEUS_PUSHGATEWAY_URL: http://wf-pushgateway:9091
+
+      # Storage paths (inside container)
+      LOCAL_STORAGE_READ_PATH: /app/data
+      LOCAL_STORAGE_WRITE_PATH: /app/output
+
+      # For .env interpolation in YAML config (01_synthetic_data.yaml)
+      # These are read by YAMLConfig when expanding ${dotenv:key}
+      runtime.pushgateway_url: http://wf-pushgateway:9091
+      local-storage-driver.read_path: /app/data
+      local-storage-driver.write_path: /app/output
+
+    volumes:
+      # Persist output across runs (named volumes)
+      - workflow-output:/app/output
+      - workflow-data:/app/data
+
+    networks:
+      # Connect to existing wattleflow-network created by monitoring stack
+      - wattleflow-network
+
+    restart: "no"  # Batch job: runs once per trigger, does not auto-restart
+
+volumes:
+  # Workflow runner volumes (independent from monitoring stack)
+  workflow-output:
+  workflow-data:
+
+networks:
+  # External network: created by dockers/monitoring/docker-compose.yaml
+  wattleflow-network:
+    external: true

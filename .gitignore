@@ -210,8 +210,3 @@ tests/
 *.md
 # Local symlink to a Makefile outside the repository; its target names a path on one machine.
 dockers/**/Makefile
-
-# Workflow runner instance — held back from this version until its documentation
-# (HLRQ/FRQ entry and the decision record carrying it) is written; the files stay
-# on disk, untracked, by the author's decision (2026-09-19).
-dockers/workflow-runner/

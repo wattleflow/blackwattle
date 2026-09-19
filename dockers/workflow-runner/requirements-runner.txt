@@ -1,0 +1,32 @@
+# Requirements for wattleflow runner (01_synthetic_data example)
+# Install with: pip install -r requirements-runner.txt
+
+# Core framework (zero-trust tier)
+wattleflow>=0.0.0.52
+wattleflow-workflow>=0.0.1.13,<0.0.2
+
+# Extension layer (non-zero-trust)
+blackwattle>=0.0.1
+
+# Example dependencies (from 01_synthetic_data.py)
+Faker>=20.0.0
+pandas>=2.0.0
+
+# Prometheus monitoring (DR-WFL-033). DriverPrometheus pushes over HTTP with
+# requests; the YAML asks for that exporter, so this is a real dependency.
+prometheus-client>=0.19.0
+requests>=2.31.0
+
+# Scheduling is the framework's own SchedulerCronJob, not a third-party library.
+
+# YAML support (for workflow config parsing)
+PyYAML>=6.0
+
+# Optional: for better Alpine support
+setuptools>=65.0.0
+
+# Not used by this example. Needed only because the image installs blackwattle
+# from PyPI, where parsers/factory.py still imports every parser eagerly and so
+# reaches image_security -> PIL. Fixed in this tree; drop this line once the
+# image installs a blackwattle that carries the fix (DR-WFL-007).
+Pillow>=10.0.0
